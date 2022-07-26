@@ -1,4 +1,5 @@
 # TeraStitcher Module
+
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
 
 A tool for fast automatic 3D-stitching of teravoxel-sized microscopy images using cloud computing resources and [TeraStitcher](https://github.com/abria/TeraStitcher).
@@ -14,4 +15,3 @@ $ docker build -t terastitcher:1.0 .
 
 ## TeraStitcher Documentation
 You can download TeraStitcher documentation from [here](https://unicampus365-my.sharepoint.com/:b:/g/personal/g_iannello_unicampus_it/EYT9KbapjBdGvTAD2_MdbKgB5gY_h9rlvHzqp6mUNqVhIw?e=s8GrFC)
-
