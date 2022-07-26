@@ -32,7 +32,7 @@ status=$?
 if ! (exit $status)
 then
     echo "- mpi4py could not be installed."
-    echo "- Trying installing some libraries..."
+    echo "- Trying installing libopenmpi first..."
 
     apt-get install -y libopenmpi-dev
 

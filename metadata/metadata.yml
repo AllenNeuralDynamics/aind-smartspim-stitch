@@ -1,2 +1,16 @@
 metadata_version: 1
-name: Untitled Capsule Jun 8, 2022 09:02
+name: TeraStitcher Module
+description: A tool for fast automatic 3D-stitching of teravoxel-sized microscopy images using cloud computing resources and TeraStitcher.
+authors:
+- name: David Feng
+  affiliations:
+  - name: Allen Institute for Neural Dynamics
+- name: Sharmishtaa Seshamani
+  affiliations:
+  - name: Allen Institute for Neural Dynamics
+- name: Cameron Arshadi
+  affiliations:
+  - name: Allen Institute for Neural Dynamics
+- name: Camilo Laiton
+  affiliations:
+  - name: Allen Institute for Neural Dynamics
