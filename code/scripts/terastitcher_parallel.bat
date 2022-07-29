@@ -26,7 +26,7 @@ terastitcher --placetiles --projin="%2\xmls\xml_displthres.xml" --projout="%2\xm
 
 echo "Merge step"
 :: Step 6
-mpiexec -n 9 python ./pyscripts/parastitcher.py -6 --projin="%2\xmls\xml_merging.xml" --volout="%2" --resolutions=0 --slicewidth=2000 --sliceheight=2000
+mpiexec -n 16 python ./pyscripts/parastitcher.py -6 --projin="%2\xmls\xml_merging.xml" --volout="%2" --resolutions=0 --slicewidth=20000 --sliceheight=20000 > "%2\xmls\step6par.txt"
 
 :: Generate 3D tiff stacks
 :: mpiexec -n 9 python ./pyscripts/parastitcher.py -6 --projin=..\TestData\mouse.cerebellum.300511.sub3\tomo300511_subv3\xml_merging.xml --volout=..\TestData\merge_step_3d --resolutions=0 --slicewidth=2000 --sliceheight=2000 --slicedepth=100 --volout_plugin="TiledXY|3Dseries" > ..\TestData\merge_step_3d\step6par_3dseries.txt 
