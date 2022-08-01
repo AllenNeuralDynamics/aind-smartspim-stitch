@@ -3,32 +3,8 @@ import os
 import subprocess
 from typing import List, Optional
 from utils import utils
-
-def helper_get_number_processes_align_step(config_params:dict) -> int:
-    """
-    
-        Get the estimate number of processes to partition the dataset and calculate the align step.
-        Using MPI, check if the number of slots are enough for running the number of processes.
-        You can automatically set --use-hwthread-cpus to automatically estimate the number 
-        of hardware threads in each core and increase the allowed number of processes. There is another
-        option with -oversubscribe.
-        
-        Parameters:
-        - config_params (dict): Parameters that will be used in the align step. i.e. {'depth': 4200, 'subvoldim': 200, 'max_num_procs': 40}
-        
-        Returns:
-        - int: Number of processes to be used in the align step. -1 indicates that there are not optimal processes for the provided configuration.
-    
-    """
-    partitioning_depth = math.ceil( config_params['depth'] / config_params['subvoldim'] )
-
-    for proc in range(config_params['max_num_procs'], -1, -1):
-        tiling_proc = 2 * ( proc - 1)
-        
-        if partitioning_depth > tiling_proc:
-            return proc
-            
-    return -1
+import math
+import time
 
 def helper_build_param_value_command(params:dict) -> str:
     """
@@ -77,8 +53,8 @@ class TeraStitcher():
         self.__parastitcher_path = parastitcher_path
         self.__verbose = verbose
         
-        if computation not in ['cpu', 'gpu']:
-            print("Setting computation to gpu")
+        if computation not in ['cpu']:#, 'gpu']: # GPU not yet implemented
+            print("Setting computation to cpu")
             self.__computation = 'cpu'
         
         if not self.__check_installation():
@@ -116,24 +92,50 @@ class TeraStitcher():
         else:
             self.__parallel = False
     
-    def __build_parallel_command(self, params:dict) -> str:
+    def __build_parallel_command(self, params:dict, step_name:str) -> str:
         """
         """
         
         if not self.__parallel:
             return ''
         
-        mpi_command = 'mpiexec -n' if self.__platform == 'Windows' else 'mpirun -np'
+        cpu_params = params['cpu_params']
         
+        mpi_command = 'mpiexec -n' if self.__platform == 'Windows' else 'mpirun -np'
         additional_params = ''
-        if len(params['additional_params']):
-            additional_params = helper_additional_params_command(params['additional_params'])
+        hostfile = ''
+        n_procs = cpu_params['number_processes']
+        
+        if len(cpu_params['additional_params']) and self.__platform != 'Windows':
+            additional_params = helper_additional_params_command(cpu_params['additional_params'])
+        
+        if self.__platform != 'Windows':
+            try:
+                hostfile = f"--hostfile {cpu_params['hostfile']}"
+            except KeyError:
+                print('Hostfile was not found. This could lead to execution problems.')
+        
+        if cpu_params['estimate_processes']:
+            if step_name == 'align':
+                n_procs = self.__get_aprox_number_processes_align_step(
+                    {
+                        'image_depth': 4200, 
+                        'subvoldim': params['subvoldim'], 
+                        'number_processes': cpu_params['number_processes']
+                    }
+                )
+                
+            elif step_name == 'merge':
+                # TODO estimate in merge step
+                print("Not implemented yet")
             
-        cmd = f"{mpi_command} {params['number_processes']} {additional_params}"
+            print("Using estimated number of processes: ", n_procs)
+        
+        cmd = f"{mpi_command} {n_procs} {hostfile} {additional_params}"
         cmd += f"python {self.__parastitcher_path}"
         return cmd
     
-    def __import_step_cmd(self, params:dict) -> str:
+    def import_step_cmd(self, params:dict) -> str:
         """
         
         """
@@ -153,7 +155,45 @@ class TeraStitcher():
         
         return cmd
     
-    def __align_step_cmd(self, params:dict):
+    def __get_aprox_number_processes_align_step(self, config_params:dict) -> int:
+        """
+            Get the estimate number of processes to partition the dataset and calculate the align step.
+            Using MPI, check if the number of slots are enough for running the number of processes.
+            You can automatically set --use-hwthread-cpus to automatically estimate the number 
+            of hardware threads in each core and increase the allowed number of processes. There is another
+            option with -oversubscribe.
+            
+            Parameters:
+            -----------------
+            - config_params (dict): Parameters that will be used in the align step. 
+                i.e. {'image_depth': 4200, 'subvoldim': 100, 'number_processes': 10}
+            
+            Returns:
+            -----------------
+            - int: Number of processes to be used in the align step. -1 indicates that there are not optimal processes for the provided configuration.
+        
+        """
+        if config_params['image_depth'] < config_params['number_processes'] or config_params['subvoldim'] > config_params['image_depth']:
+            print("Please check the parameters")
+            return -1
+        
+        partitioning_depth = math.ceil( config_params['image_depth'] / config_params['subvoldim'] )
+        left = 2
+        right = config_params['number_processes']
+
+        while (True):
+            mid_process = int((left + right) / 2)
+            tiling_proc = 2 * ( mid_process - 1)
+            
+            if partitioning_depth > tiling_proc:
+                return mid_process + 1
+            
+            else:
+                right = mid_process + 1
+                
+        return -1
+    
+    def align_step_cmd(self, params:dict):
         """
         """
         
@@ -161,12 +201,12 @@ class TeraStitcher():
         input_xml = f"--projin={self.__output_folder}/xmls/xml_import.xml"
         output_xml = f"--projout={self.__output_folder}/xmls/xml_displcomp.xml"
         parallel_command = ''
-        
+
         if self.__parallel:
             
             if self.__computation == 'cpu':
                 # mpirun for linux and mac OS
-                parallel_command = self.__build_parallel_command(params['cpu_params'])
+                parallel_command = self.__build_parallel_command(params, 'align')
                 
             else:
                 # gpu computation
@@ -184,7 +224,7 @@ class TeraStitcher():
         
         return cmd
     
-    def __input_output_step_cmd(self, 
+    def input_output_step_cmd(self, 
             step_name:str, 
             input_xml:str, 
             output_xml:str, 
@@ -202,7 +242,7 @@ class TeraStitcher():
         utils.save_dict_as_json(f"{self.__output_folder}/metadata/{step_name}_params.json", params, self.__verbose)
         return cmd
     
-    def __merge_step_cmd(self, params:dict):
+    def merge_step_cmd(self, params:dict):
         """
         """
         
@@ -215,7 +255,7 @@ class TeraStitcher():
             
             if self.__computation == 'cpu':
                 # mpirun for linux and mac OS
-                parallel_command = self.__build_parallel_command(params['cpu_params'])
+                parallel_command = self.__build_parallel_command(params, 'merge')
                 
             else:
                 # gpu computation
@@ -242,21 +282,21 @@ class TeraStitcher():
         # Step 1
         print("\n- Import step...")
         for out in utils.execute_command(
-            self.__import_step_cmd(config['import']), self.__verbose
+            self.import_step_cmd(config['import']), self.__verbose
         ):
             print(out)
         
         # Step 2
         print("- Align step...")
         for out in utils.execute_command(
-            self.__align_step_cmd(config['align']), self.__verbose
+            self.align_step_cmd(config['align']), self.__verbose
         ):
             print(out)
         
         # Step 3
         print("- Projection step...")
         for out in utils.execute_command(
-            self.__input_output_step_cmd(
+            self.input_output_step_cmd(
                 'displproj', 'xml_displcomp.xml', 'xml_displproj.xml'
             ), self.__verbose
         ):
@@ -265,7 +305,7 @@ class TeraStitcher():
         # Step 4
         print("- Threshold step...")
         for out in utils.execute_command(
-            self.__input_output_step_cmd(
+            self.input_output_step_cmd(
                 'displthres', 'xml_displproj.xml', 'xml_displthres.xml', config['threshold']
             ), self.__verbose
         ):
@@ -274,7 +314,7 @@ class TeraStitcher():
         # Step 5
         print("- Placing tiles step...")
         for out in utils.execute_command(
-            self.__input_output_step_cmd(
+            self.input_output_step_cmd(
                 'placetiles', 'xml_displthres.xml', 'xml_merging.xml'
             ), self.__verbose
         ):
@@ -283,24 +323,26 @@ class TeraStitcher():
         # Step 6
         print("- Merging step...")
         for out in utils.execute_command(
-            self.__merge_step_cmd(config["merge"]), self.__verbose
+            self.merge_step_cmd(config["merge"]), self.__verbose
         ):
             print(out)
 
 def main():
-    input_data = "C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData/mouse.cerebellum.300511.sub3/tomo300511_subv3"
-    output_folder = "C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData/output_python_3d"
+    input_data = "C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData/mouse.cerebellum.300511.sub3/tomo300511_subv3"#'/home/data/Project1/Terastitcher/TestData/mouse.cerebellum.300511.sub3/tomo300511_subv3'
+    output_folder = "C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData/test_processes" #"/home/data/Project1/Terastitcher/TestData/linux_test"
     
     # TODO if we pass another path that exists instead of parastitcher's path, it builds the command
-    parastitcher_path = 'C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TeraStitcher-portable-1.11.10-win64/pyscripts/Parastitcher.py'
+    parastitcher_path_windows = 'C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TeraStitcher-portable-1.11.10-win64/pyscripts/Parastitcher.py'
+    
+    # parastitcher_path_linux = '/home/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/Parastitcher.py'
     
     terastitcher_tool = TeraStitcher(
         input_data=input_data,
         output_folder=output_folder,
         parallel=True,
         computation='cpu',
-        parastitcher_path=parastitcher_path,
-        verbose=False
+        parastitcher_path=parastitcher_path_windows,
+        verbose=True
     )
 
     config = {
@@ -315,9 +357,11 @@ def main():
         },
         "align" : {
             'cpu_params' : {
+                'estimate_processes': True,
+                'image_depth': 1000, # This parameter should be passed if estimate_processes is True
                 'number_processes': 6, # np for linux or mac
-                #'hostfile': 'C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData',
-                'additional_params' : [] # ['use-hwthread-cpus', 'allow-run-as-root']
+                'hostfile': '/home/data/Project1/Terastitcher/TestData/hostfile',
+                'additional_params' : ['use-hwthread-cpus', 'allow-run-as-root']
             },
             'subvoldim': 100,
         },
@@ -326,9 +370,12 @@ def main():
         },
         "merge" : {
             'cpu_params' : {
-                'number_processes': 6, # np for linux or mac
-                #'hostfile': 'C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData',
-                'additional_params' : [] # ['use-hwthread-cpus', 'allow-run-as-root']
+                # TODO Estimate processes for merge step
+                'estimate_processes': False,
+                'image_depth': 1000, # This parameter should be passed if estimate_processes is True
+                'number_processes': 5, # np for linux or mac
+                'hostfile': '/home/data/Project1/Terastitcher/TestData/hostfile',
+                'additional_params' : ['use-hwthread-cpus', 'allow-run-as-root']
             },
             'volout_plugin' : '"TiledXY|2Dseries"', # This parameter need to be provided with "" TiledXY|3Dseries
             'slicewidth' : 20000,
