@@ -4,10 +4,23 @@ import subprocess
 from typing import List, Optional
 from utils import utils
 import math
-import time
+import sys
+import errno
 
 def helper_build_param_value_command(params:dict) -> str:
     """
+    Helper function to build a command based on key:value pairs.
+    
+    Parameters
+    ------------------------
+    params: dict
+        Dictionary with key:value pairs used for building the command.
+    
+    Returns
+    ------------------------
+    str:
+        String with the parameters.
+    
     """
     parameters = ''
     for (param, value) in params.items():
@@ -18,6 +31,18 @@ def helper_build_param_value_command(params:dict) -> str:
 
 def helper_additional_params_command(params:list) -> str:
     """
+    Helper function to build a command based on values.
+    
+    Parameters
+    ------------------------
+    params: list
+        List with additional command values used.
+    
+    Returns
+    ------------------------
+    str:
+        String with the parameters.
+    
     """
     additional_params = ''
     for param in params:
@@ -68,14 +93,24 @@ class TeraStitcher():
         self.__platform = platform.system()
         self.__parastitcher_path = parastitcher_path
         self.__verbose = verbose
+        self.__python_terminal = None
         
-        if computation not in ['cpu']:#, 'gpu']: # GPU not yet implemented
+        
+        # Check python
+        self.__check_python()
+        
+        if computation not in ['cpu', 'gpu']:
             print("Setting computation to cpu")
             self.__computation = 'cpu'
+            
+        if computation == 'gpu':
+            # Setting environment variable that terastitcher sees for cuda implementation of MIP-NCC algorithm
+            #TODO check if cuda is availabe and the toolkit and drivers are correct
+            os.environ['USECUDA_X_NCC'] = '1'
         
         if not self.__check_installation():
             print(f"Please, check your terastitcher installation in the system {self.__platform}")
-            raise FileNotFoundError(os.errno.ENOENT, os.strerror(os.errno.ENOENT), "terastitcher")
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "terastitcher")
         
         # If parastitcher path is not found, we set computation to sequential gpu as default.
         self.__check_parastitcher()
@@ -104,10 +139,63 @@ class TeraStitcher():
             devnull = open(os.devnull)
             subprocess.Popen([tool_name], stdout=devnull, stderr=devnull).communicate()
         except OSError as e:
-            if e.errno == os.errno.ENOENT:
-                return False
+            return False
         return True
     
+    def __check_python(self) -> None:
+        """
+        Checks python3 installation in the system.
+        
+        Raises
+        ------------------------
+        FileNotFoundError:
+            If python was not found in the system.
+        
+        """
+        
+        def helper_status_cmd(cmd:list) -> int:
+            """
+            Helper function to check python terminal execution.
+            
+            Parameters
+            ------------------------
+            cmd: list
+                command splitted in list mode.
+                
+            Returns
+            ------------------------
+            int:
+                Process exit status.
+            """
+            exit_status = None
+            
+            try:
+                proc = subprocess.run(cmd, capture_output=True)
+                exit_status = proc.returncode
+            
+            except FileNotFoundError as err:
+                exit_status = -1
+            
+            return exit_status
+        
+        found = True
+        if sys.version_info.major == 3:
+            
+            if not helper_status_cmd(['python', '-V']):
+                self.__python_terminal = 'python'
+            
+            elif not helper_status_cmd(['python3', '-V']):
+                self.__python_terminal = 'python3'
+                
+            else:
+                found = False
+        else:
+            found = False
+        
+        if not found:
+            print(f"Please, check your python 3 installation in the system {self.__platform}")
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "python")
+        
     def __check_parastitcher(self) -> None:
         """
         Checks parastitcher installation using a provided path.
@@ -119,13 +207,12 @@ class TeraStitcher():
         
         """
         
-        if self.__parastitcher_path != None:
+        if self.__parastitcher_path != None and self.__computation == 'cpu':
             if not os.path.exists(self.__parastitcher_path):
                 raise FileNotFoundError("Parastitcher path not found.")
-            else:
-                # TODO Check if parastitcher works with GPU, if it does then this would not be necessary
-                self.__computation = 'cpu'
-        elif self.__computation != 'gpu':
+            
+        else:
+            # Parallel false, but we might still be using gpu
             self.__parallel = False
     
     def __build_parallel_command(self, params:dict, step_name:str) -> str:
@@ -187,7 +274,7 @@ class TeraStitcher():
             print("Using estimated number of processes: ", n_procs)
         
         cmd = f"{mpi_command} {n_procs} {hostfile} {additional_params}"
-        cmd += f"python {self.__parastitcher_path}"
+        cmd += f"{self.__python_terminal} {self.__parastitcher_path}"
         return cmd
     
     def import_step_cmd(self, params:dict) -> str:
@@ -289,19 +376,11 @@ class TeraStitcher():
         output_xml = f"--projout={self.__output_folder}/xmls/xml_displcomp.xml"
         parallel_command = ''
 
-        if self.__parallel:
-            
-            if self.__computation == 'cpu':
-                # mpirun for linux and mac OS
-                parallel_command = self.__build_parallel_command(params, 'align')
-                
-            else:
-                # gpu computation
-                # TODO set gpu flag
-                pass
-        
+        if self.__parallel and self.__computation == 'cpu':
+            parallel_command = self.__build_parallel_command(params, 'align')
+    
         else:
-            # Sequential execution
+            # Sequential execution or gpu execution if USECUDA_X_NCC flag is 1
             parallel_command = f"terastitcher"
         
         parameters = helper_build_param_value_command(params)
@@ -377,19 +456,11 @@ class TeraStitcher():
         output_path = f"--volout={self.__output_folder}"
         parallel_command = ''
         
-        if self.__parallel:
-            
-            if self.__computation == 'cpu':
-                # mpirun for linux and mac OS
-                parallel_command = self.__build_parallel_command(params, 'merge')
-                
-            else:
-                # gpu computation
-                # TODO set gpu flag
-                pass
-        
+        if self.__parallel and self.__computation == 'cpu':
+            parallel_command = self.__build_parallel_command(params, 'merge')
+    
         else:
-            # Sequential execution
+            # Sequential execution or gpu execution if USECUDA_X_NCC flag is 1
             parallel_command = f"terastitcher"
         
         parameters = helper_build_param_value_command(params)
@@ -462,20 +533,19 @@ class TeraStitcher():
             print(out)
 
 def main():
-    input_data = "C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData/mouse.cerebellum.300511.sub3/tomo300511_subv3"#'/home/data/Project1/Terastitcher/TestData/mouse.cerebellum.300511.sub3/tomo300511_subv3'
-    output_folder = "C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData/test_processes" #"/home/data/Project1/Terastitcher/TestData/linux_test"
+    input_data = '/home/data/Project1/Terastitcher/TestData/mouse.cerebellum.300511.sub3/tomo300511_subv3'#"C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData/mouse.cerebellum.300511.sub3/tomo300511_subv3"#
+    output_folder = "/home/data/Project1/Terastitcher/TestData/linux_test_3d"#"C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData/test_processes"
     
     # TODO if we pass another path that exists instead of parastitcher's path, it builds the command
-    parastitcher_path_windows = 'C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TeraStitcher-portable-1.11.10-win64/pyscripts/Parastitcher.py'
-    
-    # parastitcher_path_linux = '/home/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/Parastitcher.py'
+    #parastitcher_path_windows = 'C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TeraStitcher-portable-1.11.10-win64/pyscripts/Parastitcher.py'
+    parastitcher_path_linux = '/home/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/Parastitcher.py'
     
     terastitcher_tool = TeraStitcher(
         input_data=input_data,
         output_folder=output_folder,
         parallel=True,
         computation='cpu',
-        parastitcher_path=parastitcher_path_windows,
+        parastitcher_path=parastitcher_path_linux,
         verbose=True
     )
 
@@ -493,7 +563,7 @@ def main():
             'cpu_params' : {
                 'estimate_processes': True,
                 'image_depth': 1000, # This parameter should be passed if estimate_processes is True
-                'number_processes': 6, # np for linux or mac
+                'number_processes': 10, # np for linux or mac
                 'hostfile': '/home/data/Project1/Terastitcher/TestData/hostfile',
                 'additional_params' : ['use-hwthread-cpus', 'allow-run-as-root']
             },
@@ -507,7 +577,7 @@ def main():
                 # TODO Estimate processes for merge step
                 'estimate_processes': False,
                 'image_depth': 1000, # This parameter should be passed if estimate_processes is True
-                'number_processes': 5, # np for linux or mac
+                'number_processes': 6, # np for linux or mac
                 'hostfile': '/home/data/Project1/Terastitcher/TestData/hostfile',
                 'additional_params' : ['use-hwthread-cpus', 'allow-run-as-root']
             },
