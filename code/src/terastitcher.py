@@ -37,11 +37,27 @@ class TeraStitcher():
         ) -> None:
         
         """
-        Constructor
+        Class constructor
         
         Parameters
         ------------------------
-            - 
+        input_data: str
+            Path where the data is stored.
+        output_folder: str
+            Path where the stitched data will be stored.
+        parallel: Optional[bool]
+            True if you want to run terastitcher in parallel, False otherwise.
+        parastitcher_path: Optional[str] 
+            Path where parastitcher execution file is located.
+        computation: Optional[str]
+            String that indicates where will terastitcher run. Available options are: ['cpu', 'gpu']
+        verbose: Optional[bool]
+            True if you want to print outputs of all executed commands.
+        
+        Raises
+        ------------------------
+        FileNotFoundError:
+            If terastitcher or Parastitcher (if provided) were not found in the system.
         
         """
         
@@ -58,16 +74,29 @@ class TeraStitcher():
             self.__computation = 'cpu'
         
         if not self.__check_installation():
-            raise 
             print(f"Please, check your terastitcher installation in the system {self.__platform}")
+            raise FileNotFoundError(os.errno.ENOENT, os.strerror(os.errno.ENOENT), "terastitcher")
         
+        # If parastitcher path is not found, we set computation to sequential gpu as default.
         self.__check_parastitcher()
         
+        # We create the folders for the xmls and metadata in the output directory
         utils.create_folder(self.__output_folder + "/xmls")
         utils.create_folder(self.__output_folder + "/metadata")
     
     def __check_installation(self, tool_name:str="terastitcher") -> bool:
         """
+        Checks the installation of any tool in the system environment.
+        
+        Parameters
+        ------------------------
+        tool_name: str
+            command name to check the installation. Default: 'terastitcher'
+        
+        Returns
+        ------------------------
+        bool:
+            True if the command was correctly executed, False otherwise.
         
         """
         
@@ -81,6 +110,13 @@ class TeraStitcher():
     
     def __check_parastitcher(self) -> None:
         """
+        Checks parastitcher installation using a provided path.
+        
+        Raises
+        ------------------------
+        FileNotFoundError:
+            If Parastitcher was not found in the system.
+        
         """
         
         if self.__parastitcher_path != None:
@@ -89,11 +125,26 @@ class TeraStitcher():
             else:
                 # TODO Check if parastitcher works with GPU, if it does then this would not be necessary
                 self.__computation = 'cpu'
-        else:
+        elif self.__computation != 'gpu':
             self.__parallel = False
     
     def __build_parallel_command(self, params:dict, step_name:str) -> str:
         """
+        Builds a mpi command based on a provided configuration dictionary. 
+        
+        Parameters
+        ------------------------
+        params: dict
+            Configuration dictionary used to build the mpi command depending on the platform.
+        step_name: str
+            Terastitcher runs in parallel the align and merge steps. Then, we build the command
+            based on which step terastitcher is running.
+        
+        Returns
+        ------------------------
+        str:
+            Command that will be executed for terastitcher.
+        
         """
         
         if not self.__parallel:
@@ -101,20 +152,24 @@ class TeraStitcher():
         
         cpu_params = params['cpu_params']
         
+        # mpiexec for windows, mpirun for linux or macs OS
         mpi_command = 'mpiexec -n' if self.__platform == 'Windows' else 'mpirun -np'
         additional_params = ''
         hostfile = ''
         n_procs = cpu_params['number_processes']
         
+        # Additional params provided in the configuration
         if len(cpu_params['additional_params']) and self.__platform != 'Windows':
             additional_params = helper_additional_params_command(cpu_params['additional_params'])
         
+        # Windows does not require a hostfile to work
         if self.__platform != 'Windows':
             try:
                 hostfile = f"--hostfile {cpu_params['hostfile']}"
             except KeyError:
                 print('Hostfile was not found. This could lead to execution problems.')
         
+        # If we want to estimate the number of processes used in any of the steps.
         if cpu_params['estimate_processes']:
             if step_name == 'align':
                 n_procs = self.__get_aprox_number_processes_align_step(
@@ -137,8 +192,22 @@ class TeraStitcher():
     
     def import_step_cmd(self, params:dict) -> str:
         """
+        Builds the terastitcher's import command based on a provided configuration dictionary.
+        It outputs a json file in the xmls folder of the output directory with all the parameters 
+        used in this step. 
+        
+        Parameters
+        ------------------------
+        params: dict
+            Configuration dictionary used to build the terastitcher's import command.
+        
+        Returns
+        ------------------------
+        str:
+            Command that will be executed for terastitcher.
         
         """
+        
         # TODO Check if params comes with all necessary keys so it does not raise KeyNotFound error
         volume_input = f"--volin={self.__input_data}"
         output_folder = f"--projout={self.__output_folder}/xmls/xml_import.xml"
@@ -157,26 +226,31 @@ class TeraStitcher():
     
     def __get_aprox_number_processes_align_step(self, config_params:dict) -> int:
         """
-            Get the estimate number of processes to partition the dataset and calculate the align step.
-            Using MPI, check if the number of slots are enough for running the number of processes.
-            You can automatically set --use-hwthread-cpus to automatically estimate the number 
-            of hardware threads in each core and increase the allowed number of processes. There is another
-            option with -oversubscribe.
-            
-            Parameters:
-            -----------------
-            - config_params (dict): Parameters that will be used in the align step. 
-                i.e. {'image_depth': 4200, 'subvoldim': 100, 'number_processes': 10}
-            
-            Returns:
-            -----------------
-            - int: Number of processes to be used in the align step. -1 indicates that there are not optimal processes for the provided configuration.
+        Get the estimate number of processes to partition the dataset and calculate the align step.
+        Using MPI, check if the number of slots are enough for running the number of processes.
+        You can automatically set --use-hwthread-cpus to automatically estimate the number of 
+        hardware threads in each core and increase the allowed number of processes. There is 
+        another option with -oversubscribe.
+        
+        Parameters:
+        -----------------
+        config_params: dict
+            Parameters that will be used in the align step. 
+            i.e. {'image_depth': 4200, 'subvoldim': 100, 'number_processes': 10}
+        
+        Returns:
+        -----------------
+        int: 
+            Number of processes to be used in the align step. If it is not possible to perform
+            the estimation, we return 2 processes as default (the master and slave processes).
         
         """
+        
         if config_params['image_depth'] < config_params['number_processes'] or config_params['subvoldim'] > config_params['image_depth']:
             print("Please check the parameters")
-            return -1
+            return 2
         
+        # Partitioning depth for the tiles
         partitioning_depth = math.ceil( config_params['image_depth'] / config_params['subvoldim'] )
         left = 2
         right = config_params['number_processes']
@@ -191,13 +265,26 @@ class TeraStitcher():
             else:
                 right = mid_process + 1
                 
-        return -1
+        return 2
     
     def align_step_cmd(self, params:dict):
         """
+        Builds the terastitcher's align command based on a provided configuration dictionary. 
+        It outputs a json file in the xmls folder of the output directory with all the parameters 
+        used in this step.
+        
+        Parameters
+        ------------------------
+        params: dict
+            Configuration dictionary used to build the terastitcher's align command.
+        
+        Returns
+        ------------------------
+        str:
+            Command that will be executed for terastitcher.
+        
         """
         
-        # TODO Check the best number of processes using formula
         input_xml = f"--projin={self.__output_folder}/xmls/xml_import.xml"
         output_xml = f"--projout={self.__output_folder}/xmls/xml_displcomp.xml"
         parallel_command = ''
@@ -231,6 +318,31 @@ class TeraStitcher():
             params:Optional[dict]=None,
         ) -> str:
         
+        """
+        Builds the terastitcher's input-output commands based on a provided configuration dictionary.
+        These commands are: displproj for projection, displthres for threshold and placetiles for 
+        placing tiles. Additionally, it outputs a json file in the xmls folder of the output directory 
+        with all the parameters used in this step.
+        
+        Parameters
+        ------------------------
+        step_name: str
+            Name of the step that will be executed. The names should be: 'displproj' for projection, 
+            'displthres' for threshold and 'placetiles' for placing tiles step.
+        input_xml: str
+            The xml filename outputed from the previous command.
+        output_xml: str
+            The xml filename that will be used as output for this step.
+        params: dict
+            Configuration dictionary used to build the terastitcher's command.
+            
+        Returns
+        ------------------------
+        str:
+            Command that will be executed for terastitcher.
+        
+        """
+        
         input_xml = f"--projin={self.__output_folder}/xmls/{input_xml}"
         output_xml = f"--projout={self.__output_folder}/xmls/{output_xml}"
         parameters = ''
@@ -244,6 +356,20 @@ class TeraStitcher():
     
     def merge_step_cmd(self, params:dict):
         """
+        Builds the terastitcher's merge command based on a provided configuration dictionary. 
+        It outputs a json file in the xmls folder of the output directory with all the parameters 
+        used in this step.
+        
+        Parameters
+        ------------------------
+        params: dict
+            Configuration dictionary used to build the terastitcher's merge command.
+        
+        Returns
+        ------------------------
+        str:
+            Command that will be executed for terastitcher.
+        
         """
         
         # TODO Check the best number of processes using formula
@@ -274,8 +400,16 @@ class TeraStitcher():
         return cmd
     
     def execute_pipeline(self, config:dict) -> None:
-        
         """
+        Executes the terastitcher's stitching pipeline that includes the following steps:
+        Import, Align, Project, Threshold, Place and Merge. Please refer to the following
+        link for more information: https://github.com/abria/TeraStitcher/wiki/Stitching-pipeline
+        
+        Parameters
+        ------------------------
+        params: dict
+            Configuration dictionary for the stitching pipeline. It should include the configuration
+            for each of the steps in the pipeline. i.e. {'import': {...}, 'align': {...}, ...}
         
         """
         

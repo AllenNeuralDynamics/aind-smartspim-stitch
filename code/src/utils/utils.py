@@ -1,23 +1,22 @@
 import os
 import subprocess
 import json
+from typing import Optional
 
 def create_folder(dest_dir:str) -> None:
-
     """
     Create new folders.
     
     Parameters
     ------------------------
-        - dest_dir (str): Path where the folder will be created if it does not exist.
+    dest_dir: str 
+        Path where the folder will be created if it does not exist.
     
     Raises
     ------------------------
-        - OSError if the folder exists.
+    OSError: 
+        if the folder exists.
     
-    Returns:
-    ------------------------
-        - None
     """
     
     if not (os.path.exists(dest_dir)):
@@ -34,13 +33,16 @@ def execute_command(command:str, print_command:bool=False) -> None:
     
     Parameters
     ------------------------
-    
-        - command (str): Command that we want to execute.
-        - print_command (bool): Bool that dictates if we print the command in the console.
-    
-    Returns
+    command: str
+        Command that we want to execute.
+    print_command: bool
+        Bool that dictates if we print the command in the console.
+        
+    Raises
     ------------------------
-        - None
+    CalledProcessError: 
+        if the command could not be executed (Returned non-zero status).
+        
     """
     
     if print_command:
@@ -54,10 +56,25 @@ def execute_command(command:str, print_command:bool=False) -> None:
     if return_code:
         raise subprocess.CalledProcessError(return_code, command)
         
-def save_dict_as_json(filename:str, dictionary:dict, verbose:False) -> None:
+def save_dict_as_json(
+        filename:str, 
+        dictionary:dict, 
+        verbose:Optional[bool]=False
+    ) -> None:
+    """
+    Saves a dictionary as a json file.
+    
+    Parameters
+    ------------------------
+    filename: str
+        Name of the json file.
+    dictionary: dict
+        Dictionary that will be saved as json.
+    verbose: Optional[bool]
+        True if you want to print the path where the file was saved.
+        
     """
     
-    """
     if dictionary == None:
         dictionary = {}
     
