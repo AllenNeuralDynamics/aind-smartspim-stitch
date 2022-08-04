@@ -2,20 +2,20 @@
 # chmod +x installing_terastitcher.sh
 
 # Installing gcc compiler for openmpi
-apt-get install -y build-essential
+# apt-get install -y build-essential
 
 # Installing make
-apt-get install -y make
+# apt-get install -y make
 
 echo "- Starting terastitcher installation with MPI"
 
-chmod +x ./terastitcher_openmpi_setup.sh
+chmod +x /home/terastitcher_openmpi_setup.sh
 
-./terastitcher_openmpi_setup.sh
+./home/terastitcher_openmpi_setup.sh
 
+python_cmd=1
 python -V
 status=$?
-python_cmd=1
 
 if ! (exit $status)
 then

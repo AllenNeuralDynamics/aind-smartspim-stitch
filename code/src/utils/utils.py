@@ -78,7 +78,7 @@ def execute_command(command:str, print_command:bool=False) -> None:
     ------------------------
     CalledProcessError: 
         if the command could not be executed (Returned non-zero status).
-        
+    
     """
     
     if print_command:
@@ -91,7 +91,28 @@ def execute_command(command:str, print_command:bool=False) -> None:
     return_code = popen.wait()
     if return_code:
         raise subprocess.CalledProcessError(return_code, command)
+    
+def check_path_instance(obj: object) -> bool:
+    """
+    Checks if an objects belongs to pathlib.Path subclasses.
+    
+    Parameters
+    ------------------------
+    obj: object
+        Object that wants to be validated.
+    
+    Returns
+    ------------------------
+    bool:
+        True if the object is an instance of Path subclass, False otherwise.
+    """
+    
+    for childclass in Path.__subclasses__():
+        if isinstance(obj, childclass):
+            return True
         
+    return False
+
 def save_dict_as_json(
         filename:str, 
         dictionary:dict, 
@@ -113,6 +134,13 @@ def save_dict_as_json(
     
     if dictionary == None:
         dictionary = {}
+    
+    else:
+        for key, value in dictionary.items():
+            # Converting path to str to dump dictionary into json
+            if check_path_instance(value):
+                # TODO fix the \\ encode problem in dump
+                dictionary[key] = str(value)
     
     with open(filename, "w") as json_file:
         json.dump(dictionary, json_file, indent=4)
@@ -142,7 +170,7 @@ def helper_build_param_value_command(params:dict, equal_con:Optional[bool]=True)
         
     parameters = ''
     for (param, value) in params.items():
-        if type(value) in [str, float, int]:
+        if type(value) in [str, float, int] or check_path_instance(value):
             parameters += f"--{param}{equal}{str(value)} "
             
     return parameters

@@ -6,16 +6,20 @@ from utils import utils
 import math
 import sys
 import errno
+from pathlib import Path
+
+PathLike = Union[str, Path]
 
 class TeraStitcher():
     
     def __init__(self, 
-            input_data:str, 
-            output_folder:str, 
+            input_data:PathLike, 
+            output_folder:PathLike, 
             parallel:bool=True,
-            parastitcher_path:Optional[str]=None,
+            parastitcher_path:Optional[PathLike]=None,
             computation:Optional[str]='cpu',
-            verbose:Optional[bool]=False
+            preprocessing:Optional[dict]=None,
+            verbose:Optional[bool]=False,
         ) -> None:
         
         """
@@ -23,16 +27,18 @@ class TeraStitcher():
         
         Parameters
         ------------------------
-        input_data: str
+        input_data: PathLike
             Path where the data is stored.
-        output_folder: str
+        output_folder: PathLike
             Path where the stitched data will be stored.
         parallel: Optional[bool]
             True if you want to run terastitcher in parallel, False otherwise.
-        parastitcher_path: Optional[str] 
+        parastitcher_path: Optional[PathLike] 
             Path where parastitcher execution file is located.
         computation: Optional[str]
             String that indicates where will terastitcher run. Available options are: ['cpu', 'gpu']
+        preprocessing: Optional[dict]:
+            All the preprocessing steps prior to terastitcher's pipeline. Default None.
         verbose: Optional[bool]
             True if you want to print outputs of all executed commands.
         
@@ -43,16 +49,17 @@ class TeraStitcher():
         
         """
         
-        self.__input_data = input_data
-        self.__output_folder = output_folder
+        self.__input_data = Path(input_data)
+        self.__output_folder = Path(output_folder)
         self.__parallel = parallel
         self.__computation = computation
         self.__platform = platform.system()
-        self.__parastitcher_path = parastitcher_path
+        self.__parastitcher_path = Path(parastitcher_path)
+        self.preprocessing = preprocessing
         self.__verbose = verbose
         self.__python_terminal = None
-        self.xmls_path = f"{self.__output_folder}/xmls"
-        self.metadata_path = f"{self.__output_folder}/metadata"
+        self.xmls_path = self.__output_folder.joinpath("xmls")
+        self.metadata_path = self.__output_folder.joinpath("metadata")
         
         # Check python
         self.__check_python()
@@ -73,9 +80,45 @@ class TeraStitcher():
         # If parastitcher path is not found, we set computation to sequential gpu as default.
         self.__check_parastitcher()
         
+        if self.preprocessing:
+            self.__change_io_paths()
+        
         # We create the folders for the xmls and metadata in the output directory
         utils.create_folder(self.xmls_path, self.__verbose)
         utils.create_folder(self.metadata_path, self.__verbose)
+    
+    def __change_io_paths(self) -> None:
+        """
+        Changes the file order to add an extra folder for pystriped and stitched data.
+        It is necessary to take the striped data for terastitcher to include it in the pipeline.
+        Thus, it should be saved.
+        
+        Parameters
+        ------------------------
+        None
+        
+        Returns
+        ------------------------
+        None
+        
+        """
+        
+        change_file_order = False
+        
+        for tool_name, params in self.preprocessing.items():
+            if tool_name == 'pystripe':
+                change_file_order = True
+                self.preprocessing['pystripe']['input'] = Path(self.preprocessing['pystripe']['input'])
+                self.preprocessing['pystripe']['output'] = Path(self.preprocessing['pystripe']['output']).joinpath("destriped")
+        
+        if change_file_order:
+            # Organizing repo to add striping folder
+            self.__input_data = self.__output_folder.joinpath("destriped")
+            self.__output_folder = self.__output_folder.joinpath("stitched")
+            
+            # Organizing output paths
+            self.xmls_path = self.__output_folder.joinpath("xmls")
+            self.metadata_path = self.__output_folder.joinpath("metadata")
     
     def __check_installation(self, tool_name:str="terastitcher") -> bool:
         """
@@ -104,10 +147,18 @@ class TeraStitcher():
         """
         Checks python3 installation in the system.
         
+        Parameters
+        ------------------------
+        None
+        
         Raises
         ------------------------
         FileNotFoundError:
             If python was not found in the system.
+        
+        Returns
+        ------------------------
+        None
         
         """
         
@@ -255,7 +306,9 @@ class TeraStitcher():
         
         # TODO Check if params comes with all necessary keys so it does not raise KeyNotFound error
         volume_input = f"--volin={self.__input_data}"
-        output_folder = f"--projout={self.xmls_path}/xml_import.xml"
+        
+        output_path = self.xmls_path.joinpath("xml_import.xml")
+        output_folder = f"--projout={output_path}"
         
         parameters = utils.helper_build_param_value_command(params)
         
@@ -265,7 +318,8 @@ class TeraStitcher():
         
         cmd = f"terastitcher --import {volume_input} {output_folder} {parameters} {additional_params}"
         
-        utils.save_dict_as_json(f"{self.metadata_path}/import_params.json", params, self.__verbose)
+        output_json = self.metadata_path.joinpath("import_params.json")
+        utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
         
         return cmd
     
@@ -329,9 +383,11 @@ class TeraStitcher():
             Command that will be executed for terastitcher.
         
         """
+        input_path = self.xmls_path.joinpath("xml_import.xml")
+        input_xml = f"--projin={input_path}"
         
-        input_xml = f"--projin={self.xmls_path}/xml_import.xml"
-        output_xml = f"--projout={self.xmls_path}/xml_displcomp.xml"
+        output_path = self.xmls_path.joinpath("xml_displcomp.xml")
+        output_xml = f"--projout={output_path}"
         parallel_command = ''
 
         if self.__parallel and self.__computation == 'cpu':
@@ -344,7 +400,9 @@ class TeraStitcher():
         parameters = utils.helper_build_param_value_command(params)
         
         cmd = f"{parallel_command} --displcompute {input_xml} {output_xml} {parameters} > {self.xmls_path}/step2par.txt"
-        utils.save_dict_as_json(f"{self.metadata_path}/align_params.json", params, self.__verbose)
+        
+        output_json = self.metadata_path.joinpath("align_params.json")
+        utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
         
         return cmd
     
@@ -380,15 +438,22 @@ class TeraStitcher():
         
         """
         
-        input_xml = f"--projin={self.xmls_path}/{input_xml}"
-        output_xml = f"--projout={self.xmls_path}/{output_xml}"
+        input_path = self.xmls_path.joinpath(input_xml)
+        input_xml = f"--projin={input_path}"
+        
+        output_path = self.xmls_path.joinpath(output_xml)
+        output_xml = f"--projout={output_path}"
+        
         parameters = ''
         
         if params:
             parameters = utils.helper_build_param_value_command(params)
         
         cmd = f"terastitcher --{step_name} {input_xml} {output_xml} {parameters}"
-        utils.save_dict_as_json(f"{self.metadata_path}/{step_name}_params.json", params, self.__verbose)
+        
+        output_json = self.metadata_path.joinpath(f"{step_name}_params.json")
+        utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
+        
         return cmd
     
     def merge_step_cmd(self, params:dict):
@@ -409,8 +474,9 @@ class TeraStitcher():
         
         """
         
-        # TODO Check the best number of processes using formula
-        input_xml = f"--projin={self.xmls_path}/xml_merging.xml"
+        input_path = self.xmls_path.joinpath("xml_merging.xml")
+        input_xml = f"--projin={input_path}"
+        
         output_path = f"--volout={self.__output_folder}"
         parallel_command = ''
         
@@ -424,18 +490,32 @@ class TeraStitcher():
         parameters = utils.helper_build_param_value_command(params)
         
         cmd = f"{parallel_command} --merge {input_xml} {output_path} {parameters} > {self.xmls_path}/step6par.txt"
-        utils.save_dict_as_json(f"{self.metadata_path}/merge_params.json", params, self.__verbose)
+        
+        output_json = self.metadata_path.joinpath("merge_params.json")
+        utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
         
         return cmd
     
-    def __pystripe_cmd(self, params:dict) -> str:
+    def __preprocessing_tool_cmd(
+            self, 
+            tool_name:str, 
+            params:dict, 
+            equal_con:bool
+        ) -> str:
+        
         """
-        Builds the pystripe execution command.
+        Builds the execution command for the given tool.
         
         Parameters
         ------------------------
         params: dict
             Configuration dictionary used to build the command.
+        
+        tool_name: str
+            Tool name to be used in the terminal for execution.
+            
+        equal_con: Optional[bool]
+            Indicates if the parameter is followed by '='.
         
         Returns
         ------------------------
@@ -443,26 +523,49 @@ class TeraStitcher():
             Command that will be executed for pystripe.
         
         """
-        parameters = utils.helper_build_param_value_command(params, equal_con=False)
-        utils.save_dict_as_json(f"{self.metadata_path}/pystripe_params.json", params, self.__verbose)
-        cmd = f"pystripe {parameters}"
+        parameters = utils.helper_build_param_value_command(params, equal_con=equal_con)
+        
+        output_json = self.metadata_path.joinpath(f"{tool_name}_params.json")
+        utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
+        
+        cmd = f"{tool_name} {parameters}"
         
         return cmd
     
-    def __change_io_paths(self) -> None:
-        # Organizing repo to add striping folder
-        utils.delete_folder(self.__output_folder, self.__verbose)
+    def execute_pystripe(self, params:dict) -> None:
+                
+        # Pystripe step
+        print("\n- striping step...")
+        for out in utils.execute_command(
+            self.__pystripe_cmd(config['pystripe']), self.__verbose
+        ):
+            print(out)
+    
+    def __execute_preprocessing_steps(self) -> None:
+        """
+        Executes any preprocessing steps that are required for the pipeline.
+        It is necessary to have the begining of the terminal command as key and
+        the parameters as a dictionary. i.e. "pystripe": {"input" : input_data,
+        "output" : output_folder,"sigma1" : 256,"sigma2" : 256,"workers" : 8}
+        Command line would be: pystripe --input input_data --output output_folder 
+        --sigma1 256 --sigma2 256 --workers 8
         
-        self.__input_data = f"{self.__output_folder}/striped"
-        self.__output_folder = f"{self.__output_folder}/stitched"
+        Parameters
+        ------------------------
+        None
         
-        # Organizing output paths
-        self.xmls_path = f"{self.__output_folder}/xmls"
-        self.metadata_path = f"{self.__output_folder}/metadata"
+        Returns
+        ------------------------
+        None
         
-        utils.create_folder(self.xmls_path, self.__verbose)
-        utils.create_folder(self.metadata_path, self.__verbose)
+        """
         
+        for tool_name, params in self.preprocessing.items():
+            cmd = self.__preprocessing_tool_cmd(tool_name, params, False)
+            
+            for out in utils.execute_command(cmd, self.__verbose):
+                print(out)
+    
     def execute_pipeline(self, config:dict) -> None:
         """
         Executes the terastitcher's stitching pipeline that includes the following steps:
@@ -477,16 +580,9 @@ class TeraStitcher():
         
         """
         
-        if "pystripe" in config:
-            self.__change_io_paths()
-            config['pystripe']['output'] = f"{config['pystripe']['output']}/striped"
-            
-            # Step 0 - pystripe
-            print("\n- striping step...")
-            for out in utils.execute_command(
-                self.__pystripe_cmd(config['pystripe']), self.__verbose
-            ):
-                print(out)
+        # Preprocessing steps
+        if self.preprocessing:
+            self.__execute_preprocessing_steps()
         
         # Step 1
         print("\n- Import step...")
@@ -537,31 +633,34 @@ class TeraStitcher():
             print(out)
 
 def main():
-    input_data = "C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData/mouse.cerebellum.300511.sub3/tomo300511_subv3"#'/home/data/Project1/Terastitcher/TestData/mouse.cerebellum.300511.sub3/tomo300511_subv3'
-    output_folder = "C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData/test_processes_2"#"/home/data/Project1/Terastitcher/TestData/linux_test_3d"#
+    input_data = '/home/data/Project1/Terastitcher/TestData/mouse.cerebellum.300511.sub3/tomo300511_subv3'#"C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData/mouse.cerebellum.300511.sub3/tomo300511_subv3"
+    output_folder = "/home/data/Project1/Terastitcher/TestData/linux_test_3d"#"C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData/test_processes_pystripe"#
     
     # TODO if we pass another path that exists instead of parastitcher's path, it builds the command
-    parastitcher_path_windows = 'C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TeraStitcher-portable-1.11.10-win64/pyscripts/Parastitcher.py'
-    #parastitcher_path_linux = '/home/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/Parastitcher.py'
+    #parastitcher_path_windows = 'C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TeraStitcher-portable-1.11.10-win64/pyscripts/Parastitcher.py'
+    parastitcher_path_linux = '/home/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/Parastitcher.py'
     
-    terastitcher_tool = TeraStitcher(
-        input_data=input_data,
-        output_folder=output_folder,
-        parallel=True,
-        computation='cpu',
-        parastitcher_path=parastitcher_path_windows,
-        verbose=True
-    )
-
-    config = {
-        # Include pystripe dict only when we want to do striping
+    preprocessing_steps = {
         "pystripe": {
             "input" : input_data,
             "output" : output_folder,
             "sigma1" : 256,
             "sigma2" : 256,
             "workers" : 8
-        },
+        }
+    }
+    
+    terastitcher_tool = TeraStitcher(
+        input_data=input_data,
+        output_folder=output_folder,
+        parallel=False,
+        computation='cpu',
+        parastitcher_path=parastitcher_path_linux,
+        verbose=True,
+        #preprocessing=preprocessing_steps
+    )
+
+    config = {
         "import" : {
             'ref1':'1',#'H',
             'ref2':'-2',#'V',
@@ -593,7 +692,7 @@ def main():
                 'hostfile': '/home/data/Project1/Terastitcher/TestData/hostfile',
                 'additional_params' : ['use-hwthread-cpus', 'allow-run-as-root']
             },
-            'volout_plugin' : '"TiledXY|2Dseries"', # This parameter need to be provided with "" TiledXY|3Dseries
+            'volout_plugin' : '"TiledXY|3Dseries"', # This parameter need to be provided with "" TiledXY|3Dseries
             'slicewidth' : 20000,
             'sliceheight' : 20000,
         }
