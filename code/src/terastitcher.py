@@ -72,12 +72,15 @@ class TeraStitcher():
             # Setting environment variable that terastitcher sees for cuda implementation of MIP-NCC algorithm
             #TODO check if cuda is availabe and the toolkit and drivers are correct
             os.environ['USECUDA_X_NCC'] = '1'
-        
+            
+        else:
+            os.environ['USECUDA_X_NCC'] = '0'
+       
         if not self.__check_installation():
             print(f"Please, check your terastitcher installation in the system {self.__platform}")
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "terastitcher")
         
-        # If parastitcher path is not found, we set computation to sequential gpu as default.
+        # If parastitcher path is not found, we set computation to sequential cpu as default.
         self.__check_parastitcher()
         
         if self.preprocessing:
@@ -179,7 +182,7 @@ class TeraStitcher():
             exit_status = None
             
             try:
-                proc = subprocess.run(cmd, capture_output=True)
+                proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 exit_status = proc.returncode
             
             except FileNotFoundError as err:
@@ -216,7 +219,7 @@ class TeraStitcher():
         
         """
         
-        if self.__parastitcher_path != None and self.__computation == 'cpu':
+        if self.__parastitcher_path != None:
             if not os.path.exists(self.__parastitcher_path):
                 raise FileNotFoundError("Parastitcher path not found.")
             
@@ -390,7 +393,7 @@ class TeraStitcher():
         output_xml = f"--projout={output_path}"
         parallel_command = ''
 
-        if self.__parallel and self.__computation == 'cpu':
+        if self.__parallel:
             parallel_command = self.__build_parallel_command(params, 'align')
     
         else:
@@ -480,7 +483,7 @@ class TeraStitcher():
         output_path = f"--volout={self.__output_folder}"
         parallel_command = ''
         
-        if self.__parallel and self.__computation == 'cpu':
+        if self.__parallel:
             parallel_command = self.__build_parallel_command(params, 'merge')
     
         else:
