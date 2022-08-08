@@ -65,5 +65,5 @@ mkdir terastitcher_installers
 mv zulu*.tar.gz openmpi*tar.gz apache*.tar.gz terastitcher_installers/
 
 # Autopep parastitcher python code
-pip install --upgrade autopep8 -y
+pip install --no-input --upgrade autopep8
 autopep8 -i $PWD/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/*.py

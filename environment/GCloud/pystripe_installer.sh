@@ -3,4 +3,6 @@
 # Pystripe installer
 conda create -n pystripe python=3.6 -y
 conda activate pystripe
-pip install https://github.com/chunglabmit/pystripe/archive/master.zip mpi4py -y
+
+# pip version >= 20.2
+pip install --no-input https://github.com/chunglabmit/pystripe/archive/master.zip mpi4py
