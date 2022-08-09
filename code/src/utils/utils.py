@@ -148,6 +148,33 @@ def save_dict_as_json(
     if verbose:
         print(f"- Json file saved: {filename}")
         
+def read_json_as_dict(
+        filepath:str
+    ) -> dict:
+    
+    """
+    Reads a json as dictionary.
+    
+    Parameters
+    ------------------------
+    filepath: PathLike
+        Path where the json is located.
+        
+    Returns
+    ------------------------
+    dict:
+        Dictionary with the data the json has.
+        
+    """
+    
+    dictionary = None
+    
+    if os.path.exists(filepath):
+        with open(filepath) as json_file:
+            dictionary = json.load(json_file)
+        
+    return dictionary
+
 def helper_build_param_value_command(params:dict, equal_con:Optional[bool]=True) -> str:
     """
     Helper function to build a command based on key:value pairs.
@@ -195,3 +222,45 @@ def helper_additional_params_command(params:List[str]) -> str:
         additional_params += f"--{param} "
         
     return additional_params
+
+def gscfuse_mount(bucket_name:PathLike, params:dict) -> None:
+    """
+    Mounts a bucket in a GCP Virtual Machine using GCSFUSE.
+    
+    Parameters
+    ------------------------
+    bucket_name: str
+        Name of the bucket.
+        
+    params: dict
+        Dictionary with the GCSFUSE params.
+        
+    """
+    
+    built_params = helper_build_param_value_command(params, equal_con=False)
+    additional_params = helper_additional_params_command(params['additional_params'])
+    
+    gfuse_cmd = f"gcsfuse {additional_params} {built_params} {bucket_name} {bucket_name}"
+
+    for out in utils.execute_command(
+        gfuse_cmd, True
+    ):
+        print(out)
+            
+def gscfuse_unmount(mount_dir:PathLike) -> None:
+    """
+    Unmounts a bucket in a VM's local folder.
+    
+    Parameters
+    ------------------------
+    bucket_name: str
+        Name of the bucket.
+    
+    """
+    
+    fuser_cmd = f"fusermount -u {mount_dir}"
+    
+    for out in utils.execute_command(
+        fuser_cmd, True
+    ):
+        print(out)

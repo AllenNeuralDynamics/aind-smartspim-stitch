@@ -11,6 +11,3 @@ cd openmpi-4.1.4
 make all
 
 sudo make install
-
-# Creating hostfile
-echo "localhost slots=70" > $PWD/hostfile

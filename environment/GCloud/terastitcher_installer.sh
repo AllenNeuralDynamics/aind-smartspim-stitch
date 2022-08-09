@@ -29,20 +29,25 @@ sudo chmod +x ./terastitcher_openmpi_setup.sh
 
 ./terastitcher_openmpi_setup.sh
 
+# Creating hostfile
+echo "localhost slots=70" > $PWD/hostfile
+
 python -V
 status=$?
 python_cmd=1
 
+# Installing pystripe and mpi4py
 if ! (exit $status)
 then
     python_version=2
     sudo apt install -y python3-pip
-    python3 -m pip install mpi4py
+    python3 -m pip install --no-input https://github.com/chunglabmit/pystripe/archive/master.zip mpi4py
 else
     sudo apt install -y python-pip
-    python -m pip install mpi4py
+    python -m pip install --no-input https://github.com/chunglabmit/pystripe/archive/master.zip mpi4py
 fi
 
+# If an error exists, it is mostly because mpi4py needs a linux library
 status=$?
 
 if ! (exit $status)

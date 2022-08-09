@@ -1,0 +1,46 @@
+{
+    "parastitcher_path":"C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TeraStitcher-portable-1.11.10-win64/pyscripts/Parastitcher.py",
+    "import" : {
+        "ref1": "1",
+        "ref2": "-2",
+        "ref3": "3",
+        "vxl1": "0.8",
+        "vxl2": "0.8",
+        "vxl3": "1",
+        "additional_params": [
+            "sparse_data",
+            "libtiff_uncompress"
+        ]
+    },
+    "align" : {
+        "cpu_params": {
+            "estimate_processes": true,
+            "image_depth": 1000,
+            "number_processes": 10,
+            "hostfile": "/home/data/Project1/Terastitcher/TestData/hostfile",
+            "additional_params": [
+                "use-hwthread-cpus",
+                "allow-run-as-root"
+            ]
+        },
+        "subvoldim": 100
+    },
+    "threshold" : {
+        "threshold" : 0.7
+    },
+    "merge" : {
+        "cpu_params": {
+            "estimate_processes": false,
+            "image_depth": 1000,
+            "number_processes": 6,
+            "hostfile": "/home/data/Project1/Terastitcher/TestData/hostfile",
+            "additional_params": [
+                "use-hwthread-cpus",
+                "allow-run-as-root"
+            ]
+        },
+        "volout_plugin": "\"TiledXY|3Dseries\"",
+        "slicewidth": 20000,
+        "sliceheight": 20000
+    }
+}

@@ -7,6 +7,8 @@ import math
 import sys
 import errno
 from pathlib import Path
+from path_parser import PathParser
+import argparse
 
 PathLike = Union[str, Path]
 
@@ -635,73 +637,106 @@ class TeraStitcher():
         ):
             print(out)
 
-def main():
-    input_data = '/home/data/Project1/Terastitcher/TestData/mouse.cerebellum.300511.sub3/tomo300511_subv3'#"C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData/mouse.cerebellum.300511.sub3/tomo300511_subv3"
-    output_folder = "/home/data/Project1/Terastitcher/TestData/linux_test_3d"#"C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData/test_processes_pystripe"#
+def execute_terastitcher(
+    input_data:PathLike, 
+    output_folder:PathLike, 
+    config_pre:dict, 
+    config_teras:dict
+    ) -> None:
+    """
+    Executes terastitcher with in-command parameters. It could be on-premise or in the cloud.
+    If the process in being carried-out on a GCP VM (i.e. VertexAI jupyter notebook), the
+    corresponding buckets will be loaded.
     
-    # TODO if we pass another path that exists instead of parastitcher's path, it builds the command
-    #parastitcher_path_windows = 'C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TeraStitcher-portable-1.11.10-win64/pyscripts/Parastitcher.py'
-    parastitcher_path_linux = '/home/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/Parastitcher.py'
+    Parameters
+    ------------------------
+    input_data: PathLike
+        Path where the data is located.
+        
+    output_folder: PathLike
+        Path where the data will be saved.
+        
+    config_pre: dict
+        Dictionary with the preprocessing steps and their configuration to be executed.
+        
+    config_teras: dict
+        Dictionary with terastitcher's configuration.
     
+    """
+    
+    parser_result = PathParser.parse_path_gcs(
+        input_data,
+        output_folder
+    )
+    
+    if len(parser_result):
+        # changing paths to mounted dirs
+        input_data = input_data.replace('gs://', '/home/jupyter/')
+        output_folder = output_folder.replace('gs://', '/home/jupyter/')
+    
+    terastitcher_tool = TeraStitcher(
+        input_data=input_data,
+        output_folder=output_folder,
+        parallel=True,
+        computation='cpu',
+        parastitcher_path=config_teras["parastitcher_path"],
+        verbose=True,
+        preprocessing=config_pre
+    )
+    
+    terastitcher_tool.execute_pipeline(config_teras)
+    
+    if len(parser_result):
+        # unmounting dirs
+        if parser_result[0] == parser_result[1]:
+            utils.gscfuse_unmount(parser_result[0])
+        else:
+            utils.gscfuse_unmount(parser_result[0])
+            utils.gscfuse_unmount(parser_result[1])
+
+def main() -> dict:
+    
+    # input_data = '/home/data/Project1/Terastitcher/TestData/mouse.cerebellum.300511.sub3/tomo300511_subv3'#"C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData/mouse.cerebellum.300511.sub3/tomo300511_subv3"
+    # output_folder = "/home/data/Project1/Terastitcher/TestData/linux_test_3d"#"C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData/test_processes_pystripe"#    
+    
+    # # TODO if we pass another path that exists instead of parastitcher's path, it builds the command
+    # #parastitcher_path_windows = 'C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TeraStitcher-portable-1.11.10-win64/pyscripts/Parastitcher.py'
+    # parastitcher_path_linux = '/home/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/Parastitcher.py'
+    
+    ap = argparse.ArgumentParser()
+    ap.add_argument("-i", "--input", default='', help="Path where the data is located", type=str)
+    ap.add_argument("-o", "--output", default='', help="Output path", type=str)
+    ap.add_argument("-ct", "--config_teras", default='', help="Config json for terastitcher", type=str)
+
+    args = vars(ap.parse_args())
+    print(args)
+        
     preprocessing_steps = {
         "pystripe": {
-            "input" : input_data,
-            "output" : output_folder,
+            "input" : args['input'],
+            "output" : args['output'],
             "sigma1" : 256,
             "sigma2" : 256,
             "workers" : 8
         }
     }
     
-    terastitcher_tool = TeraStitcher(
-        input_data=input_data,
-        output_folder=output_folder,
-        parallel=False,
-        computation='cpu',
-        parastitcher_path=parastitcher_path_linux,
-        verbose=True,
-        #preprocessing=preprocessing_steps
-    )
-
-    config = {
-        "import" : {
-            'ref1':'1',#'H',
-            'ref2':'-2',#'V',
-            'ref3':'3',#'D',
-            'vxl1':'0.8',#'1.800',
-            'vxl2':'0.8',#'1.800',
-            'vxl3':'1',#'2',
-            'additional_params':['sparse_data', 'libtiff_uncompress'] # 'rescan'
-        },
-        "align" : {
-            'cpu_params' : {
-                'estimate_processes': True,
-                'image_depth': 1000, # This parameter should be passed if estimate_processes is True
-                'number_processes': 10, # np for linux or mac
-                'hostfile': '/home/data/Project1/Terastitcher/TestData/hostfile',
-                'additional_params' : ['use-hwthread-cpus', 'allow-run-as-root']
-            },
-            'subvoldim': 100,
-        },
-        "threshold" : {
-            "threshold" : 0.7
-        },
-        "merge" : {
-            'cpu_params' : {
-                # TODO Estimate processes for merge step
-                'estimate_processes': False,
-                'image_depth': 1000, # This parameter should be passed if estimate_processes is True
-                'number_processes': 6, # np for linux or mac
-                'hostfile': '/home/data/Project1/Terastitcher/TestData/hostfile',
-                'additional_params' : ['use-hwthread-cpus', 'allow-run-as-root']
-            },
-            'volout_plugin' : '"TiledXY|3Dseries"', # This parameter need to be provided with "" TiledXY|3Dseries
-            'slicewidth' : 20000,
-            'sliceheight' : 20000,
-        }
-    }
+    if not os.path.exists(args['input']):
+        print('\n- Input data does not exist.')
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), args['input'])
     
-    terastitcher_tool.execute_pipeline(config)
-
+    config_teras = utils.read_json_as_dict(args['config_teras'])
+    
+    if config_teras:
+        execute_terastitcher(
+            input_data=args['input'],
+            output_folder=args['output'],
+            config_pre=preprocessing_steps,
+            config_teras=config_teras
+        )
+    
+    else:
+        print("- Error while loading configuration file for Terastitcher")
+        
 if __name__ == "__main__":
     main()
