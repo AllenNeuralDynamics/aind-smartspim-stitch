@@ -76,8 +76,11 @@ class TeraStitcher():
             os.environ['USECUDA_X_NCC'] = '1'
             
         else:
-            os.environ['USECUDA_X_NCC'] = '0'
-       
+            try:
+                del os.environ['USECUDA_X_NCC']
+            except KeyError:
+                print("- Warning: environmental variable 'USECUDA_X_NCC' could not be removed. Ignore this warning if you're using CPU")
+                
         if not self.__check_installation():
             print(f"Please, check your terastitcher installation in the system {self.__platform}")
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "terastitcher")
