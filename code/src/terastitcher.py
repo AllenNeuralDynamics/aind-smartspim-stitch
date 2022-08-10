@@ -43,7 +43,7 @@ class TeraStitcher():
             All the preprocessing steps prior to terastitcher's pipeline. Default None.
         verbose: Optional[bool]
             True if you want to print outputs of all executed commands.
-        
+            
         Raises
         ------------------------
         FileNotFoundError:
@@ -60,8 +60,8 @@ class TeraStitcher():
         self.preprocessing = preprocessing
         self.__verbose = verbose
         self.__python_terminal = None
-        self.xmls_path = self.__output_folder.joinpath("xmls")
-        self.metadata_path = self.__output_folder.joinpath("metadata")
+        self.metadata_path = self.__output_folder.joinpath("metadata/params")
+        self.xmls_path = self.__output_folder.joinpath("metadata/xmls")
         
         # Check python
         self.__check_python()
@@ -94,6 +94,9 @@ class TeraStitcher():
         # We create the folders for the xmls and metadata in the output directory
         utils.create_folder(self.xmls_path, self.__verbose)
         utils.create_folder(self.metadata_path, self.__verbose)
+        
+        # Setting stdout log file last because the folder structure depends if preprocessing steps are provided
+        self.stdout_log_file = self.metadata_path.joinpath("stdout_log.txt")
     
     def __change_io_paths(self) -> None:
         """
@@ -125,8 +128,8 @@ class TeraStitcher():
             self.__output_folder = self.__output_folder.joinpath("stitched")
             
             # Organizing output paths
-            self.xmls_path = self.__output_folder.joinpath("xmls")
-            self.metadata_path = self.__output_folder.joinpath("metadata")
+            self.metadata_path = self.__output_folder.joinpath("metadata/params")
+            self.xmls_path = self.__output_folder.joinpath("metadata/xmls")
     
     def __check_installation(self, tool_name:str="terastitcher") -> bool:
         """
@@ -276,19 +279,19 @@ class TeraStitcher():
         # If we want to estimate the number of processes used in any of the steps.
         if cpu_params['estimate_processes']:
             if step_name == 'align':
-                n_procs = self.__get_aprox_number_processes_align_step(
+                n_procs = TeraStitcher.get_aprox_number_processes_align_step(
                     {
-                        'image_depth': 4200, 
+                        'image_depth': cpu_params["image_depth"], 
                         'subvoldim': params['subvoldim'], 
                         'number_processes': cpu_params['number_processes']
                     }
                 )
                 
+                print(f"- Changing number of processes for align step to {n_procs}")
+                
             elif step_name == 'merge':
                 # TODO estimate in merge step
-                print("Not implemented yet")
-            
-            print("Using estimated number of processes: ", n_procs)
+                print("- Aproximate number of processes for the merge step is not implemented yet.")
         
         cmd = f"{mpi_command} {n_procs} {hostfile} {additional_params}"
         cmd += f"{self.__python_terminal} {self.__parastitcher_path}"
@@ -331,7 +334,8 @@ class TeraStitcher():
         
         return cmd
     
-    def __get_aprox_number_processes_align_step(self, config_params:dict) -> int:
+    @staticmethod
+    def get_aprox_number_processes_align_step(config_params:dict) -> int:
         """
         Get the estimate number of processes to partition the dataset and calculate the align step.
         Using MPI, check if the number of slots are enough for running the number of processes.
@@ -540,15 +544,6 @@ class TeraStitcher():
         
         return cmd
     
-    def execute_pystripe(self, params:dict) -> None:
-                
-        # Pystripe step
-        print("\n- striping step...")
-        for out in utils.execute_command(
-            self.__pystripe_cmd(config['pystripe']), self.__verbose
-        ):
-            print(out)
-    
     def __execute_preprocessing_steps(self) -> None:
         """
         Executes any preprocessing steps that are required for the pipeline.
@@ -567,12 +562,15 @@ class TeraStitcher():
         None
         
         """
+        exists_stdout = os.path.exists(self.stdout_log_file)
         
         for tool_name, params in self.preprocessing.items():
             cmd = self.__preprocessing_tool_cmd(tool_name, params, False)
             
-            for out in utils.execute_command(cmd, self.__verbose):
+            for out in utils.execute_command(cmd, self.__verbose, self.stdout_log_file):
                 print(out)
+                if exists_stdout:
+                    utils.save_string_to_txt(out, self.stdout_log_file, "a")
     
     def execute_pipeline(self, config:dict) -> None:
         """
@@ -582,11 +580,14 @@ class TeraStitcher():
         
         Parameters
         ------------------------
-        params: dict
+        config: dict
             Configuration dictionary for the stitching pipeline. It should include the configuration
             for each of the steps in the pipeline. i.e. {'import': {...}, 'align': {...}, ...}
         
         """
+        
+        # Checking if stdout log file exists
+        exists_stdout = os.path.exists(self.stdout_log_file)
         
         # Preprocessing steps
         if self.preprocessing:
@@ -595,14 +596,17 @@ class TeraStitcher():
         # Step 1
         print("\n- Import step...")
         for out in utils.execute_command(
-            self.import_step_cmd(config['import']), self.__verbose
+            self.import_step_cmd(config['import']), self.__verbose, self.stdout_log_file
         ):
             print(out)
+            
+            if exists_stdout:
+                utils.save_string_to_txt(out, self.stdout_log_file, "a")
         
         # Step 2
         print("- Align step...")
         for out in utils.execute_command(
-            self.align_step_cmd(config['align']), self.__verbose
+            self.align_step_cmd(config['align']), self.__verbose, self.stdout_log_file
         ):
             print(out)
         
@@ -611,40 +615,52 @@ class TeraStitcher():
         for out in utils.execute_command(
             self.input_output_step_cmd(
                 'displproj', 'xml_displcomp.xml', 'xml_displproj.xml'
-            ), self.__verbose
+            ), self.__verbose, self.stdout_log_file
         ):
             print(out)
+            
+            if exists_stdout:
+                utils.save_string_to_txt(out, self.stdout_log_file, "a")
           
         # Step 4
         print("- Threshold step...")
         for out in utils.execute_command(
             self.input_output_step_cmd(
                 'displthres', 'xml_displproj.xml', 'xml_displthres.xml', config['threshold']
-            ), self.__verbose
+            ), self.__verbose, self.stdout_log_file
         ):
             print(out)
+            
+            if exists_stdout:
+                utils.save_string_to_txt(out, self.stdout_log_file, "a")
         
         # Step 5
         print("- Placing tiles step...")
         for out in utils.execute_command(
             self.input_output_step_cmd(
                 'placetiles', 'xml_displthres.xml', 'xml_merging.xml'
-            ), self.__verbose
+            ), self.__verbose, self.stdout_log_file
         ):
             print(out)
+            
+            if exists_stdout:
+                utils.save_string_to_txt(out, self.stdout_log_file, "a")
         
         # Step 6
         print("- Merging step...")
         for out in utils.execute_command(
-            self.merge_step_cmd(config["merge"]), self.__verbose
+            self.merge_step_cmd(config["merge"]), self.__verbose, self.stdout_log_file
         ):
             print(out)
+            
+            if exists_stdout:
+                utils.save_string_to_txt(out, self.stdout_log_file, "a")
 
 def execute_terastitcher(
     input_data:PathLike, 
     output_folder:PathLike, 
-    config_pre:dict, 
-    config_teras:dict
+    config_teras:PathLike,
+    config_pre:Optional[dict]=None, 
     ) -> None:
     """
     Executes terastitcher with in-command parameters. It could be on-premise or in the cloud.
@@ -659,43 +675,57 @@ def execute_terastitcher(
     output_folder: PathLike
         Path where the data will be saved.
         
-    config_pre: dict
+    config_teras: PathLike
+        Path to json with terastitcher's configuration.
+    
+    config_pre: Optional[dict]
         Dictionary with the preprocessing steps and their configuration to be executed.
-        
-    config_teras: dict
-        Dictionary with terastitcher's configuration.
     
     """
     
-    parser_result = PathParser.parse_path_gcs(
-        input_data,
-        output_folder
-    )
+    config_teras_dict = utils.read_json_as_dict(config_teras)
     
-    if len(parser_result):
-        # changing paths to mounted dirs
-        input_data = input_data.replace('gs://', '/home/jupyter/')
-        output_folder = output_folder.replace('gs://', '/home/jupyter/')
+    if config_teras:
+        
+        parser_result = PathParser.parse_path_gcs(
+            input_data,
+            output_folder
+        )
+        
+        if len(parser_result):
+            # changing paths to mounted dirs
+            input_data = input_data.replace('gs://', '/home/jupyter/')
+            output_folder = output_folder.replace('gs://', '/home/jupyter/')
+        
+        terastitcher_tool = TeraStitcher(
+            input_data=input_data,
+            output_folder=output_folder,
+            parallel=True,
+            computation='cpu',
+            parastitcher_path=config_teras_dict["parastitcher_path"],
+            verbose=True,
+            preprocessing=config_pre
+        )
+        
+        # Saving log command
+        terastitcher_cmd = f"$ python terastitcher.py --input {input_data} --output {output_folder} --config_teras {config_teras}\n"
+        utils.save_string_to_txt(terastitcher_cmd, terastitcher_tool.stdout_log_file)
+        
+        # Executing terastitcher
+        terastitcher_tool.execute_pipeline(
+            config_teras_dict
+        )
+        
+        if len(parser_result):
+            # unmounting dirs
+            if parser_result[0] == parser_result[1]:
+                utils.gscfuse_unmount(parser_result[0])
+            else:
+                utils.gscfuse_unmount(parser_result[0])
+                utils.gscfuse_unmount(parser_result[1])
     
-    terastitcher_tool = TeraStitcher(
-        input_data=input_data,
-        output_folder=output_folder,
-        parallel=True,
-        computation='cpu',
-        parastitcher_path=config_teras["parastitcher_path"],
-        verbose=True,
-        preprocessing=config_pre
-    )
-    
-    terastitcher_tool.execute_pipeline(config_teras)
-    
-    if len(parser_result):
-        # unmounting dirs
-        if parser_result[0] == parser_result[1]:
-            utils.gscfuse_unmount(parser_result[0])
-        else:
-            utils.gscfuse_unmount(parser_result[0])
-            utils.gscfuse_unmount(parser_result[1])
+    else:
+        print("- Error while loading configuration file for Terastitcher")
 
 def main() -> dict:
     
@@ -712,7 +742,6 @@ def main() -> dict:
     ap.add_argument("-ct", "--config_teras", default='', help="Config json for terastitcher", type=str)
 
     args = vars(ap.parse_args())
-    print(args)
         
     preprocessing_steps = {
         "pystripe": {
@@ -728,18 +757,12 @@ def main() -> dict:
         print('\n- Input data does not exist.')
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), args['input'])
     
-    config_teras = utils.read_json_as_dict(args['config_teras'])
-    
-    if config_teras:
-        execute_terastitcher(
-            input_data=args['input'],
-            output_folder=args['output'],
-            config_pre=preprocessing_steps,
-            config_teras=config_teras
-        )
-    
-    else:
-        print("- Error while loading configuration file for Terastitcher")
+    execute_terastitcher(
+        input_data=args['input'],
+        output_folder=args['output'],
+        config_teras=args["config_teras"],
+        #config_pre=preprocessing_steps
+    )
         
 if __name__ == "__main__":
     main()

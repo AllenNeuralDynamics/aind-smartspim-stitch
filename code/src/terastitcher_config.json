@@ -32,7 +32,7 @@
         "cpu_params": {
             "estimate_processes": false,
             "image_depth": 1000,
-            "number_processes": 6,
+            "number_processes": 10,
             "hostfile": "/home/data/Project1/Terastitcher/TestData/hostfile",
             "additional_params": [
                 "use-hwthread-cpus",

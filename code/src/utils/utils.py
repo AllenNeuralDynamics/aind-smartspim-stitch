@@ -63,7 +63,12 @@ def delete_folder(dest_dir:PathLike, verbose:Optional[bool]=False) -> None:
         except shutil.Error as e:
             print(f"Folder could not be removed! Error {e}")
 
-def execute_command(command:str, print_command:bool=False) -> None:
+def execute_command(
+        command:str, 
+        print_command:bool=False, 
+        stdout_log_file:Optional[PathLike]=None
+    ) -> None:
+    
     """
     Execute a shell command.
     
@@ -83,6 +88,9 @@ def execute_command(command:str, print_command:bool=False) -> None:
     
     if print_command:
         print(command)
+    
+    if stdout_log_file and len(str(stdout_log_file)):
+        save_string_to_txt("$ " + command, stdout_log_file, "a")
     
     popen = subprocess.Popen(command, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
     for stdout_line in iter(popen.stdout.readline, ""):
@@ -242,7 +250,7 @@ def gscfuse_mount(bucket_name:PathLike, params:dict) -> None:
     
     gfuse_cmd = f"gcsfuse {additional_params} {built_params} {bucket_name} {bucket_name}"
 
-    for out in utils.execute_command(
+    for out in execute_command(
         gfuse_cmd, True
     ):
         print(out)
@@ -260,7 +268,27 @@ def gscfuse_unmount(mount_dir:PathLike) -> None:
     
     fuser_cmd = f"fusermount -u {mount_dir}"
     
-    for out in utils.execute_command(
+    for out in execute_command(
         fuser_cmd, True
     ):
         print(out)
+
+def save_string_to_txt(txt:str, filepath:PathLike, mode='w') -> None:
+    """
+    Saves a text in a file in the given mode.
+    
+    Parameters
+    ------------------------
+    txt: str
+        String to be saved.
+        
+    filepath: PathLike
+        Path where the file is located or will be saved.
+        
+    mode: str
+        File open mode.
+    
+    """
+    
+    with open(filepath, mode) as file:
+        file.write(txt + "\n")
