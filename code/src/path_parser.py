@@ -46,7 +46,7 @@ class PathParser():
         folder_name_output = output_path[gcs_bucket_output_re.end():]
         
         bucket_input_config = {
-            "only-dir": folder_name_input,
+            #"only-dir": folder_name_input,
             "max-conns-per-host": 20,
             "stat-cache-ttl": "5m0s",
             "max-retry-sleep": "5m0s",
@@ -54,7 +54,7 @@ class PathParser():
         }
         
         bucket_output_config = {
-            "only-dir": folder_name_output,
+            #"only-dir": folder_name_output,
             "max-conns-per-host": 20,
             "stat-cache-ttl": "5m0s",
             "max-retry-sleep": "5m0s",
