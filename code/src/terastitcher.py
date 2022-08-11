@@ -85,6 +85,24 @@ class TeraStitcher():
             print(f"Please, check your terastitcher installation in the system {self.__platform}")
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "terastitcher")
         
+        # TODO get versions
+        tools = [
+            {
+                'Name': 'TeraStitcher',
+                'Version': '1.11.10',
+                'CodeURL': 'http://abria.github.io/TeraStitcher'
+            }
+        ]
+        
+        pystripe_info = {
+            'Name': 'pystripe',
+            'Version': '0.2.0',
+            'CodeURL': 'https://github.com/chunglabmit/pystripe'
+        }
+        
+        data_description = utils.generate_data_description(input_folder=self.__input_data, tools=tools)
+        data_description_path = self.__output_folder.joinpath('data_description.json')
+        
         # If parastitcher path is not found, we set computation to sequential cpu as default.
         self.__check_parastitcher()
         
@@ -97,7 +115,18 @@ class TeraStitcher():
         
         # Setting stdout log file last because the folder structure depends if preprocessing steps are provided
         self.stdout_log_file = self.metadata_path.joinpath("stdout_log.txt")
-    
+        
+        # Saving data description
+        
+        if preprocessing and 'pystripe' in preprocessing:
+            tools.insert(0, pystripe_info)
+            data_description_path = Path(*self.__output_folder.parts[:-1]).joinpath('data_description.json')
+        
+        utils.save_dict_as_json(
+            data_description_path, 
+            data_description
+        )
+        
     def __change_io_paths(self) -> None:
         """
         Changes the file order to add an extra folder for pystriped and stitched data.
@@ -659,8 +688,7 @@ class TeraStitcher():
 def execute_terastitcher(
     input_data:PathLike, 
     output_folder:PathLike, 
-    config_teras:PathLike,
-    config_pre:Optional[dict]=None, 
+    config_teras:PathLike
     ) -> None:
     """
     Executes terastitcher with in-command parameters. It could be on-premise or in the cloud.
@@ -685,7 +713,7 @@ def execute_terastitcher(
     
     config_teras_dict = utils.read_json_as_dict(config_teras)
     
-    if config_teras:
+    if config_teras_dict:
         
         parser_result = PathParser.parse_path_gcs(
             input_data,
@@ -696,6 +724,18 @@ def execute_terastitcher(
             # changing paths to mounted dirs
             input_data = input_data.replace('gs://', '/home/jupyter/')
             output_folder = output_folder.replace('gs://', '/home/jupyter/')
+            print(f"- New input folder: {input_data}")
+            print(f"- New output folder: {output_folder}")
+        
+        preprocessing_steps = {
+            "pystripe": {
+                "input" : input_data,
+                "output" : output_folder,
+                "sigma1" : 256,
+                "sigma2" : 256,
+                "workers" : 8
+            }
+        }
         
         terastitcher_tool = TeraStitcher(
             input_data=input_data,
@@ -704,7 +744,7 @@ def execute_terastitcher(
             computation='cpu',
             parastitcher_path=config_teras_dict["parastitcher_path"],
             verbose=True,
-            preprocessing=config_pre
+            preprocessing=preprocessing_steps
         )
         
         # Saving log command
@@ -727,14 +767,7 @@ def execute_terastitcher(
     else:
         print("- Error while loading configuration file for Terastitcher")
 
-def main() -> dict:
-    
-    # input_data = '/home/data/Project1/Terastitcher/TestData/mouse.cerebellum.300511.sub3/tomo300511_subv3'#"C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData/mouse.cerebellum.300511.sub3/tomo300511_subv3"
-    # output_folder = "/home/data/Project1/Terastitcher/TestData/linux_test_3d"#"C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TestData/test_processes_pystripe"#    
-    
-    # # TODO if we pass another path that exists instead of parastitcher's path, it builds the command
-    # #parastitcher_path_windows = 'C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TeraStitcher-portable-1.11.10-win64/pyscripts/Parastitcher.py'
-    # parastitcher_path_linux = '/home/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/Parastitcher.py'
+def main() -> None:
     
     ap = argparse.ArgumentParser()
     ap.add_argument("-i", "--input", default='', help="Path where the data is located", type=str)
@@ -742,26 +775,15 @@ def main() -> dict:
     ap.add_argument("-ct", "--config_teras", default='', help="Config json for terastitcher", type=str)
 
     args = vars(ap.parse_args())
-        
-    preprocessing_steps = {
-        "pystripe": {
-            "input" : args['input'],
-            "output" : args['output'],
-            "sigma1" : 256,
-            "sigma2" : 256,
-            "workers" : 8
-        }
-    }
     
-    if not os.path.exists(args['input']):
+    if not os.path.exists(args['input']) and "gs://" not in args['input']:
         print('\n- Input data does not exist.')
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), args['input'])
     
     execute_terastitcher(
         input_data=args['input'],
         output_folder=args['output'],
-        config_teras=args["config_teras"],
-        #config_pre=preprocessing_steps
+        config_teras=args["config_teras"]
     )
         
 if __name__ == "__main__":

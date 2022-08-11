@@ -1,0 +1,46 @@
+{
+    "parastitcher_path":"/home/jupyter/terastitcher-module/environment/GCloud/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/Parastitcher.py",
+    "import" : {
+        "ref1":"H",
+        "ref2":"V",
+        "ref3":"D",
+        "vxl1":"1.800",
+        "vxl2":"1.800",
+        "vxl3":"2",
+        "additional_params": [
+            "sparse_data",
+            "libtiff_uncompress"
+        ]
+    },
+    "align" : {
+        "cpu_params": {
+            "estimate_processes": false,
+            "image_depth": 4200,
+            "number_processes": 16,
+            "hostfile": "/home/jupyter/terastitcher-module/environment/GCloud/hostfile",
+            "additional_params": [
+                "use-hwthread-cpus",
+                "allow-run-as-root"
+            ]
+        },
+        "subvoldim": 100
+    },
+    "threshold" : {
+        "threshold" : 0.7
+    },
+    "merge" : {
+        "cpu_params": {
+            "estimate_processes": false,
+            "image_depth": 1000,
+            "number_processes": 16,
+            "hostfile": "/home/jupyter/terastitcher-module/environment/GCloud/hostfile",
+            "additional_params": [
+                "use-hwthread-cpus",
+                "allow-run-as-root"
+            ]
+        },
+        "volout_plugin": "\"TiledXY|2Dseries\"",
+        "slicewidth": 20000,
+        "sliceheight": 20000
+    }
+}

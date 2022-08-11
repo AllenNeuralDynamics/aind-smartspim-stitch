@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Optional, List, Union
 import shutil
+from glob import glob
+import platform
 
 # IO types
 PathLike = Union[str, Path]
@@ -292,3 +294,56 @@ def save_string_to_txt(txt:str, filepath:PathLike, mode='w') -> None:
     
     with open(filepath, mode) as file:
         file.write(txt + "\n")
+        
+def generate_data_description(input_folder:PathLike, tools:List[dict]) -> dict:
+    """
+    Generates data description for the output folder.
+    
+    Parameters
+    ------------------------
+    input_folder: PathLike
+        Path where the data is located.
+        
+    tools: List[dict]
+        List with the used tools in the pipeline.
+    
+    Returns
+    ------------------------
+    dict:
+        Dictionary with the data description
+    """
+    
+    if type(input_folder) == str:
+        input_folder = Path(input_folder)
+    
+    separator = '/'
+    
+    if platform.system() == 'Windows':
+        separator = '\\'
+    
+    splitted_path = list(input_folder.parts)
+    root_name = splitted_path[-2]
+    root_folder = splitted_path[0:-1]
+    root_folder = separator.join(root_folder)
+    
+    data_description = glob( root_folder + '/data_description.json' )
+    
+    if len(data_description):
+        data_description = read_json_as_dict(data_description[0])
+        
+        data_description['Name'] = f"{data_description['Name']}_stitched"
+        data_description['DatasetType'] = 'derived'
+        data_description['GeneratedBy'] = tools
+        
+    else:
+        data_description = {}
+        
+        data_description['Name'] = f"{root_name}_stitched"
+        data_description['DatasetType'] = 'derived'
+        data_description['License'] = 'CC-BY-4.0'
+        data_description['Institute'] = 'Allen Institute For Neural Dynamics'
+        data_description['Group'] = ''
+        data_description['Project'] = ''
+        data_description['GeneratedBy'] = tools
+    
+    return data_description

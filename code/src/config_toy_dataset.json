@@ -39,7 +39,7 @@
                 "allow-run-as-root"
             ]
         },
-        "volout_plugin": "\"TiledXY|3Dseries\"",
+        "volout_plugin": "\"TiledXY|2Dseries\"",
         "slicewidth": 20000,
         "sliceheight": 20000
     }
