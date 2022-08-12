@@ -82,5 +82,11 @@ The align and merge steps are computationally expensive. Therefore, we added cpu
 }
 ```
 
+### Execution example
+```
+$ cd ~
+$ python terastitcher-module/code/src/terastitcher.py -i gs://bucket-name/dataset/images -o gs://bucket-name/dataset_stitched -ct terastitcher-module/code/src/config_real_data.json
+```
+
 ## TeraStitcher Documentation
 You can download TeraStitcher documentation from [here](https://unicampus365-my.sharepoint.com/:b:/g/personal/g_iannello_unicampus_it/EYT9KbapjBdGvTAD2_MdbKgB5gY_h9rlvHzqp6mUNqVhIw?e=s8GrFC)
