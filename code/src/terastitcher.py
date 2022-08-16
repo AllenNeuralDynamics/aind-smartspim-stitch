@@ -392,18 +392,12 @@ class TeraStitcher():
         
         # Partitioning depth for the tiles
         partitioning_depth = math.ceil( config_params['image_depth'] / config_params['subvoldim'] )
-        left = 2
-        right = config_params['number_processes']
-
-        while (True):
-            mid_process = int((left + right) / 2)
-            tiling_proc = 2 * ( mid_process - 1)
+        
+        for proc in range(config_params['number_processes'], 0, -1):
+            tiling_proc = 2 * ( proc - 1)
             
             if partitioning_depth > tiling_proc:
-                return mid_process + 1
-            
-            else:
-                right = mid_process + 1
+                return proc
                 
         return 2
     
