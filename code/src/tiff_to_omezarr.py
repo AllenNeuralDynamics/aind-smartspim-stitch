@@ -10,7 +10,8 @@ import argparse
 import time
 from typing import List, Optional, Union
 
-#pip install git+https://github.com/AllenCellModeling/aicsimageio.git@feature/zarrwriter
+#pip install git+https://github.com/carshadi/aicsimageio.git@feature/zarrwriter-compression
+#pip install git+https://github.com/AllenInstitute/argschema.git
 from aicsimageio.writers import OmeZarrWriter
 from aicsimageio.readers.tiff_reader import TiffReader
 
@@ -85,7 +86,7 @@ def pad_array_5d(arr):
 
 def convert_tiff_image_to_omezarr(
         image_path:PathLike,
-        args,
+        writer_config:dict,
         writer: OmeZarrWriter,
         compressor, 
         opts:dict
@@ -99,7 +100,7 @@ def convert_tiff_image_to_omezarr(
         image_path: PathLike
             Path where the image is stored.
         
-        args:
+        writer_config:
             Arguments provided by user to store in OmeZarr format.
             
         writer: aicsimageio.writers.OmeZarrWriter
@@ -123,16 +124,16 @@ def convert_tiff_image_to_omezarr(
         physical_pixel_sizes=None,
         channel_names=None,
         channel_colors=None,
-        scale_num_levels=args.n_levels,  # : int = 1,
-        scale_factor=args.scale_factor,  # : float = 2.0,
+        # scale_num_levels=writer_config['n_levels'],  # : int = 1,
+        # scale_factor=writer_config['scale_factor'],  # : float = 2.0,
         # chunks=chunks,
         # storage_options=opts,
     )
     
 @dask.delayed
-def batch_images(
+def process_batched_images(
         seq_images:List[PathLike], 
-        args, 
+        writer_config:dict, 
         writer:OmeZarrWriter, 
         compressor, 
         opts:dict
@@ -169,7 +170,7 @@ def batch_images(
         sub_results.append(
             convert_tiff_image_to_omezarr(
                 image, 
-                args, 
+                writer_config, 
                 writer, 
                 compressor, 
                 opts
@@ -181,7 +182,7 @@ def batch_images(
 def batch_images(
         list_images:List[PathLike], 
         output_path:PathLike, 
-        args, 
+        writer_config:dict, 
         image_batch:int=10
     ) -> List[List[dask.delayed]]:
     
@@ -217,15 +218,15 @@ def batch_images(
         output_path
     )
     
-    compressor = get_blosc_codec(args.codec, args.clevel)
+    compressor = get_blosc_codec(writer_config['codec'], writer_config['clevel'])
     opts = {
         "compressor": compressor,
     }
     
     for idx in range(0, len(list_images), image_batch):
-        result_batch = batch_images(
+        result_batch = process_batched_images(
             list_images[idx: idx + image_batch],
-            args,
+            writer_config,
             writer,
             compressor,
             opts
@@ -256,9 +257,11 @@ def parse_args():
     parser.add_argument(
         "--chunk_shape", type=int, nargs='+', default=None, help="5D sequence of chunk dimensions, in TCZYX order"
     )
+    
     parser.add_argument(
         "--n_levels", type=int, default=1, help="number of resolution levels"
     )
+    
     parser.add_argument(
         "--scale_factor",
         type=float,
@@ -269,6 +272,30 @@ def parse_args():
     
     return args
 
+def execute_tiff_omezarr_conversion(
+        input_path,
+        output_path,
+        writer_config:dict
+    ):
+    
+    client = Client()
+    print(client)
+    
+    image_paths = get_images(input_path)
+    print(f"Found {len(image_paths)} images to process")
+    
+    convert_images = batch_images(image_paths, output_path, writer_config)
+    convert_images = dask.persist(convert_images)
+    progress(convert_images)
+    
+    # Use scheduler with 'threads' when we're using it locally to avoid cost of transferring data between tasks
+    # and avoid garbage collections. However, it might take more time to process the images.
+    
+    dask.compute(convert_images)#, scheduler='threads')#, scheduler='single-threaded')
+
+    client.close()
+
+    
 def main():
     args = parse_args()
     
@@ -279,13 +306,7 @@ def main():
     logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%Y-%m-%d %H:%M")
     LOGGER = logging.getLogger(__name__)
     LOGGER.setLevel(logging.INFO)
-        
-    client = Client()
-    print(client)
 
-    image_paths = get_images(args.input)
-    LOGGER.info(f"Found {len(image_paths)} images to process")
-    
     output_path = None
     
     if not args.output or args.output == args.input:
@@ -294,22 +315,23 @@ def main():
         output_path = Path(args.output)
 
     start_time = time.time()
-    convert_images = batch_images(image_paths, output_path, args)
+      
+    writer = {
+        'codec': args.codec,
+        'clevel' : args.clevel,
+        'chunk_size': args.chunk_size,
+        'chunk_shape': args.chunk_shape,
+        'n_levels': args.n_levels,
+        'scale_factor': args.scale_factor,
+    }
     
-    convert_images = dask.persist(convert_images)
-    progress(convert_images)
-    
-    # Use scheduler with 'threads' when we're using it locally to avoid cost of transferring data between tasks
-    # and avoid garbage collections. However, it might take more time to process the images.
-    
-    dask.compute(convert_images)#, scheduler='threads')#, scheduler='single-threaded')
+    execute_tiff_omezarr_conversion(args.input, output_path, writer)
     
     end_time = time.time()
+    
     LOGGER.info(
         f"Done converting dataset. Took {end_time - start_time}s."
     )
-    
-    client.close()
-    
+        
 if __name__ == "__main__":
     main()

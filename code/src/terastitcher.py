@@ -8,7 +8,9 @@ import sys
 import errno
 from pathlib import Path
 from path_parser import PathParser
-import argparse
+from params import MyParameters, get_default_config
+from argschema import ArgSchemaParser
+from tiff_to_omezarr import execute_tiff_omezarr_conversion
 
 PathLike = Union[str, Path]
 
@@ -619,7 +621,7 @@ class TeraStitcher():
         # Step 1
         print("\n- Import step...")
         for out in utils.execute_command(
-            self.import_step_cmd(config['import']), self.__verbose, self.stdout_log_file
+            self.import_step_cmd(config['import_data']), self.__verbose, self.stdout_log_file
         ):
             print(out)
             
@@ -678,6 +680,22 @@ class TeraStitcher():
             
             if exists_stdout:
                 utils.save_string_to_txt(out, self.stdout_log_file, "a")
+                
+        print("- Converting to OME-Zarr")
+        writer = {
+            'codec': "zstd",
+            'clevel' : 1,
+            'chunk_size': 64,
+            'chunk_shape': None,
+            'n_levels': 1,
+            'scale_factor': 2.0
+        }
+        
+        execute_tiff_omezarr_conversion(
+            self.__output_folder,
+            self.__output_folder.joinpath('OMEZarr'),
+            writer
+        )
 
 def execute_terastitcher(
     input_data:PathLike, 
@@ -697,87 +715,75 @@ def execute_terastitcher(
     output_folder: PathLike
         Path where the data will be saved.
         
-    config_teras: PathLike
-        Path to json with terastitcher's configuration.
-    
-    config_pre: Optional[dict]
-        Dictionary with the preprocessing steps and their configuration to be executed.
+    config_teras: Dict
+        Dictionary with terastitcher's configuration.
     
     """
     
-    config_teras_dict = utils.read_json_as_dict(config_teras)
+    parser_result = PathParser.parse_path_gcs(
+        input_data,
+        output_folder
+    )
     
-    if config_teras_dict:
-        
-        parser_result = PathParser.parse_path_gcs(
-            input_data,
-            output_folder
-        )
-        
-        if len(parser_result):
-            # changing paths to mounted dirs
-            input_data = input_data.replace('gs://', '/home/jupyter/')
-            output_folder = output_folder.replace('gs://', '/home/jupyter/')
-            print(f"- New input folder: {input_data}")
-            print(f"- New output folder: {output_folder}")
-        
-        preprocessing_steps = {
-            "pystripe": {
-                "input" : input_data,
-                "output" : output_folder,
-                "sigma1" : 256,
-                "sigma2" : 256,
-                "workers" : 8
-            }
+    if len(parser_result):
+        # changing paths to mounted dirs
+        input_data = input_data.replace('gs://', '/home/jupyter/')
+        output_folder = output_folder.replace('gs://', '/home/jupyter/')
+        print(f"- New input folder: {input_data}")
+        print(f"- New output folder: {output_folder}")
+    
+    preprocessing_steps = {
+        "pystripe": {
+            "input" : input_data,
+            "output" : output_folder,
+            "sigma1" : 256,
+            "sigma2" : 256,
+            "workers" : 8
         }
-        
-        terastitcher_tool = TeraStitcher(
-            input_data=input_data,
-            output_folder=output_folder,
-            parallel=True,
-            computation='cpu',
-            parastitcher_path=config_teras_dict["parastitcher_path"],
-            verbose=True,
-            preprocessing=preprocessing_steps
-        )
-        
-        # Saving log command
-        terastitcher_cmd = f"$ python terastitcher.py --input {input_data} --output {output_folder} --config_teras {config_teras}\n"
-        utils.save_string_to_txt(terastitcher_cmd, terastitcher_tool.stdout_log_file)
-        
-        # Executing terastitcher
-        terastitcher_tool.execute_pipeline(
-            config_teras_dict
-        )
-        
-        if len(parser_result):
-            # unmounting dirs
-            if parser_result[0] == parser_result[1]:
-                utils.gscfuse_unmount(parser_result[0])
-            else:
-                utils.gscfuse_unmount(parser_result[0])
-                utils.gscfuse_unmount(parser_result[1])
+    }
     
-    else:
-        print("- Error while loading configuration file for Terastitcher")
+    terastitcher_tool = TeraStitcher(
+        input_data=input_data,
+        output_folder=output_folder,
+        parallel=True,
+        computation='cpu',
+        parastitcher_path=config_teras["parastitcher_path"],
+        verbose=True,
+        preprocessing=preprocessing_steps
+    )
+    
+    # Saving log command
+    terastitcher_cmd = f"$ python terastitcher.py --input {input_data} --output {output_folder} --config_teras {config_teras}\n"
+    utils.save_string_to_txt(terastitcher_cmd, terastitcher_tool.stdout_log_file)
+    
+    # Executing terastitcher
+    terastitcher_tool.execute_pipeline(
+        config_teras
+    )
+    
+    if len(parser_result):
+        # unmounting dirs
+        if parser_result[0] == parser_result[1]:
+            utils.gscfuse_unmount(parser_result[0])
+        else:
+            utils.gscfuse_unmount(parser_result[0])
+            utils.gscfuse_unmount(parser_result[1])
 
 def main() -> None:
     
-    ap = argparse.ArgumentParser()
-    ap.add_argument("-i", "--input", default='', help="Path where the data is located", type=str)
-    ap.add_argument("-o", "--output", default='', help="Output path", type=str)
-    ap.add_argument("-ct", "--config_teras", default='', help="Config json for terastitcher", type=str)
+    default_config = get_default_config()
 
-    args = vars(ap.parse_args())
+    mod = ArgSchemaParser(
+        input_data=default_config,
+        schema_type=MyParameters
+    )
     
-    if not os.path.exists(args['input']) and "gs://" not in args['input']:
-        print('\n- Input data does not exist.')
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), args['input'])
+    args = mod.args
     
     execute_terastitcher(
-        input_data=args['input'],
-        output_folder=args['output'],
-        config_teras=args["config_teras"]
+        input_data=args['input_data'],
+        output_folder=args['output_data'],
+        config_teras=args
     )
         
 if __name__ == "__main__":
