@@ -66,15 +66,11 @@ class ImportParameters(DefaultSchema):
         dump_default=2
     )
     
-    sparse_data = Boolean(
-        required=False,
-        matadata={
-            'description':'If data is sparsed or not'
-        },
-        dump_default=True
+    additional_params = List(
+        Str(), 
+        required=False, 
+        cli_as_single_argument=True
     )
-    
-    additional_params = List(Str(), required=False)
 
 class CPUParams(DefaultSchema):
     
@@ -115,7 +111,8 @@ class CPUParams(DefaultSchema):
         dump_default=[
             "use-hwthread-cpus",
             "allow-run-as-root"
-        ]
+        ],
+        cli_as_single_argument=True
     )
 
 class AlignParameters(DefaultSchema):
@@ -175,7 +172,7 @@ class MergeParameters(DefaultSchema):
     cpu_params = Nested(CPUParams)
    
 class PystripeParams(DefaultSchema):
-    # input and output will are already defined in MyParameters Class
+    # input and output are already defined in MyParameters Class
     sigma1 = Int(
         required=False, 
         metadata={
@@ -198,6 +195,42 @@ class PystripeParams(DefaultSchema):
             'description':'number of cpu workers to use in batch processing'
         },
         dump_default=8
+    )
+    
+class OmeZarrParams(DefaultSchema):
+    
+    codec = Str(
+        required=False,
+        metadata={
+            'description':'Parameter for ome-zarr compressor'
+        },
+        dump_default='zstd'
+    )
+    
+    clevel = Int(
+        required=False,
+        metadata={
+            'description':'Parameter for ome-zarr compressor'
+        },
+        dump_default=1
+    )
+    
+    scale_factor = List(
+        Int(),
+        required=False,
+        metadata={
+            'description':'scale factor for each image axis'
+        },
+        cli_as_single_argument=True,
+        dump_default=[2, 2]
+    )
+    
+    pyramid_levels = Int(
+        required=False,
+        metadata={
+            'description':'number of pyramid levels for ome-zarr multiscale'
+        },
+        dump_default=5
     )
 
 class PreprocessingSteps(DefaultSchema):
@@ -228,11 +261,23 @@ class MyParameters(ArgSchema):
         dump_default='/home/jupyter/terastitcher-module/environment/GCloud/hostfile'
     )
     
-    preprocessing_steps = Nested(PreprocessingSteps, required=True)
+    # Processing params
+    preprocessing_steps = Nested(PreprocessingSteps, required=False)
     import_data = Nested(ImportParameters, required=True)
-    align = Nested(AlignParameters, required=True)
-    threshold = Nested(ThresholdParameters, required=True)
-    merge = Nested(MergeParameters, required=True)
+    align = Nested(AlignParameters, required=False)
+    threshold = Nested(ThresholdParameters, required=False)
+    merge = Nested(MergeParameters, required=False)
+    
+    # Conversion params
+    ome_zarr_params = Nested(OmeZarrParams, required=False)
+    
+    clean_output = Boolean(
+        required=False,
+        matadata={
+            'description':'Set True if you want to delete intermediate output images (e.g. pystripe, terastitcher) and keep only OME-Zarr images. Set False otherwise.'
+        },
+        dump_default=False
+    )
 
 def get_default_config():
     return {
@@ -250,7 +295,6 @@ def get_default_config():
             "vxl1":1.800,
             "vxl2":1.800,
             "vxl3":2,
-            "sparse_data": True,
             "additional_params": [
                 "sparse_data",
                 "libtiff_uncompress"
@@ -283,9 +327,15 @@ def get_default_config():
                     "allow-run-as-root"
                 ]
             },
-            "volout_plugin": "\"TiledXY|3Dseries\"",
+            "volout_plugin": "\"TiledXY|2Dseries\"",
             "slicewidth": 20000,
             "sliceheight": 20000
+        },
+        'ome_zarr_params': {
+            'codec': 'zstd',
+            'clevel': 1,
+            'scale_factor': [2, 2],
+            'pyramid_levels': 5
         }
     }
 

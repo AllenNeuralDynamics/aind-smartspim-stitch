@@ -7,10 +7,23 @@ import math
 import sys
 import errno
 from pathlib import Path
+from glob import glob
 from path_parser import PathParser
 from params import MyParameters, get_default_config
 from argschema import ArgSchemaParser
 from tiff_to_omezarr import execute_tiff_omezarr_conversion
+import warnings
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s : %(message)s",
+    datefmt="%Y-%m-%d %H:%M",
+    handlers=[
+        logging.StreamHandler(),
+        # logging.FileHandler("test.log", "a"),
+    ],
+)
 
 PathLike = Union[str, Path]
 
@@ -81,7 +94,7 @@ class TeraStitcher():
             try:
                 del os.environ['USECUDA_X_NCC']
             except KeyError:
-                print("- Warning: environmental variable 'USECUDA_X_NCC' could not be removed. Ignore this warning if you're using CPU")
+                warnings.warn("environmental variable 'USECUDA_X_NCC' could not be removed. Ignore this warning if you're using CPU")
                 
         if not self.__check_installation():
             print(f"Please, check your terastitcher installation in the system {self.__platform}")
@@ -93,6 +106,11 @@ class TeraStitcher():
                 'Name': 'TeraStitcher',
                 'Version': '1.11.10',
                 'CodeURL': 'http://abria.github.io/TeraStitcher'
+            },
+            {
+                'Name': 'aicsimageio',
+                'Version': 'feature/zarrwriter-multiscales',
+                'CodeURL': 'https://github.com/carshadi/aicsimageio/tree/feature/zarrwriter-multiscales'
             }
         ]
         
@@ -128,6 +146,10 @@ class TeraStitcher():
             data_description_path, 
             data_description
         )
+        
+        # Setting logger
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
         
     def __change_io_paths(self) -> None:
         """
@@ -244,7 +266,7 @@ class TeraStitcher():
             found = False
         
         if not found:
-            print(f"Please, check your python 3 installation in the system {self.__platform}")
+            self.logger.info(f"Please, check your python 3 installation in the system {self.__platform}")
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "python")
         
     def __check_parastitcher(self) -> None:
@@ -305,7 +327,7 @@ class TeraStitcher():
             try:
                 hostfile = f"--hostfile {cpu_params['hostfile']}"
             except KeyError:
-                print('Hostfile was not found. This could lead to execution problems.')
+                self.logger.info('Hostfile was not found. This could lead to execution problems.')
         
         # If we want to estimate the number of processes used in any of the steps.
         if cpu_params['estimate_processes']:
@@ -318,11 +340,11 @@ class TeraStitcher():
                     }
                 )
                 
-                print(f"- Changing number of processes for align step to {n_procs}")
+                self.logger.info(f"- Changing number of processes for align step to {n_procs}")
                 
             elif step_name == 'merge':
                 # TODO estimate in merge step
-                print("- Aproximate number of processes for the merge step is not implemented yet.")
+                self.logger.info("Aproximate number of processes for the merge step is not implemented yet.")
         
         cmd = f"{mpi_command} {n_procs} {hostfile} {additional_params}"
         cmd += f"{self.__python_terminal} {self.__parastitcher_path}"
@@ -389,7 +411,7 @@ class TeraStitcher():
         """
         
         if config_params['image_depth'] < config_params['number_processes'] or config_params['subvoldim'] > config_params['image_depth']:
-            print("Please check the parameters")
+            self.logger.info("Please check the parameters for aproximate number of processes in align step")
             return 2
         
         # Partitioning depth for the tiles
@@ -533,6 +555,19 @@ class TeraStitcher():
         
         return cmd
     
+    def convert_to_ome_zarr(self, config):
+        
+        output_json = self.metadata_path.joinpath("ome_zarr_params.json")
+        utils.save_dict_as_json(output_json, config, self.__verbose)
+        
+        input_folder = utils.get_deepest_dirpath(self.__output_folder)
+        
+        execute_tiff_omezarr_conversion(
+            input_folder,
+            self.__output_folder.joinpath('OMEZarr'),
+            config
+        )
+    
     def __preprocessing_tool_cmd(
             self, 
             tool_name:str, 
@@ -569,7 +604,7 @@ class TeraStitcher():
         
         return cmd
     
-    def __execute_preprocessing_steps(self) -> None:
+    def __execute_preprocessing_steps(self, exec_config:dict) -> None:
         """
         Executes any preprocessing steps that are required for the pipeline.
         It is necessary to have the begining of the terminal command as key and
@@ -580,22 +615,16 @@ class TeraStitcher():
         
         Parameters
         ------------------------
-        None
-        
-        Returns
-        ------------------------
-        None
+        exec_config: dict
+            Configuration for command line execution. Mostly for logger.
         
         """
-        exists_stdout = os.path.exists(self.stdout_log_file)
         
         for tool_name, params in self.preprocessing.items():
-            cmd = self.__preprocessing_tool_cmd(tool_name, params, False)
-            
-            for out in utils.execute_command(cmd, self.__verbose, self.stdout_log_file):
-                print(out)
-                if exists_stdout:
-                    utils.save_string_to_txt(out, self.stdout_log_file, "a")
+            exec_config['command'] = self.__preprocessing_tool_cmd(tool_name, params, False)
+            utils.execute_command(
+                exec_config
+            )
     
     def execute_pipeline(self, config:dict) -> None:
         """
@@ -611,97 +640,84 @@ class TeraStitcher():
         
         """
         
-        # Checking if stdout log file exists
-        exists_stdout = os.path.exists(self.stdout_log_file)
+        exec_config = {
+            'command': '',
+            'verbose': self.__verbose,
+            'stdout_log_file': self.stdout_log_file,
+            'logger': self.logger,
+            # Checking if stdout log file exists
+            'exists_stdout': os.path.exists(self.stdout_log_file)
+        }
         
         # Preprocessing steps
         if self.preprocessing:
-            self.__execute_preprocessing_steps()
+            self.__execute_preprocessing_steps(exec_config)
         
         # Step 1
-        print("\n- Import step...")
-        for out in utils.execute_command(
-            self.import_step_cmd(config['import_data']), self.__verbose, self.stdout_log_file
-        ):
-            print(out)
-            
-            if exists_stdout:
-                utils.save_string_to_txt(out, self.stdout_log_file, "a")
+        
+        exec_config['command'] = self.import_step_cmd(config['import_data'])
+        self.logger.info("Import step...")
+        utils.execute_command(
+            exec_config
+        )
         
         # Step 2
-        print("- Align step...")
-        for out in utils.execute_command(
-            self.align_step_cmd(config['align']), self.__verbose, self.stdout_log_file
-        ):
-            print(out)
+        self.logger.info("Align step...")
+        exec_config['command'] = self.align_step_cmd(config['align'])
+        utils.execute_command(
+            exec_config
+        )
         
         # Step 3
-        print("- Projection step...")
-        for out in utils.execute_command(
-            self.input_output_step_cmd(
-                'displproj', 'xml_displcomp.xml', 'xml_displproj.xml'
-            ), self.__verbose, self.stdout_log_file
-        ):
-            print(out)
-            
-            if exists_stdout:
-                utils.save_string_to_txt(out, self.stdout_log_file, "a")
-          
+        self.logger.info("Projection step...")
+        exec_config['command'] = self.input_output_step_cmd(
+            'displproj', 'xml_displcomp.xml', 'xml_displproj.xml'
+        )
+        utils.execute_command(
+            exec_config
+        )
+        
         # Step 4
-        print("- Threshold step...")
-        for out in utils.execute_command(
-            self.input_output_step_cmd(
-                'displthres', 'xml_displproj.xml', 'xml_displthres.xml', config['threshold']
-            ), self.__verbose, self.stdout_log_file
-        ):
-            print(out)
-            
-            if exists_stdout:
-                utils.save_string_to_txt(out, self.stdout_log_file, "a")
+        self.logger.info("Threshold step...")
+        exec_config['command'] = self.input_output_step_cmd(
+            'displthres', 'xml_displproj.xml', 'xml_displthres.xml', config['threshold']
+        )
+        utils.execute_command(
+            exec_config
+        )
         
         # Step 5
-        print("- Placing tiles step...")
-        for out in utils.execute_command(
-            self.input_output_step_cmd(
-                'placetiles', 'xml_displthres.xml', 'xml_merging.xml'
-            ), self.__verbose, self.stdout_log_file
-        ):
-            print(out)
-            
-            if exists_stdout:
-                utils.save_string_to_txt(out, self.stdout_log_file, "a")
+        self.logger.info("Placing tiles step...")
+        exec_config['command'] = self.input_output_step_cmd(
+            'placetiles', 'xml_displthres.xml', 'xml_merging.xml'
+        )
+        utils.execute_command(
+            exec_config
+        )
         
         # Step 6
-        print("- Merging step...")
-        for out in utils.execute_command(
-            self.merge_step_cmd(config["merge"]), self.__verbose, self.stdout_log_file
-        ):
-            print(out)
-            
-            if exists_stdout:
-                utils.save_string_to_txt(out, self.stdout_log_file, "a")
-                
-        print("- Converting to OME-Zarr")
-        writer = {
-            'codec': "zstd",
-            'clevel' : 1,
-            'chunk_size': 64,
-            'chunk_shape': None,
-            'n_levels': 1,
-            'scale_factor': 2.0
-        }
-        
-        execute_tiff_omezarr_conversion(
-            self.__output_folder,
-            self.__output_folder.joinpath('OMEZarr'),
-            writer
+        self.logger.info("Merging step...")
+        exec_config['command'] = self.merge_step_cmd(config["merge"])
+        utils.execute_command(
+            exec_config
         )
+        
+        self.logger.info("Converting to OME-Zarr...")
+        self.convert_to_ome_zarr(config['ome_zarr_params'])
+        
+        if config['clean_output']:
+            destriped_folder = Path(os.path.sep.join(list(self.__output_folder.parts)[:-1])).joinpath('destriped')
+            utils.delete_folder(destriped_folder, self.__verbose)
+            
+            stitched_folder = Path(glob(str(self.__output_folder) + '/RES*')[0])
+            utils.delete_folder(stitched_folder, self.__verbose)
 
 def execute_terastitcher(
-    input_data:PathLike, 
-    output_folder:PathLike, 
-    config_teras:PathLike
+        input_data:PathLike, 
+        output_folder:PathLike,
+        config_teras:PathLike
     ) -> None:
+    
     """
     Executes terastitcher with in-command parameters. It could be on-premise or in the cloud.
     If the process in being carried-out on a GCP VM (i.e. VertexAI jupyter notebook), the
@@ -732,15 +748,8 @@ def execute_terastitcher(
         print(f"- New input folder: {input_data}")
         print(f"- New output folder: {output_folder}")
     
-    preprocessing_steps = {
-        "pystripe": {
-            "input" : input_data,
-            "output" : output_folder,
-            "sigma1" : 256,
-            "sigma2" : 256,
-            "workers" : 8
-        }
-    }
+    config_teras['preprocessing_steps']['pystripe']['input'] = input_data
+    config_teras['preprocessing_steps']['pystripe']['output'] = output_folder
     
     terastitcher_tool = TeraStitcher(
         input_data=input_data,
@@ -748,8 +757,8 @@ def execute_terastitcher(
         parallel=True,
         computation='cpu',
         parastitcher_path=config_teras["parastitcher_path"],
-        verbose=True,
-        preprocessing=preprocessing_steps
+        verbose=False,
+        preprocessing=config_teras['preprocessing_steps']
     )
     
     # Saving log command
