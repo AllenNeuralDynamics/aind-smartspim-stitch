@@ -15,6 +15,21 @@ class InputFileBasedLinux(InputFile):
     def _validate(self, value):
         if platform.system() != 'Windows':
             super()._validate(value)
+            
+class InputDirGCloud(InputDir):
+    """
+    
+    InputDirGCloud is a :class:`argschema.fields.InputDir` subclass which is a path to
+    a directory location which will be validated if the user is not on GCloud.
+    
+    """
+    
+    def _validate(self, value):
+        if not value.startswith('gs://'):
+            super()._validate(value)
+        else:
+            # Validate after mounting
+            pass
 
 class ImportParameters(DefaultSchema):
     
@@ -172,7 +187,7 @@ class MergeParameters(DefaultSchema):
     cpu_params = Nested(CPUParams)
    
 class PystripeParams(DefaultSchema):
-    # input and output are already defined in MyParameters Class
+    # input and output are already defined in PipelineParams Class
     sigma1 = Int(
         required=False, 
         metadata={
@@ -236,10 +251,10 @@ class OmeZarrParams(DefaultSchema):
 class PreprocessingSteps(DefaultSchema):
     pystripe = Nested(PystripeParams, required=True)
 
-class MyParameters(ArgSchema):
+class PipelineParams(ArgSchema):
     
     # TODO Implement custom class for GCSCloud
-    input_data = InputDir(
+    input_data = InputDirGCloud(
         required=True, 
         metadata={
             'description':'Path where the data is located'
@@ -258,7 +273,7 @@ class MyParameters(ArgSchema):
         metadata={
             'description':'Path to parastitcher'
         },
-        dump_default='/home/jupyter/terastitcher-module/environment/GCloud/hostfile'
+        dump_default='/home/jupyter/terastitcher-module/environment/GCloud/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/Parastitcher.py'
     )
     
     # Processing params
@@ -346,7 +361,7 @@ if __name__ == '__main__':
 
     mod = ArgSchemaParser(
         input_data=example,
-        schema_type=MyParameters
+        schema_type=PipelineParams
     )
 
     pp.pprint(mod.args)

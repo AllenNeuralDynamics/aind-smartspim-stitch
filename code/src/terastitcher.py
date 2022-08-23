@@ -9,7 +9,7 @@ import errno
 from pathlib import Path
 from glob import glob
 from path_parser import PathParser
-from params import MyParameters, get_default_config
+from params import PipelineParams, get_default_config
 from argschema import ArgSchemaParser
 from tiff_to_omezarr import execute_tiff_omezarr_conversion
 import warnings
@@ -743,8 +743,8 @@ def execute_terastitcher(
     
     if len(parser_result):
         # changing paths to mounted dirs
-        input_data = input_data.replace('gs://', '/home/jupyter/')
-        output_folder = output_folder.replace('gs://', '/home/jupyter/')
+        input_data = input_data.replace('gs://', os.getcwd()+'/')
+        output_folder = output_folder.replace('gs://', os.getcwd()+'/')
         print(f"- New input folder: {input_data}")
         print(f"- New output folder: {output_folder}")
     
@@ -784,7 +784,7 @@ def main() -> None:
 
     mod = ArgSchemaParser(
         input_data=default_config,
-        schema_type=MyParameters
+        schema_type=PipelineParams
     )
     
     args = mod.args

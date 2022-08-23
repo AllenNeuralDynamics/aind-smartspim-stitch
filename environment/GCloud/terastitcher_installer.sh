@@ -41,15 +41,21 @@ if ! (exit $status)
 then
     python_version=2
     sudo apt install -y python3-pip
-    python3 -m pip install --no-input https://github.com/chunglabmit/pystripe/archive/master.zip \
+    python3 -m pip install --no-input 'tifffile < 2022.4.22' \
+    git+https://github.com/toloudis/ome-zarr-py.git@feature/dask-poc\
+    https://github.com/chunglabmit/pystripe/archive/master.zip \
     git+https://github.com/carshadi/aicsimageio.git@feature/zarrwriter-multiscales \
     git+https://github.com/AllenInstitute/argschema.git \
+    distributed xarray_multiscale \
     mpi4py
 else
     sudo apt install -y python-pip
-    python -m pip install --no-input https://github.com/chunglabmit/pystripe/archive/master.zip \
+    python -m pip install --no-input 'tifffile < 2022.4.22' \
+    git+https://github.com/toloudis/ome-zarr-py.git@feature/dask-poc\
+    https://github.com/chunglabmit/pystripe/archive/master.zip \
     git+https://github.com/carshadi/aicsimageio.git@feature/zarrwriter-multiscales \
     git+https://github.com/AllenInstitute/argschema.git \
+    distributed xarray_multiscale \
     mpi4py
 fi
 

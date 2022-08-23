@@ -282,7 +282,7 @@ def gscfuse_mount(bucket_name:PathLike, params:dict) -> None:
     
     gfuse_cmd = f"gcsfuse {additional_params} {built_params} {bucket_name} {bucket_name}"
 
-    for out in execute_command(
+    for out in execute_command_helper(
         gfuse_cmd, True
     ):
         print(out)
@@ -300,7 +300,7 @@ def gscfuse_unmount(mount_dir:PathLike) -> None:
     
     fuser_cmd = f"fusermount -u {mount_dir}"
     
-    for out in execute_command(
+    for out in execute_command_helper(
         fuser_cmd, True
     ):
         print(out)

@@ -223,7 +223,7 @@ def parse_args():
     )
     
     parser.add_argument(
-        "--pyramid_levels", type=int, default=1, help="number of resolution levels"
+        "--pyramid_levels", type=int, default=5, help="number of resolution levels"
     )
     
     parser.add_argument(
