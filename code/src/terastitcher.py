@@ -11,7 +11,7 @@ from glob import glob
 from path_parser import PathParser
 from params import PipelineParams, get_default_config
 from argschema import ArgSchemaParser
-from tiff_to_omezarr import execute_tiff_omezarr_conversion
+from zarr_converter import ZarrConverter
 import warnings
 import logging
 
@@ -539,6 +539,14 @@ class TeraStitcher():
         output_path = f"--volout={self.__output_folder}"
         parallel_command = ''
         
+        params = {
+            'slicewidth': params['slice_extent'][0],
+            'sliceheight': params['slice_extent'][1],
+            'slicedepth': params['slice_extent'][2],
+            'volout_plugin': params['volout_plugin'],
+            'cpu_params': params['cpu_params']
+        }
+        
         if self.__parallel:
             parallel_command = self.__build_parallel_command(params, 'merge')
     
@@ -562,9 +570,13 @@ class TeraStitcher():
         
         input_folder = utils.get_deepest_dirpath(self.__output_folder)
         
-        execute_tiff_omezarr_conversion(
-            input_folder,
-            self.__output_folder.joinpath('OMEZarr'),
+        converter = ZarrConverter(
+            input_folder, 
+            self.__output_folder.joinpath('OMEZarr'), 
+            {'codec': config['codec'], 'clevel': config['clevel']}
+        )
+        
+        converter.convert(
             config
         )
     
@@ -679,8 +691,9 @@ class TeraStitcher():
         
         # Step 4
         self.logger.info("Threshold step...")
+        threshold_cnf = {'threshold': config['threshold']['reliability_threshold']}
         exec_config['command'] = self.input_output_step_cmd(
-            'displthres', 'xml_displproj.xml', 'xml_displthres.xml', config['threshold']
+            'displthres', 'xml_displproj.xml', 'xml_displthres.xml', threshold_cnf
         )
         utils.execute_command(
             exec_config
@@ -748,16 +761,19 @@ def execute_terastitcher(
         print(f"- New input folder: {input_data}")
         print(f"- New output folder: {output_folder}")
     
-    config_teras['preprocessing_steps']['pystripe']['input'] = input_data
-    config_teras['preprocessing_steps']['pystripe']['output'] = output_folder
-    
+    try:
+        config_teras['preprocessing_steps']['pystripe']['input'] = input_data
+        config_teras['preprocessing_steps']['pystripe']['output'] = output_folder
+    except KeyError:
+        config_teras['preprocessing_steps'] = None
+        
     terastitcher_tool = TeraStitcher(
         input_data=input_data,
         output_folder=output_folder,
         parallel=True,
         computation='cpu',
         parastitcher_path=config_teras["parastitcher_path"],
-        verbose=False,
+        verbose=True,
         preprocessing=config_teras['preprocessing_steps']
     )
     
@@ -779,7 +795,6 @@ def execute_terastitcher(
             utils.gscfuse_unmount(parser_result[1])
 
 def main() -> None:
-    
     default_config = get_default_config()
 
     mod = ArgSchemaParser(

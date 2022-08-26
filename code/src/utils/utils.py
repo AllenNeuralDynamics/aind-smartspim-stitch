@@ -6,6 +6,7 @@ from typing import Optional, List, Union
 import shutil
 from glob import glob
 import platform
+import numpy as np
 
 # IO types
 PathLike = Union[str, Path]
@@ -96,7 +97,7 @@ def execute_command_helper(
     
     popen = subprocess.Popen(command, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
     for stdout_line in iter(popen.stdout.readline, ""):
-        yield stdout_line
+        yield str(stdout_line).strip()
     popen.stdout.close()
     return_code = popen.wait()
     if return_code:
@@ -125,7 +126,6 @@ def execute_command(
     for out in execute_command_helper(
         config['command'], config['verbose'], config['stdout_log_file']
     ):
-        out = str(out).strip()
         if len(out):
             config['logger'].info(out)
         

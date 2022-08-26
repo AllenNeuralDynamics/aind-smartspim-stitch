@@ -2,6 +2,7 @@ from argschema import ArgSchemaParser, ArgSchema
 from argschema.fields import NumpyArray, Boolean, Int, Str, Nested, List, Float, InputFile, InputDir
 from argschema.schemas import DefaultSchema
 from marshmallow import validate
+from zarr_converter import OmeZarrParams
 import pprint as pp
 import platform
 
@@ -144,7 +145,7 @@ class AlignParameters(DefaultSchema):
         
 class ThresholdParameters(DefaultSchema):
     
-    threshold = Float(
+    reliability_threshold = Float(
         required=False, 
         metadata={
             'description':'Reliability threshold applied to the computed displacements to select the most reliable ones'
@@ -160,20 +161,14 @@ class ThresholdParameters(DefaultSchema):
 
 class MergeParameters(DefaultSchema):
     
-    slicewidth = Int(
-        required=False, 
+    slice_extent = List(
+        Int(),
+        required=True,
         metadata={
-            'description':'Supposing the output image is saved in a tiled format, this is the width of output tiles along X axis'
+            'description':'Supposing the output image is saved in a tiled format, this is an array that contains the slice size of output tiles in order [slicewidth, sliceheight, slicedepth]'
         },
-        dump_default=20000
-    )
-    
-    sliceheight = Int(
-        required=False, 
-        metadata={
-            'description':'Supposing the output image is saved in a tiled format, this is the width of output tiles along Y axis'
-        },
-        dump_default=20000
+        cli_as_single_argument=True,
+        dump_default=[20000, 20000, 0]
     )
     
     volout_plugin = Str(
@@ -211,49 +206,12 @@ class PystripeParams(DefaultSchema):
         },
         dump_default=8
     )
-    
-class OmeZarrParams(DefaultSchema):
-    
-    codec = Str(
-        required=False,
-        metadata={
-            'description':'Parameter for ome-zarr compressor'
-        },
-        dump_default='zstd'
-    )
-    
-    clevel = Int(
-        required=False,
-        metadata={
-            'description':'Parameter for ome-zarr compressor'
-        },
-        dump_default=1
-    )
-    
-    scale_factor = List(
-        Int(),
-        required=False,
-        metadata={
-            'description':'scale factor for each image axis'
-        },
-        cli_as_single_argument=True,
-        dump_default=[2, 2]
-    )
-    
-    pyramid_levels = Int(
-        required=False,
-        metadata={
-            'description':'number of pyramid levels for ome-zarr multiscale'
-        },
-        dump_default=5
-    )
 
 class PreprocessingSteps(DefaultSchema):
-    pystripe = Nested(PystripeParams, required=True)
+    pystripe = Nested(PystripeParams, required=False)
 
 class PipelineParams(ArgSchema):
     
-    # TODO Implement custom class for GCSCloud
     input_data = InputDirGCloud(
         required=True, 
         metadata={
@@ -301,7 +259,7 @@ def get_default_config():
                 "sigma1" : 256,
                 "sigma2" : 256,
                 "workers" : 8
-            }  
+            }
         },
         'import_data' : {
             "ref1":"X",
@@ -329,7 +287,7 @@ def get_default_config():
             "subvoldim": 100
         },
         "threshold" : {
-            "threshold" : 0.7
+            "reliability_threshold" : 0.7
         },
         "merge" : {
             "cpu_params": {
@@ -343,13 +301,12 @@ def get_default_config():
                 ]
             },
             "volout_plugin": "\"TiledXY|2Dseries\"",
-            "slicewidth": 20000,
-            "sliceheight": 20000
+            "slice_extent": [20000, 20000, 0]
         },
         'ome_zarr_params': {
             'codec': 'zstd',
             'clevel': 1,
-            'scale_factor': [2, 2],
+            'scale_factor': [2, 2, 2],
             'pyramid_levels': 5
         }
     }
@@ -365,8 +322,4 @@ if __name__ == '__main__':
     )
 
     pp.pprint(mod.args)
-    
-    # pp.pprint(mod.args['import_data'])
-    # pp.pprint(mod.args['input_data'])
-    # pp.pprint(mod.args['output_data'])
     
