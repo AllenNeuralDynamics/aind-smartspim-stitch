@@ -6,6 +6,7 @@ from typing import Optional, List, Union
 import shutil
 from glob import glob
 import platform
+import numpy as np
 
 # IO types
 PathLike = Union[str, Path]
@@ -65,7 +66,7 @@ def delete_folder(dest_dir:PathLike, verbose:Optional[bool]=False) -> None:
         except shutil.Error as e:
             print(f"Folder could not be removed! Error {e}")
 
-def execute_command(
+def execute_command_helper(
         command:str, 
         print_command:bool=False, 
         stdout_log_file:Optional[PathLike]=None
@@ -96,12 +97,41 @@ def execute_command(
     
     popen = subprocess.Popen(command, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
     for stdout_line in iter(popen.stdout.readline, ""):
-        yield stdout_line
+        yield str(stdout_line).strip()
     popen.stdout.close()
     return_code = popen.wait()
     if return_code:
         raise subprocess.CalledProcessError(return_code, command)
+
+def execute_command(
+        config:dict
+    ) -> None:
+    """
+    Execute a shell command with a given configuration.
     
+    Parameters
+    ------------------------
+    command: str
+        Command that we want to execute.
+    print_command: bool
+        Bool that dictates if we print the command in the console.
+        
+    Raises
+    ------------------------
+    CalledProcessError: 
+        if the command could not be executed (Returned non-zero status).
+    
+    """
+
+    for out in execute_command_helper(
+        config['command'], config['verbose'], config['stdout_log_file']
+    ):
+        if len(out):
+            config['logger'].info(out)
+        
+        if config['exists_stdout']:
+            save_string_to_txt(out, config['stdout_log_file'], "a")
+ 
 def check_path_instance(obj: object) -> bool:
     """
     Checks if an objects belongs to pathlib.Path subclasses.
@@ -252,7 +282,7 @@ def gscfuse_mount(bucket_name:PathLike, params:dict) -> None:
     
     gfuse_cmd = f"gcsfuse {additional_params} {built_params} {bucket_name} {bucket_name}"
 
-    for out in execute_command(
+    for out in execute_command_helper(
         gfuse_cmd, True
     ):
         print(out)
@@ -270,7 +300,7 @@ def gscfuse_unmount(mount_dir:PathLike) -> None:
     
     fuser_cmd = f"fusermount -u {mount_dir}"
     
-    for out in execute_command(
+    for out in execute_command_helper(
         fuser_cmd, True
     ):
         print(out)
@@ -294,6 +324,41 @@ def save_string_to_txt(txt:str, filepath:PathLike, mode='w') -> None:
     
     with open(filepath, mode) as file:
         file.write(txt + "\n")
+        
+def get_deepest_dirpath(folder:PathLike, ignore_folders:List[str]=['metadata']) -> PathLike:
+    """
+    Returns the deepest folder path in the provided folder.
+    
+    Parameters
+    ------------------------
+    folder: PathLike
+        Path where the search will be carried out.
+        
+    ignore_folders: List[str]
+        List of folders that need to be ignored
+    
+    Returns
+    ------------------------
+    PathLike:
+        Path of the deepest directory
+    """
+    
+    deepest_path = None
+    deep_val = 0
+    
+    for root, dirs, files in os.walk(folder, topdown=False):
+        
+        if any(ignore_folder in root for ignore_folder in ignore_folders):
+            continue
+        
+        for foldername in dirs:
+            tmp_path = os.path.join(root, foldername)
+            if tmp_path.count(os.path.sep) > deep_val and not any(ignore_folder in foldername for ignore_folder in ignore_folders):
+                deepest_path = tmp_path
+                deep_val = tmp_path.count(os.path.sep)
+    
+    
+    return Path(deepest_path)
         
 def generate_data_description(input_folder:PathLike, tools:List[dict]) -> dict:
     """
