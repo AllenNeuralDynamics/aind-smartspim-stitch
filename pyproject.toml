@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "terastitcher-module"
+version = "0.1.0"
+description = "Striping and stitching module for 3D teravoxel-sized microscopy images using TeraStitcher and Pystripe"
+authors = [
+    {name = "David Feng", email="david.feng@alleninstitute.org"},
+    {name = "Sharmishtaa Seshamani", email="sharmishtaas@alleninstitute.org"},
+    {name = "Camilo Laiton", email="camilo.laiton@alleninstitute.org"},
+]
+license = {text = "MIT"}
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3"
+]
+dynamic = ["readme"]
+
+dependencies = [
+    'tifffile < 2022.4.22',
+    'xarray_multiscale',
+    'argschema',
+    'distributed',
+    'mpi4py',
+    'pystripe@https://github.com/chunglabmit/pystripe/archive/master.zip',
+    'ome-zarr@git+https://github.com/camilolaiton/ome-zarr-py.git@feature/delayed-dask-poc',
+    'aicsimageio@git+https://github.com/camilolaiton/aicsimageio.git@feature/zarrwriter-multiscales-daskjobs',
+]
+
+[project.optional-dependencies]
+dev = [
+    
+]
+
+[project.urls]
+homepage = "https://github.com/AllenNeuralDynamics/terastitcher-module"
+documentation = "https://github.com/AllenNeuralDynamics/terastitcher-module"
+repository = "https://github.com/AllenNeuralDynamics/terastitcher-module"
+
+[tool.setuptools.packages.find]
+where = ["code/src"]
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"]}

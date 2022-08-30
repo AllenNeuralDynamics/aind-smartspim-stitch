@@ -39,6 +39,26 @@ $ pystripe -h
 $ mpirun -V
 ```
 
+## Local installation
+Follow the steps provided [here](https://github.com/abria/TeraStitcher/wiki/Download-and-install) to install TeraStitcher for your platform. Please, install the command-line version with BioFormats support [Link](https://github.com/abria/TeraStitcher/wiki/Binary-packages#terastitcher-portable-with-support-for-bioformats-command-line-version).
+
+After TeraStitcher is correctly installed in your platform, create a new conda environment and execute the following commands:
+
+```
+$ conda create -n stitch -y python=3.8
+$ conda activate stitch
+```
+
+Then, clone the repository and install the packages using pyproject.toml file.
+
+```
+$ git clone https://github.com/AllenNeuralDynamics/terastitcher-module
+$ cd terastitcher-module
+$ pip install -e .
+```
+
+Afterwards, set --parastitcher_path parameter to the Parastitcher python script. You can do this in the command line or directly in the code. It should be located in `YOUR_DIRECTORY/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/Parastitcher.py`.
+
 ## Parameters
 This module uses the following principal parameters:
 - --input_data: Path where the data is located. If it's located in a GCS bucket, please refer to it such as: `gs://bucket-name/dataset_name/image_folder`.
@@ -106,3 +126,6 @@ $ python terastitcher-module/code/src/terastitcher.py --input_data gs://bucket-n
 
 ## TeraStitcher Documentation
 You can download TeraStitcher documentation from [here](https://unicampus365-my.sharepoint.com/:b:/g/personal/g_iannello_unicampus_it/EYT9KbapjBdGvTAD2_MdbKgB5gY_h9rlvHzqp6mUNqVhIw?e=s8GrFC)
+
+## Pystripe Documentation
+You can access Pystripe documentation from [here](https://github.com/chunglabmit/pystripe)

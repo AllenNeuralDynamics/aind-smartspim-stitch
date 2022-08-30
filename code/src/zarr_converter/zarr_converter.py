@@ -5,7 +5,6 @@ from distributed import Client, LocalCluster, progress
 from numcodecs import blosc
 import dask
 from dask.array.image import imread
-from dask.diagnostics import ProgressBar
 import argparse
 import time
 from typing import List, Optional, Union, Tuple, Any
@@ -14,6 +13,7 @@ from xarray_multiscale.reducers import windowed_mean
 import numpy as np
 from .zarr_converter_params import ZarrConvertParams, get_default_config
 from argschema import ArgSchemaParser
+from glob import glob
 
 #pip install git+https://github.com/carshadi/aicsimageio.git@feature/zarrwriter-multiscales
 #pip install git+https://github.com/AllenInstitute/argschema.git
@@ -46,13 +46,58 @@ class ZarrConverter():
             'compressor': blosc.Blosc(cname=blosc_config['codec'], clevel=blosc_config['clevel'], shuffle=blosc.SHUFFLE)
         }
         # get_blosc_codec(writer_config['codec'], writer_config['clevel'])
+    
+    def read_multichannel_image(
+        self,
+        path:PathLike
+    ) -> dask.array.core.Array:
+        """
+            Reads image files and stores them in a dask array.
+            
+            path:PathLike
+                Path where the images are located
+            
+            Returns
+            ------------------------
+            dask.array.core.Array:
+                Dask array with the images. Returns None if it was not possible to read the images.
+        """
         
-    def read_files(
-        self
+        image_channel = []
+        path = str(path)
+        
+        channel_paths = glob(path+'/*/')
+        
+        if not len(channel_paths):
+            return None
+        
+        for path in channel_paths:
+            for stitched_path in glob(path + '/stitched/RES*/*/*/'):
+                print("- Reading channel: ", Path(path).stem)
+                image_channel.append(
+                    ensure_shape_n_d(
+                        self.read_channel_image(stitched_path),
+                        4
+                    )
+                )
+        
+        try:
+            image_channel = concatenate(image_channel, axis=0)
+        except ValueError as err:
+            return None
+        
+        return image_channel
+    
+    def read_channel_image(
+        self,
+        path:PathLike
     ) -> dask.array.core.Array:
     
         """
             Reads image files and stores them in a dask array.
+            
+            path:PathLike
+                Path where the images are located
             
             file_format:str
                 Accepted file format
@@ -62,11 +107,11 @@ class ZarrConverter():
             dask.array.core.Array:
                 Dask array with the images. Returns None if it was not possible to read the images.
         """
-    
+        
         images = None
         
         try:
-            filename_pattern = f'{self.input_data}/*.{self.file_format}*'
+            filename_pattern = f'{path}/*.{self.file_format}*'
             images = imread(filename_pattern)
             
         except ValueError:
@@ -153,7 +198,10 @@ class ZarrConverter():
         
         client = Client()
         
-        image = self.read_files()
+        image = self.read_multichannel_image(self.input_data)
+        
+        if not isinstance(image, dask.array.core.Array):
+            image = self.read_channel_image(self.input_data)
             
         scale_axis = []
         for axis in range(len(image.shape)-len(writer_config['scale_factor'])):
@@ -170,17 +218,21 @@ class ZarrConverter():
         
         pyramid_data = [self.pad_array_5d(pyramid) for pyramid in pyramid_data]
         
-        with ProgressBar():
-            self.writer.write_multiscale(
-                pyramid=pyramid_data,  # : types.ArrayLike,  # must be 5D TCZYX
-                image_name=image_name,  #: str,
-                physical_pixel_sizes=None,
-                channel_names=None,
-                channel_colors=None,
-                scale_factor=scale_axis,  # : float = 2.0,
-                chunks=pyramid_data[0].chunksize,#writer_config['chunks'],
-                storage_options=self.opts,
-            )
+        dask_jobs = self.writer.write_multiscale(
+            pyramid=pyramid_data,  # : types.ArrayLike,  # must be 5D TCZYX
+            image_name=image_name,  #: str,
+            physical_pixel_sizes=None,
+            channel_names=None,
+            channel_colors=None,
+            scale_factor=scale_axis,  # : float = 2.0,
+            chunks=pyramid_data[0].chunksize,#writer_config['chunks'],
+            storage_options=self.opts,
+            compute_dask=False
+        )
+        
+        if len(dask_jobs):
+            dask_jobs = dask.persist(*dask_jobs)
+            progress(dask_jobs)
         
         client.close()
 
