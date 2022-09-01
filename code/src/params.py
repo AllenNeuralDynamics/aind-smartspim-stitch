@@ -183,20 +183,24 @@ class MergeParameters(DefaultSchema):
    
 class PystripeParams(DefaultSchema):
     # input and output are already defined in PipelineParams Class
-    sigma1 = Int(
-        required=False, 
+    sigma1 = List(
+        Int(),
+        required=False,
         metadata={
-            'description':'bandwidth of the stripe filter for the foreground'
+            'description':'bandwidth of the stripe filter for the foreground for each channel'
         },
-        dump_default=256
+        cli_as_single_argument=True,
+        dump_default=[256, 800, 800]
     )
     
-    sigma2 = Int(
-        required=False, 
+    sigma2 = List(
+        Int(),
+        required=False,
         metadata={
-            'description':'bandwidth of the stripe filter for the background'
+            'description':'bandwidth of the stripe filter for the background for each channel'
         },
-        dump_default=256
+        cli_as_single_argument=True,
+        dump_default=[256, 800, 800]
     )
     
     workers = Int(
@@ -234,6 +238,14 @@ class PipelineParams(ArgSchema):
         dump_default='/home/jupyter/terastitcher-module/environment/GCloud/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/Parastitcher.py'
     )
     
+    paraconverter_path = InputFile(
+        required=False, 
+        metadata={
+            'description':'Path to parastitcher'
+        },
+        dump_default='/home/jupyter/terastitcher-module/environment/GCloud/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/paraconverter.py'
+    )
+    
     # Processing params
     preprocessing_steps = Nested(PreprocessingSteps, required=False)
     import_data = Nested(ImportParameters, required=True)
@@ -256,9 +268,9 @@ def get_default_config():
     return {
         'preprocessing_steps': {
             'pystripe': {
-                "sigma1" : 256,
-                "sigma2" : 256,
-                "workers" : 8
+                "sigma1" : [256, 800, 800, 800],
+                "sigma2" : [256, 800, 800, 800],
+                "workers" : 4
             }
         },
         'import_data' : {
@@ -277,7 +289,7 @@ def get_default_config():
             "cpu_params": {
                 "estimate_processes": False,
                 "image_depth": 4200,
-                "number_processes": 16,
+                "number_processes": 4,
                 "hostfile": "/home/jupyter/terastitcher-module/environment/GCloud/hostfile",
                 "additional_params": [
                     "use-hwthread-cpus",
@@ -293,7 +305,7 @@ def get_default_config():
             "cpu_params": {
                 "estimate_processes": False,
                 "image_depth": 1000,
-                "number_processes": 16,
+                "number_processes": 4,
                 "hostfile": "/home/jupyter/terastitcher-module/environment/GCloud/hostfile",
                 "additional_params": [
                     "use-hwthread-cpus",
@@ -301,7 +313,7 @@ def get_default_config():
                 ]
             },
             "volout_plugin": "\"TiledXY|2Dseries\"",
-            "slice_extent": [20000, 20000, 0]
+            "slice_extent": [20000, 20000, 20000]
         },
         'ome_zarr_params': {
             'codec': 'zstd',

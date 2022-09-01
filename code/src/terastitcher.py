@@ -14,6 +14,7 @@ from argschema import ArgSchemaParser
 from zarr_converter import ZarrConverter
 import warnings
 import logging
+import re
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -24,6 +25,7 @@ logging.basicConfig(
         # logging.FileHandler("test.log", "a"),
     ],
 )
+logging.disable('DEBUG')
 
 PathLike = Union[str, Path]
 
@@ -34,6 +36,7 @@ class TeraStitcher():
             output_folder:PathLike, 
             parallel:bool=True,
             parastitcher_path:Optional[PathLike]=None,
+            paraconverter_path:Optional[PathLike]=None,
             computation:Optional[str]='cpu',
             preprocessing:Optional[dict]=None,
             verbose:Optional[bool]=False,
@@ -52,6 +55,8 @@ class TeraStitcher():
             True if you want to run terastitcher in parallel, False otherwise.
         parastitcher_path: Optional[PathLike] 
             Path where parastitcher execution file is located.
+        paraconverter_path: Optional[PathLike] 
+            Path where paraconverter execution file is located.
         computation: Optional[str]
             String that indicates where will terastitcher run. Available options are: ['cpu', 'gpu']
         preprocessing: Optional[dict]:
@@ -62,7 +67,7 @@ class TeraStitcher():
         Raises
         ------------------------
         FileNotFoundError:
-            If terastitcher or Parastitcher (if provided) were not found in the system.
+            If terastitcher, Parastitcher or paraconverter (if provided) were not found in the system.
         
         """
         
@@ -72,6 +77,7 @@ class TeraStitcher():
         self.__computation = computation
         self.__platform = platform.system()
         self.__parastitcher_path = Path(parastitcher_path)
+        self.__paraconverter_path = Path(paraconverter_path)
         self.preprocessing = preprocessing
         self.__verbose = verbose
         self.__python_terminal = None
@@ -123,8 +129,8 @@ class TeraStitcher():
         data_description = utils.generate_data_description(input_folder=self.__input_data, tools=tools)
         data_description_path = self.__output_folder.joinpath('data_description.json')
         
-        # If parastitcher path is not found, we set computation to sequential cpu as default.
-        self.__check_parastitcher()
+        # If parastitcher or paraconverter paths are not found, we set computation to sequential cpu as default.
+        self.__check_teras_parallel_scripts()
         
         if self.preprocessing:
             self.__change_io_paths()
@@ -269,26 +275,32 @@ class TeraStitcher():
             self.logger.info(f"Please, check your python 3 installation in the system {self.__platform}")
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "python")
         
-    def __check_parastitcher(self) -> None:
+    def __check_teras_parallel_scripts(self) -> None:
         """
-        Checks parastitcher installation using a provided path.
+        Checks parastitcher and paraconverter installation using a provided paths.
         
         Raises
         ------------------------
         FileNotFoundError:
-            If Parastitcher was not found in the system.
+            If parastitcher or paraconverter were not found in the system.
         
         """
         
-        if self.__parastitcher_path != None:
-            if not os.path.exists(self.__parastitcher_path):
-                raise FileNotFoundError("Parastitcher path not found.")
-            
-        else:
-            # Parallel false, but we might still be using gpu
+        def check_file_helper(path:PathLike) -> bool:
+            if path != None:
+                if not os.path.exists(path):
+                    raise FileNotFoundError(f"{path} not found.")    
+
+                return True
+            return False
+        
+        parastitcher = check_file_helper(self.__parastitcher_path)
+        paraconverter = check_file_helper(self.__paraconverter_path)
+        
+        if not parastitcher or not paraconverter:
             self.__parallel = False
     
-    def __build_parallel_command(self, params:dict, step_name:str) -> str:
+    def __build_parallel_command(self, params:dict, step_name:str, tool:PathLike) -> str:
         """
         Builds a mpi command based on a provided configuration dictionary. 
         
@@ -299,7 +311,9 @@ class TeraStitcher():
         step_name: str
             Terastitcher runs in parallel the align and merge steps. Then, we build the command
             based on which step terastitcher is running.
-        
+        tool: PathLike
+            Parallel tool to be used in the command. (Parastitcher or Paraconverter)
+            
         Returns
         ------------------------
         str:
@@ -347,14 +361,63 @@ class TeraStitcher():
                 self.logger.info("Aproximate number of processes for the merge step is not implemented yet.")
         
         cmd = f"{mpi_command} {n_procs} {hostfile} {additional_params}"
-        cmd += f"{self.__python_terminal} {self.__parastitcher_path}"
+        cmd += f"{self.__python_terminal} {tool}"
         return cmd
     
-    def import_step_cmd(self, params:dict) -> str:
+    def import_step_cmd(self, params:dict, channel:str, fuse_path:PathLike=None) -> str:
         """
         Builds the terastitcher's import command based on a provided configuration dictionary.
         It outputs a json file in the xmls folder of the output directory with all the parameters 
         used in this step. 
+        
+        Parameters
+        ------------------------
+        params: dict
+            Configuration dictionary used to build the terastitcher's import command.
+        channel:str
+            Name of the dataset channel that will be imported
+        fuse_path:PathLike
+            Path where the fused xml files will be stored. This will only be used in multichannel fusing.
+            Default None
+        
+        Returns
+        ------------------------
+        str:
+            Command that will be executed for terastitcher.
+        
+        """
+        
+        # TODO Check if params comes with all necessary keys so it does not raise KeyNotFound error
+        
+        input_path = self.__input_data.joinpath(channel)
+        volume_input = f"--volin={input_path}"
+        
+        output_path = self.xmls_path.joinpath(f"xml_import_{channel}.xml")
+        
+        # changing output path to fuse path for multichannel fusing
+        if fuse_path != None:
+            output_path = fuse_path.joinpath(f"xml_import_{channel}.xml")
+            
+        output_folder = f"--projout={output_path}"
+        
+        parameters = utils.helper_build_param_value_command(params)
+        
+        additional_params = ''
+        if len(params['additional_params']):
+            additional_params = utils.helper_additional_params_command(params['additional_params'])
+        
+        cmd = f"terastitcher --import {volume_input} {output_folder} {parameters} {additional_params}"
+        
+        output_json = self.metadata_path.joinpath(f"import_params_{channel}.json")
+        utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
+        
+        return cmd
+    
+    def import_multivolume_cmd(self, params:dict) -> str:
+        """
+        Builds the terastitcher's multivolume import command based on a provided configuration dictionary.
+        It outputs a json file in the xmls fuse folder of the output directory with all the parameters 
+        used in this step.
         
         Parameters
         ------------------------
@@ -367,22 +430,16 @@ class TeraStitcher():
             Command that will be executed for terastitcher.
         
         """
-        
-        # TODO Check if params comes with all necessary keys so it does not raise KeyNotFound error
-        volume_input = f"--volin={self.__input_data}"
-        
-        output_path = self.xmls_path.joinpath("xml_import.xml")
-        output_folder = f"--projout={output_path}"
-        
+                
         parameters = utils.helper_build_param_value_command(params)
         
         additional_params = ''
         if len(params['additional_params']):
             additional_params = utils.helper_additional_params_command(params['additional_params'])
         
-        cmd = f"terastitcher --import {volume_input} {output_folder} {parameters} {additional_params}"
+        cmd = f"terastitcher --import {parameters} {additional_params}"
         
-        output_json = self.metadata_path.joinpath("import_params.json")
+        output_json = self.metadata_path.joinpath(f"import_params_multivolume.json")
         utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
         
         return cmd
@@ -425,7 +482,7 @@ class TeraStitcher():
                 
         return 2
     
-    def align_step_cmd(self, params:dict):
+    def align_step_cmd(self, params:dict, channel:str) -> str:
         """
         Builds the terastitcher's align command based on a provided configuration dictionary. 
         It outputs a json file in the xmls folder of the output directory with all the parameters 
@@ -435,22 +492,24 @@ class TeraStitcher():
         ------------------------
         params: dict
             Configuration dictionary used to build the terastitcher's align command.
-        
+        channel:str
+            Name of the dataset channel that will be aligned
+            
         Returns
         ------------------------
         str:
             Command that will be executed for terastitcher.
         
         """
-        input_path = self.xmls_path.joinpath("xml_import.xml")
+        input_path = self.xmls_path.joinpath(f"xml_import_{channel}.xml")
         input_xml = f"--projin={input_path}"
         
-        output_path = self.xmls_path.joinpath("xml_displcomp.xml")
+        output_path = self.xmls_path.joinpath(f"xml_displcomp_{channel}.xml")
         output_xml = f"--projout={output_path}"
         parallel_command = ''
 
         if self.__parallel:
-            parallel_command = self.__build_parallel_command(params, 'align')
+            parallel_command = self.__build_parallel_command(params, 'align', self.__parastitcher_path)
     
         else:
             # Sequential execution or gpu execution if USECUDA_X_NCC flag is 1
@@ -460,17 +519,18 @@ class TeraStitcher():
         
         cmd = f"{parallel_command} --displcompute {input_xml} {output_xml} {parameters} > {self.xmls_path}/step2par.txt"
         
-        output_json = self.metadata_path.joinpath("align_params.json")
+        output_json = self.metadata_path.joinpath(f"align_params_{channel}.json")
         utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
         
         return cmd
     
-    def input_output_step_cmd(self, 
-            step_name:str, 
-            input_xml:str, 
-            output_xml:str, 
-            params:Optional[dict]=None,
-        ) -> str:
+    def input_output_step_cmd(
+        self, 
+        step_name:str, 
+        input_xml:str, 
+        output_xml:str, 
+        params:Optional[dict]=None,
+    ) -> str:
         
         """
         Builds the terastitcher's input-output commands based on a provided configuration dictionary.
@@ -510,12 +570,13 @@ class TeraStitcher():
         
         cmd = f"terastitcher --{step_name} {input_xml} {output_xml} {parameters}"
         
-        output_json = self.metadata_path.joinpath(f"{step_name}_params.json")
+        channel = output_xml.replace('.xml', '').split('_')[-1]
+        output_json = self.metadata_path.joinpath(f"{step_name}_params_{channel}.json")
         utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
         
         return cmd
     
-    def merge_step_cmd(self, params:dict):
+    def merge_step_cmd(self, params:dict, channel:str) -> str:
         """
         Builds the terastitcher's merge command based on a provided configuration dictionary. 
         It outputs a json file in the xmls folder of the output directory with all the parameters 
@@ -525,7 +586,9 @@ class TeraStitcher():
         ------------------------
         params: dict
             Configuration dictionary used to build the terastitcher's merge command.
-        
+        channel:str
+            Name of the dataset channel that will be merged
+            
         Returns
         ------------------------
         str:
@@ -533,7 +596,7 @@ class TeraStitcher():
         
         """
         
-        input_path = self.xmls_path.joinpath("xml_merging.xml")
+        input_path = self.xmls_path.joinpath(f"xml_merging_{channel}.xml")
         input_xml = f"--projin={input_path}"
         
         output_path = f"--volout={self.__output_folder}"
@@ -548,7 +611,7 @@ class TeraStitcher():
         }
         
         if self.__parallel:
-            parallel_command = self.__build_parallel_command(params, 'merge')
+            parallel_command = self.__build_parallel_command(params, 'merge', self.__parastitcher_path)
     
         else:
             # Sequential execution or gpu execution if USECUDA_X_NCC flag is 1
@@ -558,22 +621,72 @@ class TeraStitcher():
         
         cmd = f"{parallel_command} --merge {input_xml} {output_path} {parameters} > {self.xmls_path}/step6par.txt"
         
-        output_json = self.metadata_path.joinpath("merge_params.json")
+        output_json = self.metadata_path.joinpath(f"merge_params_{channel}.json")
         utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
         
         return cmd
     
-    def convert_to_ome_zarr(self, config):
+    def merge_multivolume_cmd(self, params:dict) -> str:
+        """
+        Builds the terastitcher's multivolume merge command based on a provided configuration dictionary. 
+        It outputs a json file in the xmls folder of the output directory with all the parameters 
+        used in this step.
+        
+        Parameters
+        ------------------------
+        params: dict
+            Configuration dictionary used to build the terastitcher's multivolume merge command.
+        
+        Returns
+        ------------------------
+        str:
+            Command that will be executed for terastitcher.
+        
+        """
+        parallel_command = ''
+        
+        if self.__parallel:
+            parallel_command = self.__build_parallel_command(params, 'merge', self.__paraconverter_path)
+
+        else:
+            # Sequential execution or gpu execution if USECUDA_X_NCC flag is 1
+            parallel_command = f"teraconverter"
+        
+        parameters = utils.helper_build_param_value_command(params)
+
+        cmd = f"{parallel_command} {parameters} > {self.xmls_path}/step6par.txt"
+        cmd = cmd.replace('--s=', '-s=')
+        cmd = cmd.replace('--d=', '-d=')
+        
+        output_json = self.metadata_path.joinpath("merge_volume_params.json")
+        utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
+        
+        return cmd
+    
+    def convert_to_ome_zarr(self, config:dict, channels:List[str]) -> None:
+        """
+        Converts tiff files to OMEZarr.
+        
+        Parameters
+        ------------------------
+        config: dict
+            Configuration dictionary used to instanciate the OMEZarr Writer.
+        
+        channels:List[str]
+            List with channel names that will be processed by pystripe.
+            Sigma1 and sigma2 values in the lists belong to each of the channels respectively.
+        """
         
         output_json = self.metadata_path.joinpath("ome_zarr_params.json")
         utils.save_dict_as_json(output_json, config, self.__verbose)
         
-        input_folder = utils.get_deepest_dirpath(self.__output_folder)
+        path = [folder for folder in os.listdir(self.__output_folder) if 'RES' in folder]
         
         converter = ZarrConverter(
-            input_folder, 
+            self.__output_folder.joinpath(path[0]), 
             self.__output_folder.joinpath('OMEZarr'), 
-            {'codec': config['codec'], 'clevel': config['clevel']}
+            {'codec': config['codec'], 'clevel': config['clevel']},
+            channels
         )
         
         converter.convert(
@@ -609,19 +722,19 @@ class TeraStitcher():
         """
         parameters = utils.helper_build_param_value_command(params, equal_con=equal_con)
         
-        output_json = self.metadata_path.joinpath(f"{tool_name}_params.json")
+        output_json = self.metadata_path.joinpath(f"{tool_name}_params_{params['input'].stem}.json")
         utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
         
         cmd = f"{tool_name} {parameters}"
         
         return cmd
     
-    def __execute_preprocessing_steps(self, exec_config:dict) -> None:
+    def __execute_preprocessing_steps(self, exec_config:dict, channels:List[str]) -> None:
         """
         Executes any preprocessing steps that are required for the pipeline.
         It is necessary to have the begining of the terminal command as key and
         the parameters as a dictionary. i.e. "pystripe": {"input" : input_data,
-        "output" : output_folder,"sigma1" : 256,"sigma2" : 256,"workers" : 8}
+        "output" : output_folder,"sigma1" : [256, ...],"sigma2" : [256, ...],"workers" : 8}
         Command line would be: pystripe --input input_data --output output_folder 
         --sigma1 256 --sigma2 256 --workers 8
         
@@ -629,16 +742,262 @@ class TeraStitcher():
         ------------------------
         exec_config: dict
             Configuration for command line execution. Mostly for logger.
+        channels:List[str]
+            List with channel names that will be processed by pystripe.
+            Sigma1 and sigma2 values in the lists belong to each of the channels respectively.
         
         """
+        for idx in range(len(channels)):
+            for tool_name, params in self.preprocessing.items():
+                params_copy = params.copy()
+                
+                params_copy['input'] = params_copy['input'].joinpath(channels[idx])
+                params_copy['output'] = params_copy['output'].joinpath(channels[idx])
+                params_copy['sigma1'] = params_copy['sigma1'][idx]
+                params_copy['sigma2'] = params_copy['sigma2'][idx]
+                
+                exec_config['command'] = self.__preprocessing_tool_cmd(tool_name, params_copy, False)
+                utils.execute_command(
+                    exec_config
+                )
+    
+    def __compute_informative_channel(
+        self,
+        config:dict, 
+        exec_config:dict,
+        informative_channel:str,
+        fuse_xmls:PathLike
+    ) -> None:
+        """
+        Computes 1-5 terastitcher steps for the informative channel when the multichannel stitch will be performed.
         
-        for tool_name, params in self.preprocessing.items():
-            exec_config['command'] = self.__preprocessing_tool_cmd(tool_name, params, False)
+        Parameters
+        ------------------------
+        params: dict
+            Configuration dictionary used to build the command.
+        exec_config: dict
+            Configuration for command line execution. Mostly for logger.
+        informative_channel:str
+            Name of the dataset's informative channel that will be used for stitching.
+        fuse_xmls:PathLike
+            Path where the multivolume xmls will be saved.
+        """
+        
+        
+        # Importing informative channel
+        exec_config['command'] = self.import_step_cmd(
+            config['import_data'], 
+            informative_channel
+        )
+        
+        self.logger.info("Import step for informative channel...")
+        # print(exec_config)
+        utils.execute_command(
+            exec_config
+        )
+        
+        # Compute alignments for most informative channel
+        self.logger.info("Align step...")
+        exec_config['command'] = self.align_step_cmd(
+            config['align'],
+            informative_channel
+        )
+        
+        utils.execute_command(
+            exec_config
+        )
+        
+        # Step 3
+        self.logger.info("Projection step...")
+        exec_config['command'] = self.input_output_step_cmd(
+            'displproj', f'xml_displcomp_{informative_channel}.xml', f'xml_displproj_{informative_channel}.xml'
+        )
+        utils.execute_command(
+            exec_config
+        )
+        
+        # Step 4
+        self.logger.info("Threshold step...")
+        threshold_cnf = {'threshold': config['threshold']['reliability_threshold']}
+        exec_config['command'] = self.input_output_step_cmd(
+            'displthres', f'xml_displproj_{informative_channel}.xml', f'xml_displthres_{informative_channel}.xml', threshold_cnf
+        )
+        utils.execute_command(
+            exec_config
+        )
+        
+        # Step 5
+        self.logger.info("Placing tiles step...")
+        exec_config['command'] = self.input_output_step_cmd(
+            'placetiles', f'xml_displthres_{informative_channel}.xml', f'{fuse_xmls}/xml_merging_{informative_channel}.xml'
+        )
+        utils.execute_command(
+            exec_config
+        )
+    
+    def process_multiple_channels(
+        self, 
+        config:dict, 
+        exec_config:dict,
+        channels:List[str],
+        pos_informative_channel:int=0
+    ) -> None:
+        """
+        Stitch a dataset using multiple channels.
+        
+        Parameters
+        ------------------------
+        config: dict
+            Configuration dictionary used to process the channels.
+        exec_config: dict
+            Configuration for command line execution. Mostly for logger.
+        channels:List[str]
+            List with channel names that will be processed by pystripe.
+            Sigma1 and sigma2 values in the lists belong to each of the channels respectively.
+        pos_informative_channel:int
+            Position of the channels list where the informative channel is located.
+        """
+        
+        
+        if self.preprocessing:
+            self.__execute_preprocessing_steps(exec_config, channels)
+        
+        # Creating fuse folder
+        informative_channel = channels[pos_informative_channel]
+        fuse_xmls = self.xmls_path.joinpath('fuse_xmls')
+        utils.create_folder(fuse_xmls)
+        
+        # Importing non-informative channels
+        for idx in range(len(channels)):
+            
+            if idx == pos_informative_channel:
+                # Ignore import informative channel since we have already calculated projections
+                continue
+            
+            exec_config['command'] = self.import_step_cmd(
+                config['import_data'], 
+                channels[idx],
+                fuse_path=fuse_xmls
+            )
+            self.logger.info(f"Import step for {channels[idx]} channel...")
             utils.execute_command(
                 exec_config
-            )
+            )        
+        
+        # Computing xmls for informative channel
+        self.__compute_informative_channel(
+            config,
+            exec_config,
+            informative_channel,
+            fuse_xmls
+        )
+        
+        # Importing multivolume dataset
+        params_multivolume = config['import_data'].copy()
+        params_multivolume['volin'] = fuse_xmls
+        params_multivolume['projout'] = fuse_xmls.joinpath('import_multivolume.xml')
+        params_multivolume['volin_plugin'] = 'MultiVolume'
+        params_multivolume['imin_channel'] = pos_informative_channel
+
+        exec_config['command'] = self.import_multivolume_cmd(
+            params_multivolume
+        )
+        self.logger.info(f"Import multivolume using {channels[pos_informative_channel]} channel...")
+        utils.execute_command(
+            exec_config
+        )
+        
+        # Merge channels
+        self.logger.info("Merging channels step...")
+        merge_config = {
+            's' : params_multivolume['projout'],
+            'd' : self.__output_folder,
+            'sfmt': "\"TIFF (unstitched, 3D)\"",
+            'dfmt': f"\"TIFF (tiled, {len(channels)}D)\"",
+            'cpu_params':config['merge']['cpu_params'],
+            'width': config['merge']['slice_extent'][0],
+            'height': config['merge']['slice_extent'][1],
+            'depth': config['merge']['slice_extent'][2],
+        }
+            
+        exec_config['command'] = self.merge_multivolume_cmd(merge_config)
+        utils.execute_command(
+            exec_config
+        )
     
-    def execute_pipeline(self, config:dict) -> None:
+    def process_single_channel(
+        self, 
+        config:dict, 
+        exec_config:dict, 
+        channel:str
+    ) -> None:
+        """
+        Stitch a dataset with a single channel.
+        
+        Parameters
+        ------------------------
+        config: dict
+            Configuration dictionary used to process the channels.
+        exec_config: dict
+            Configuration for command line execution. Mostly for logger.
+        channel:str
+            Name of the dataset channel that will be imported
+        """
+        
+        # Preprocessing steps
+        if self.preprocessing:
+            self.__execute_preprocessing_steps(exec_config, [channel])
+        
+        # Step 1
+        exec_config['command'] = self.import_step_cmd(config['import_data'], channel)
+        self.logger.info("Import step...")
+        utils.execute_command(
+            exec_config
+        )
+        
+        # Step 2
+        self.logger.info("Align step...")
+        exec_config['command'] = self.align_step_cmd(config['align'], channel)
+        utils.execute_command(
+            exec_config
+        )
+        
+        # Step 3
+        self.logger.info("Projection step...")
+        exec_config['command'] = self.input_output_step_cmd(
+            'displproj', f'xml_displcomp_{channel}.xml', f'xml_displproj_{channel}.xml'
+        )
+        utils.execute_command(
+            exec_config
+        )
+        
+        # Step 4
+        self.logger.info("Threshold step...")
+        threshold_cnf = {'threshold': config['threshold']['reliability_threshold']}
+        exec_config['command'] = self.input_output_step_cmd(
+            'displthres', f'xml_displproj_{channel}.xml', f'xml_displthres_{channel}.xml', threshold_cnf
+        )
+        utils.execute_command(
+            exec_config
+        )
+        
+        # Step 5
+        self.logger.info("Placing tiles step...")
+        exec_config['command'] = self.input_output_step_cmd(
+            'placetiles', f'xml_displthres_{channel}.xml', f'xml_merging_{channel}.xml'
+        )
+        utils.execute_command(
+            exec_config
+        )
+        
+        # Step 6
+        self.logger.info("Merging step...")
+        exec_config['command'] = self.merge_step_cmd(config["merge"], channel)
+        utils.execute_command(
+            exec_config
+        )
+    
+    def execute_pipeline(self, config:dict, channels:List[str]) -> None:
         """
         Executes the terastitcher's stitching pipeline that includes the following steps:
         Import, Align, Project, Threshold, Place and Merge. Please refer to the following
@@ -649,7 +1008,9 @@ class TeraStitcher():
         config: dict
             Configuration dictionary for the stitching pipeline. It should include the configuration
             for each of the steps in the pipeline. i.e. {'import': {...}, 'align': {...}, ...}
-        
+        channels:List[str]
+            List with channel names that will be processed by pystripe.
+            Sigma1 and sigma2 values in the lists belong to each of the channels respectively.
         """
         
         exec_config = {
@@ -661,62 +1022,27 @@ class TeraStitcher():
             'exists_stdout': os.path.exists(self.stdout_log_file)
         }
         
-        # Preprocessing steps
-        if self.preprocessing:
-            self.__execute_preprocessing_steps(exec_config)
+        self.logger.info(f"Processing {len(channels)} channels")
         
-        # Step 1
-        
-        exec_config['command'] = self.import_step_cmd(config['import_data'])
-        self.logger.info("Import step...")
-        utils.execute_command(
-            exec_config
-        )
-        
-        # Step 2
-        self.logger.info("Align step...")
-        exec_config['command'] = self.align_step_cmd(config['align'])
-        utils.execute_command(
-            exec_config
-        )
-        
-        # Step 3
-        self.logger.info("Projection step...")
-        exec_config['command'] = self.input_output_step_cmd(
-            'displproj', 'xml_displcomp.xml', 'xml_displproj.xml'
-        )
-        utils.execute_command(
-            exec_config
-        )
-        
-        # Step 4
-        self.logger.info("Threshold step...")
-        threshold_cnf = {'threshold': config['threshold']['reliability_threshold']}
-        exec_config['command'] = self.input_output_step_cmd(
-            'displthres', 'xml_displproj.xml', 'xml_displthres.xml', threshold_cnf
-        )
-        utils.execute_command(
-            exec_config
-        )
-        
-        # Step 5
-        self.logger.info("Placing tiles step...")
-        exec_config['command'] = self.input_output_step_cmd(
-            'placetiles', 'xml_displthres.xml', 'xml_merging.xml'
-        )
-        utils.execute_command(
-            exec_config
-        )
-        
-        # Step 6
-        self.logger.info("Merging step...")
-        exec_config['command'] = self.merge_step_cmd(config["merge"])
-        utils.execute_command(
-            exec_config
-        )
-        
+        if len(channels) > 1:
+            pos_informative_channel = 2
+            self.process_multiple_channels(
+                config,
+                exec_config,
+                channels,
+                pos_informative_channel
+            )
+            
+        else:
+            
+            self.process_single_channel(
+                config,
+                exec_config,
+                channels[0]
+            )
+            
         self.logger.info("Converting to OME-Zarr...")
-        self.convert_to_ome_zarr(config['ome_zarr_params'])
+        self.convert_to_ome_zarr(config['ome_zarr_params'], channels)
         
         if config['clean_output']:
             destriped_folder = Path(os.path.sep.join(list(self.__output_folder.parts)[:-1])).joinpath('destriped')
@@ -725,6 +1051,25 @@ class TeraStitcher():
             stitched_folder = Path(glob(str(self.__output_folder) + '/RES*')[0])
             utils.delete_folder(stitched_folder, self.__verbose)
 
+def find_channels(path:PathLike, channel_regex:str=r'Ex_([0-9]*)_Em_([0-9]*)'):
+    """
+    Find image channels of a dataset using a regular expression.
+    
+    Parameters
+    ------------------------
+    path:PathLike
+        Dataset path
+    channel_regex:str
+        Regular expression for filtering folders in dataset path.
+        
+    Returns
+    ------------------------
+    List[str]:
+        List with the image channels. Empty list if it does not find any channels
+        with the given regular expression.
+    """
+    return [path for path in os.listdir(path) if re.search(channel_regex, path)]
+    
 def execute_terastitcher(
         input_data:PathLike, 
         output_folder:PathLike,
@@ -749,50 +1094,58 @@ def execute_terastitcher(
     
     """
     
-    parser_result = PathParser.parse_path_gcs(
-        input_data,
-        output_folder
-    )
+    channels = find_channels(input_data)#, r'CH([0-9]*)')
     
-    if len(parser_result):
-        # changing paths to mounted dirs
-        input_data = input_data.replace('gs://', os.getcwd()+'/')
-        output_folder = output_folder.replace('gs://', os.getcwd()+'/')
-        print(f"- New input folder: {input_data}")
-        print(f"- New output folder: {output_folder}")
+    if not len(channels):
+        raise ValueError('Channels not found!')
     
-    try:
-        config_teras['preprocessing_steps']['pystripe']['input'] = input_data
-        config_teras['preprocessing_steps']['pystripe']['output'] = output_folder
-    except KeyError:
-        config_teras['preprocessing_steps'] = None
+    else:
         
-    terastitcher_tool = TeraStitcher(
-        input_data=input_data,
-        output_folder=output_folder,
-        parallel=True,
-        computation='cpu',
-        parastitcher_path=config_teras["parastitcher_path"],
-        verbose=True,
-        preprocessing=config_teras['preprocessing_steps']
-    )
-    
-    # Saving log command
-    terastitcher_cmd = f"$ python terastitcher.py --input {input_data} --output {output_folder} --config_teras {config_teras}\n"
-    utils.save_string_to_txt(terastitcher_cmd, terastitcher_tool.stdout_log_file)
-    
-    # Executing terastitcher
-    terastitcher_tool.execute_pipeline(
-        config_teras
-    )
-    
-    if len(parser_result):
-        # unmounting dirs
-        if parser_result[0] == parser_result[1]:
-            utils.gscfuse_unmount(parser_result[0])
-        else:
-            utils.gscfuse_unmount(parser_result[0])
-            utils.gscfuse_unmount(parser_result[1])
+        parser_result = PathParser.parse_path_gcs(
+            input_data,
+            output_folder
+        )
+        
+        if len(parser_result):
+            # changing paths to mounted dirs
+            input_data = input_data.replace('gs://', os.getcwd()+'/')
+            output_folder = output_folder.replace('gs://', os.getcwd()+'/')
+            print(f"- New input folder: {input_data}")
+            print(f"- New output folder: {output_folder}")
+        
+        try:
+            config_teras['preprocessing_steps']['pystripe']['input'] = input_data
+            config_teras['preprocessing_steps']['pystripe']['output'] = output_folder
+        except KeyError:
+            config_teras['preprocessing_steps'] = None
+            
+        terastitcher_tool = TeraStitcher(
+            input_data=input_data,
+            output_folder=output_folder,
+            parallel=True,
+            computation='cpu',
+            parastitcher_path=config_teras["parastitcher_path"],
+            paraconverter_path=config_teras["paraconverter_path"],
+            verbose=True,
+            preprocessing=config_teras['preprocessing_steps']
+        )
+        
+        # Saving log command
+        terastitcher_cmd = f"$ python terastitcher.py --input_data {input_data} --output_data {output_folder}\n"
+        utils.save_string_to_txt(terastitcher_cmd, terastitcher_tool.stdout_log_file)
+        
+        terastitcher_tool.execute_pipeline(
+            config_teras,
+            channels
+        )
+        
+        if len(parser_result):
+            # unmounting dirs
+            if parser_result[0] == parser_result[1]:
+                utils.gscfuse_unmount(parser_result[0])
+            else:
+                utils.gscfuse_unmount(parser_result[0])
+                utils.gscfuse_unmount(parser_result[1])
 
 def main() -> None:
     default_config = get_default_config()

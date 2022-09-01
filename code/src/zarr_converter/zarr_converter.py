@@ -5,6 +5,7 @@ from distributed import Client, LocalCluster, progress
 from numcodecs import blosc
 import dask
 from dask.array.image import imread
+from dask.array import moveaxis, concatenate
 import argparse
 import time
 from typing import List, Optional, Union, Tuple, Any
@@ -31,6 +32,7 @@ class ZarrConverter():
         input_data:PathLike, 
         output_data:PathLike, 
         blosc_config:dict,
+        channels:List[str]=None,
         file_format:List[str]='tif'
     ) -> None:
         
@@ -45,6 +47,19 @@ class ZarrConverter():
         self.opts = {
             'compressor': blosc.Blosc(cname=blosc_config['codec'], clevel=blosc_config['clevel'], shuffle=blosc.SHUFFLE)
         }
+        
+        self.channels = channels
+        self.channel_colors = None
+        
+        if channels != None:
+            colors = [
+                0xFF0000, # Red
+                0x00FF00, # green
+                0xFF00FF,  # Purple
+                0xFFFF00   # Yellow
+            ]
+            self.channel_colors = colors[:len(self.channels)]
+            
         # get_blosc_codec(writer_config['codec'], writer_config['clevel'])
     
     def read_multichannel_image(
@@ -72,15 +87,15 @@ class ZarrConverter():
             return None
         
         for path in channel_paths:
-            for stitched_path in glob(path + '/stitched/RES*/*/*/'):
+            for stitched_path in glob(path + '/*/*/'):
                 print("- Reading channel: ", Path(path).stem)
                 image_channel.append(
-                    ensure_shape_n_d(
+                    self.pad_array_n_d(
                         self.read_channel_image(stitched_path),
                         4
                     )
                 )
-        
+    
         try:
             image_channel = concatenate(image_channel, axis=0)
         except ValueError as err:
@@ -115,11 +130,11 @@ class ZarrConverter():
             images = imread(filename_pattern)
             
         except ValueError:
-            raise ValueError('- No images found')
+            raise ValueError('- No images found in ', path)
         
         return images
     
-    def pad_array_5d(self, arr:ArrayLike) -> ArrayLike:
+    def pad_array_n_d(self, arr:ArrayLike, dim:int=5) -> ArrayLike:
     
         """
             Pads a daks array to be in a 5D shape.
@@ -129,13 +144,17 @@ class ZarrConverter():
             arr: ArrayLike
                 Dask/numpy array that contains image data.
                 
+            dim: int
+                Number of dimensions that the array will be padded
             Returns
             ------------------------
             ArrayLike:
                 Padded dask/numpy array.
         """
+        if dim > 5:
+            raise ValueError("Padding more than 5 dimensions is not supported.")
         
-        while arr.ndim < 5:
+        while arr.ndim < dim:
             arr = arr[np.newaxis, ...]
         return arr
 
@@ -201,7 +220,7 @@ class ZarrConverter():
         image = self.read_multichannel_image(self.input_data)
         
         if not isinstance(image, dask.array.core.Array):
-            image = self.read_channel_image(self.input_data)
+            image = self.read_channel_image(str(self.input_data)+'/*/*/')
             
         scale_axis = []
         for axis in range(len(image.shape)-len(writer_config['scale_factor'])):
@@ -210,20 +229,22 @@ class ZarrConverter():
         scale_axis.extend(list(writer_config['scale_factor']))
         scale_axis = tuple(scale_axis)
         
+        # image = moveaxis(image, -1, 0) # If data is 3D
+                
         pyramid_data = self.compute_pyramid(
             image, 
             writer_config['pyramid_levels'],
             scale_axis
         )
         
-        pyramid_data = [self.pad_array_5d(pyramid) for pyramid in pyramid_data]
+        pyramid_data = [self.pad_array_n_d(pyramid) for pyramid in pyramid_data]
         
         dask_jobs = self.writer.write_multiscale(
             pyramid=pyramid_data,  # : types.ArrayLike,  # must be 5D TCZYX
             image_name=image_name,  #: str,
             physical_pixel_sizes=None,
-            channel_names=None,
-            channel_colors=None,
+            channel_names=self.channels,#['CH_0', 'CH_1', 'CH_2', 'CH_3'],
+            channel_colors=self.channel_colors,
             scale_factor=scale_axis,  # : float = 2.0,
             chunks=pyramid_data[0].chunksize,#writer_config['chunks'],
             storage_options=self.opts,
