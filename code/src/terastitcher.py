@@ -654,7 +654,7 @@ class TeraStitcher():
         
         parameters = utils.helper_build_param_value_command(params)
 
-        cmd = f"{parallel_command} {parameters} > {self.xmls_path}/step6par.txt"
+        cmd = f"{parallel_command} {parameters}"# > {self.xmls_path}/step6par.txt"
         cmd = cmd.replace('--s=', '-s=')
         cmd = cmd.replace('--d=', '-d=')
         
@@ -913,11 +913,12 @@ class TeraStitcher():
             's' : params_multivolume['projout'],
             'd' : self.__output_folder,
             'sfmt': "\"TIFF (unstitched, 3D)\"",
-            'dfmt': f"\"TIFF (tiled, {len(channels)}D)\"",
+            'dfmt': "\"TIFF (tiled, 4D)\"",
             'cpu_params':config['merge']['cpu_params'],
             'width': config['merge']['slice_extent'][0],
             'height': config['merge']['slice_extent'][1],
             'depth': config['merge']['slice_extent'][2],
+            # 'clist':'0'
         }
             
         exec_config['command'] = self.merge_multivolume_cmd(merge_config)
@@ -1022,15 +1023,14 @@ class TeraStitcher():
             'exists_stdout': os.path.exists(self.stdout_log_file)
         }
         
-        self.logger.info(f"Processing {len(channels)} channels")
+        self.logger.info(f"Processing {channels} channels with informative channel {channels[config['stitch_channel']]}")
         
         if len(channels) > 1:
-            pos_informative_channel = 2
             self.process_multiple_channels(
                 config,
                 exec_config,
                 channels,
-                pos_informative_channel
+                config['stitch_channel']
             )
             
         else:
@@ -1094,10 +1094,14 @@ def execute_terastitcher(
     
     """
     
-    channels = find_channels(input_data)#, r'CH([0-9]*)')
+    regexpression = config_teras['regex_channels']
+    regexpression = "({})".format(regexpression)
+    channels = find_channels(input_data, regexpression)
+    stitch_channel = config_teras['stitch_channel']
+    len_channels = len(channels)
     
-    if not len(channels):
-        raise ValueError('Channels not found!')
+    if not len_channels or config_teras['stitch_channel'] > len_channels:
+        raise ValueError(f'Please, check the regular expression for obtaining channels: {channels} and the stitch_channel parameter: {stitch_channel}.')
     
     else:
         

@@ -229,8 +229,6 @@ class ZarrConverter():
         scale_axis.extend(list(writer_config['scale_factor']))
         scale_axis = tuple(scale_axis)
         
-        # image = moveaxis(image, -1, 0) # If data is 3D
-                
         pyramid_data = self.compute_pyramid(
             image, 
             writer_config['pyramid_levels'],

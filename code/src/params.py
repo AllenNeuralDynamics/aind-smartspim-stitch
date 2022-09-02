@@ -230,6 +230,28 @@ class PipelineParams(ArgSchema):
         }
     )
     
+    stitch_channel = Int(
+        required=True, 
+        metadata={
+            'description':"Position of the informative channel for stitching"
+        },
+        dump_default=0,
+        validate=validate.Range(
+            min=0, 
+            min_inclusive=True,
+            max=3,
+            max_inclusive=True
+        )
+    )
+    
+    regex_channels = Str(
+        required=False, 
+        metadata={
+            'description':"Path where the data will be saved"
+        },
+        dump_default='Ex_([0-9]*)_Em_([0-9]*)'
+    )
+    
     parastitcher_path = InputFile(
         required=False, 
         metadata={
@@ -270,7 +292,7 @@ def get_default_config():
             'pystripe': {
                 "sigma1" : [256, 800, 800, 800],
                 "sigma2" : [256, 800, 800, 800],
-                "workers" : 4
+                "workers" : 16
             }
         },
         'import_data' : {
@@ -289,7 +311,7 @@ def get_default_config():
             "cpu_params": {
                 "estimate_processes": False,
                 "image_depth": 4200,
-                "number_processes": 4,
+                "number_processes": 16,
                 "hostfile": "/home/jupyter/terastitcher-module/environment/GCloud/hostfile",
                 "additional_params": [
                     "use-hwthread-cpus",
@@ -305,7 +327,7 @@ def get_default_config():
             "cpu_params": {
                 "estimate_processes": False,
                 "image_depth": 1000,
-                "number_processes": 4,
+                "number_processes": 16,
                 "hostfile": "/home/jupyter/terastitcher-module/environment/GCloud/hostfile",
                 "additional_params": [
                     "use-hwthread-cpus",
@@ -313,7 +335,7 @@ def get_default_config():
                 ]
             },
             "volout_plugin": "\"TiledXY|2Dseries\"",
-            "slice_extent": [20000, 20000, 20000]
+            "slice_extent": [20000, 20000, 1]
         },
         'ome_zarr_params': {
             'codec': 'zstd',
