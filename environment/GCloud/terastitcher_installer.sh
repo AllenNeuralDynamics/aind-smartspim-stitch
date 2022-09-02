@@ -17,11 +17,10 @@ source ~/.bash_profile
 tar -xzf TeraStitcher-portable-1.11.10-with-BF-Linux.tar.gz
 echo "export PATH=$PATH:$PWD/TeraStitcher-portable-1.11.10-with-BF-Linux" >> ~/.bash_profile
 
-# Installing gcc compiler for openmpi
-sudo apt-get install -y build-essential
-
-# Installing make
-sudo apt-get install -y make
+# Installing packages
+sudo apt-get install -y --no-install-recomends \ 
+    "build-essential" \ # gcc compiler for openmpi
+    "make" # Make
 
 echo "- Starting terastitcher installation with MPI"
 
