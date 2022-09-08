@@ -5,7 +5,7 @@ from distributed import Client, LocalCluster, progress
 from numcodecs import blosc
 import dask
 from dask.array.image import imread
-from dask.array import moveaxis, concatenate
+from dask.array import moveaxis, concatenate, stack
 import argparse
 import time
 from typing import List, Optional, Union, Tuple, Any
@@ -15,6 +15,8 @@ import numpy as np
 from .zarr_converter_params import ZarrConvertParams, get_default_config
 from argschema import ArgSchemaParser
 from glob import glob
+from aicsimageio.types import PhysicalPixelSizes
+from xarray import DataArray
 
 #pip install git+https://github.com/carshadi/aicsimageio.git@feature/zarrwriter-multiscales
 #pip install git+https://github.com/AllenInstitute/argschema.git
@@ -33,11 +35,13 @@ class ZarrConverter():
         output_data:PathLike, 
         blosc_config:dict,
         channels:List[str]=None,
+        physical_pixels:List[float]=None,
         file_format:List[str]='tif'
     ) -> None:
         
         self.input_data = input_data
         self.output_data = output_data
+        self.physical_pixels = PhysicalPixelSizes(physical_pixels[0], physical_pixels[1], physical_pixels[2])
         self.file_format = file_format
         
         self.writer = OmeZarrWriter(
@@ -90,14 +94,11 @@ class ZarrConverter():
             for stitched_path in glob(path + '/*/*/'):
                 print("- Reading channel: ", Path(path).stem)
                 image_channel.append(
-                    self.pad_array_n_d(
-                        self.read_channel_image(stitched_path),
-                        4
-                    )
+                    self.read_channel_image(stitched_path)
                 )
     
         try:
-            image_channel = concatenate(image_channel, axis=0)
+            image_channel = stack(image_channel, axis=0)
         except ValueError as err:
             return None
         
@@ -198,7 +199,8 @@ class ZarrConverter():
     def convert(
         self,
         writer_config:dict,
-        image_name:str='zarr_multiscale'
+        image_name:str='zarr_multiscale.zarr',
+        chunks:List[int]=[1, 1, 128, 1024, 1024]
     ) -> None:
         
         """
@@ -215,13 +217,23 @@ class ZarrConverter():
         
         """
         
+        dask.config.set(
+            {
+                'temporary-directory':'/home/jupyter/tmp_dir',
+                'scheduler': 8786,
+                'tcp-timeout': 60
+            }
+        )
+        
+        print(dask.config.config)
+        
         client = Client()
         
         image = self.read_multichannel_image(self.input_data)
         
         if not isinstance(image, dask.array.core.Array):
             image = self.read_channel_image(str(self.input_data)+'/*/*/')
-            
+        
         scale_axis = []
         for axis in range(len(image.shape)-len(writer_config['scale_factor'])):
             scale_axis.append(1)
@@ -237,19 +249,22 @@ class ZarrConverter():
         
         pyramid_data = [self.pad_array_n_d(pyramid) for pyramid in pyramid_data]
         
+        print(pyramid_data)
+        
         dask_jobs = self.writer.write_multiscale(
             pyramid=pyramid_data,  # : types.ArrayLike,  # must be 5D TCZYX
             image_name=image_name,  #: str,
-            physical_pixel_sizes=None,
+            physical_pixel_sizes=self.physical_pixels,
             channel_names=self.channels,#['CH_0', 'CH_1', 'CH_2', 'CH_3'],
             channel_colors=self.channel_colors,
             scale_factor=scale_axis,  # : float = 2.0,
-            chunks=pyramid_data[0].chunksize,#writer_config['chunks'],
+            chunks=pyramid_data[0].chunksize,#chunks,#writer_config['chunks'],
             storage_options=self.opts,
             compute_dask=False
         )
-        
+
         if len(dask_jobs):
+            print("jobs: ", len(dask_jobs))
             dask_jobs = dask.persist(*dask_jobs)
             progress(dask_jobs)
         
@@ -275,7 +290,8 @@ def main():
         blosc_config={
             'codec': args['writer']['codec'], 
             'clevel': args['writer']['clevel']
-        }
+        },
+        physical_pixels=[2.0, 1.8, 1.8]
     )
     
     start_time = time.time()

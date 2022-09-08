@@ -686,7 +686,8 @@ class TeraStitcher():
             self.__output_folder.joinpath(path[0]), 
             self.__output_folder.joinpath('OMEZarr'), 
             {'codec': config['codec'], 'clevel': config['clevel']},
-            channels
+            channels,
+            config['physical_pixels']
         )
         
         converter.convert(
@@ -1094,6 +1095,18 @@ def execute_terastitcher(
     
     """
     
+    parser_result = PathParser.parse_path_gcs(
+        input_data,
+        output_folder
+    )
+
+    if len(parser_result):
+        # changing paths to mounted dirs
+        input_data = input_data.replace('gs://', os.getcwd()+'/')
+        output_folder = output_folder.replace('gs://', os.getcwd()+'/')
+        print(f"- New input folder: {input_data}")
+        print(f"- New output folder: {output_folder}")
+    
     regexpression = config_teras['regex_channels']
     regexpression = "({})".format(regexpression)
     channels = find_channels(input_data, regexpression)
@@ -1104,18 +1117,6 @@ def execute_terastitcher(
         raise ValueError(f'Please, check the regular expression for obtaining channels: {channels} and the stitch_channel parameter: {stitch_channel}.')
     
     else:
-        
-        parser_result = PathParser.parse_path_gcs(
-            input_data,
-            output_folder
-        )
-        
-        if len(parser_result):
-            # changing paths to mounted dirs
-            input_data = input_data.replace('gs://', os.getcwd()+'/')
-            output_folder = output_folder.replace('gs://', os.getcwd()+'/')
-            print(f"- New input folder: {input_data}")
-            print(f"- New output folder: {output_folder}")
         
         try:
             config_teras['preprocessing_steps']['pystripe']['input'] = input_data
