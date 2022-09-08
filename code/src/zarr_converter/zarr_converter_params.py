@@ -1,5 +1,5 @@
 from argschema import ArgSchemaParser, ArgSchema
-from argschema.fields import Int, Str, Nested, List, InputDir
+from argschema.fields import Int, Str, Nested, List, InputDir, Float
 from argschema.schemas import DefaultSchema
 
 class OmeZarrParams(DefaultSchema):
@@ -28,6 +28,16 @@ class OmeZarrParams(DefaultSchema):
         },
         cli_as_single_argument=True,
         # dump_default=[2, 2, 2]
+    )
+    
+    physical_pixels = List(
+        Float(),
+        required=True,
+        metadata={
+            'description':'Physical pixel sizes in microns in TCZYX order'
+        },
+        cli_as_single_argument=True,
+        dump_default=[2.0, 1.8, 1.8]
     )
     
     pyramid_levels = Int(

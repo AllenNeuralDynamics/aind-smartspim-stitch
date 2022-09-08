@@ -1052,7 +1052,7 @@ class TeraStitcher():
             stitched_folder = Path(glob(str(self.__output_folder) + '/RES*')[0])
             utils.delete_folder(stitched_folder, self.__verbose)
 
-def find_channels(path:PathLike, channel_regex:str=r'Ex_([0-9]*)_Em_([0-9]*)'):
+def find_channels(path:PathLike, channel_regex:str=r'Ex_([0-9]*)_Em_([0-9]*)$'):
     """
     Find image channels of a dataset using a regular expression.
     
@@ -1112,7 +1112,7 @@ def execute_terastitcher(
     channels = find_channels(input_data, regexpression)
     stitch_channel = config_teras['stitch_channel']
     len_channels = len(channels)
-    
+
     if not len_channels or config_teras['stitch_channel'] > len_channels:
         raise ValueError(f'Please, check the regular expression for obtaining channels: {channels} and the stitch_channel parameter: {stitch_channel}.')
     
@@ -1152,6 +1152,59 @@ def execute_terastitcher(
                 utils.gscfuse_unmount(parser_result[0])
                 utils.gscfuse_unmount(parser_result[1])
 
+def process_multiple_datasets() -> None:
+    default_config = get_default_config()
+    # print(default_config)
+
+    mod = ArgSchemaParser(
+        input_data=default_config,
+        schema_type=PipelineParams
+    )
+    
+    args = mod.args
+
+    print("Overwriting datasets...")
+
+    datasets = [
+        # {
+        #     'input_data': 'Y:/SmartSPIM_Data/2022_07_19/20220719_10_49_05_622386',
+        #     'output_data': 'W:/SmartSPIM/ephys/SmartSPIM_622386_2022_07_19_10_49_05_stitched'
+        # },
+        {
+            'input_data': 'Y:/SmartSPIM_Data/2022_07_19/20220719_13_57_15_619778',
+            'output_data': 'W:/SmartSPIM/ephys/SmartSPIM_619778_2022_07_19_13_57_15_stitched'
+        },
+        {
+            'input_data': 'Y:/SmartSPIM_Data/2022_07_19/20220719_17_48_39_595922',
+            'output_data': 'W:/SmartSPIM/ephys/SmartSPIM_595922_2022_07_19_17_48_39_stitched'
+        },
+        {
+            'input_data': 'Y:/SmartSPIM_Data/2022_08_24/20220824_12_13_29_625749',
+            'output_data': 'W:/SmartSPIM/ephys/SmartSPIM_625749_2022_08_24_12_13_29_stitched'
+        },
+        {
+            'input_data': 'Y:/SmartSPIM_Data/2022_08_24/20220824_15_33_08_634568',
+            'output_data': 'W:/SmartSPIM/ephys/SmartSPIM_634568_2022_08_24_15_33_08_stitched'
+        },
+        {
+            'input_data': 'Y:/SmartSPIM_Data/2022_08_24/20220824_19_14_17_634571',
+            'output_data': 'W:/SmartSPIM/ephys/SmartSPIM_634571_2022_08_24_19_14_17_stitched'
+        },
+        {
+            'input_data': 'Y:/SmartSPIM_Data/2022_08_24/20220824_22_56_15_634569',
+            'output_data': 'W:/SmartSPIM/ephys/SmartSPIM_634569_2022_08_24_22_56_15_stitched'
+        },
+    ]
+
+    for dataset in datasets:
+        print(f"Processing {dataset['input_data']} dataset")
+
+        execute_terastitcher(
+            input_data=dataset['input_data'],
+            output_folder=dataset['output_data'],
+            config_teras=args
+        )
+
 def main() -> None:
     default_config = get_default_config()
 
@@ -1170,3 +1223,4 @@ def main() -> None:
         
 if __name__ == "__main__":
     main()
+    # process_multiple_datasets()

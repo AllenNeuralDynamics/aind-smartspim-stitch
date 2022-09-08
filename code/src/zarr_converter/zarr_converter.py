@@ -225,7 +225,7 @@ class ZarrConverter():
             }
         )
         
-        print(dask.config.config)
+        # print(dask.config.config)
         
         client = Client()
         

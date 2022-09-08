@@ -249,7 +249,7 @@ class PipelineParams(ArgSchema):
         metadata={
             'description':"Path where the data will be saved"
         },
-        dump_default='Ex_([0-9]*)_Em_([0-9]*)'
+        dump_default='Ex_([0-9]*)_Em_([0-9]*)$'
     )
     
     parastitcher_path = InputFile(
