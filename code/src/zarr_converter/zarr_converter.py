@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 import logging
-from distributed import Client, LocalCluster, progress
+from dask.distributed import Client, LocalCluster, progress, performance_report
 from numcodecs import blosc
 import dask
 from dask.array.image import imread
@@ -96,11 +96,11 @@ class ZarrConverter():
                 image_channel.append(
                     self.read_channel_image(stitched_path)
                 )
-    
-        try:
-            image_channel = stack(image_channel, axis=0)
-        except ValueError as err:
-            return None
+        
+        # try:
+        #     image_channel = stack(image_channel, axis=0)
+        # except ValueError as err:
+        #     return None
         
         return image_channel
     
@@ -195,12 +195,12 @@ class ZarrConverter():
         )
         
         return [arr.data for arr in pyramid]
-
+        
     def convert(
         self,
         writer_config:dict,
         image_name:str='zarr_multiscale.zarr',
-        chunks:List[int]=[1, 1, 128, 1024, 1024]
+        # chunks:List[int]=[1, 736, 560]
     ) -> None:
         
         """
@@ -220,53 +220,74 @@ class ZarrConverter():
         dask.config.set(
             {
                 'temporary-directory':'/home/jupyter/tmp_dir',
-                'scheduler': 8786,
-                'tcp-timeout': 60
+                'tcp-timeout': '60s',
+                'array.chunk-size': '384MiB',
+                'distributed.comm.timeouts': {
+                    'connect': '60s', 
+                    'tcp': '60s'
+                },
+                'distributed.scheduler.bandwidth': 100000000,
+                # 'distributed.scheduler.unknown-task-duration': '15m',
+                # 'distributed.scheduler.default-task-durations': '2h',
             }
         )
         
         # print(dask.config.config)
         
-        client = Client()
+        cluster = LocalCluster()
+        # cluster.adapt(
+        #     minimum=1, maximum=4, interval='10s', target_duration='60s'
+        # )
+        client = Client(cluster)
         
         image = self.read_multichannel_image(self.input_data)
         
-        if not isinstance(image, dask.array.core.Array):
+        if not isinstance(image, dask.array.core.Array) and not isinstance(image, list):
             image = self.read_channel_image(str(self.input_data)+'/*/*/')
         
         scale_axis = []
-        for axis in range(len(image.shape)-len(writer_config['scale_factor'])):
+        for axis in range(len(image[0].shape)-len(writer_config['scale_factor'])):
             scale_axis.append(1)
         
         scale_axis.extend(list(writer_config['scale_factor']))
         scale_axis = tuple(scale_axis)
         
-        pyramid_data = self.compute_pyramid(
-            image, 
-            writer_config['pyramid_levels'],
-            scale_axis
-        )
+        # chunks = [1, image[0].shape[-2]//2, image[0].shape[-1]//2]
+        # print(chunks, scale_axis, image)
         
-        pyramid_data = [self.pad_array_n_d(pyramid) for pyramid in pyramid_data]
-        
-        print(pyramid_data)
-        
-        dask_jobs = self.writer.write_multiscale(
-            pyramid=pyramid_data,  # : types.ArrayLike,  # must be 5D TCZYX
-            image_name=image_name,  #: str,
-            physical_pixel_sizes=self.physical_pixels,
-            channel_names=self.channels,#['CH_0', 'CH_1', 'CH_2', 'CH_3'],
-            channel_colors=self.channel_colors,
-            scale_factor=scale_axis,  # : float = 2.0,
-            chunks=pyramid_data[0].chunksize,#chunks,#writer_config['chunks'],
-            storage_options=self.opts,
-            compute_dask=False
-        )
+        with performance_report(filename="dask-report.html"):
+            for idx in range(len(image)):
+                # Rechunking image chunks
+                # image[idx] = image[idx].rechunk(tuple(chunks))
+                # print("Number of partitions: ", image[idx].npartitions)
+                
+                pyramid_data = self.compute_pyramid(
+                    image[idx], 
+                    writer_config['pyramid_levels'],
+                    scale_axis
+                )
 
-        if len(dask_jobs):
-            print("jobs: ", len(dask_jobs))
-            dask_jobs = dask.persist(*dask_jobs)
-            progress(dask_jobs)
+                pyramid_data = [self.pad_array_n_d(pyramid) for pyramid in pyramid_data]
+
+                print(pyramid_data)
+
+                dask_jobs = self.writer.write_multiscale(
+                    pyramid=pyramid_data,  # : types.ArrayLike,  # must be 5D TCZYX
+                    image_name=self.channels[idx] + '.zarr',  #: str,
+                    physical_pixel_sizes=self.physical_pixels,
+                    channel_names=[self.channels[idx]],#['CH_0', 'CH_1', 'CH_2', 'CH_3'],
+                    channel_colors=[self.channel_colors[idx]],
+                    scale_factor=scale_axis,  # : float = 2.0,
+                    chunks=pyramid_data[0].chunksize,#chunks,#writer_config['chunks'],
+                    storage_options=self.opts,
+                    compute_dask=False
+                )
+
+                if len(dask_jobs):
+                    print("jobs: ", len(dask_jobs))
+                    dask_jobs = dask.persist(*dask_jobs)#, get=dask.threaded.get)
+                    # dask_jobs = dask_jobs.persist()
+                    progress(dask_jobs)
         
         client.close()
 
