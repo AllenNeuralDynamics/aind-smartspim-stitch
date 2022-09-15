@@ -34,7 +34,7 @@ class OmeZarrParams(DefaultSchema):
         Float(),
         required=True,
         metadata={
-            'description':'Physical pixel sizes in microns in TCZYX order'
+            'description':'Physical pixel sizes in microns in ZYX order'
         },
         cli_as_single_argument=True,
         dump_default=[2.0, 1.8, 1.8]

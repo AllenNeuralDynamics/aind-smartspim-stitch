@@ -3,6 +3,7 @@ from ng_layer import NgLayer
 from pint import UnitRegistry
 from pathlib import Path
 import sys
+import re
 
 sys.path.append('../')
 from utils import utils
@@ -55,7 +56,7 @@ class NgState():
         """
         
         output_json = Path(output_json)
-        name = str(output_json.stem)
+        name = str(output_json.name)
         
         if not name.endswith('.json'):
             name += '.json'
@@ -89,7 +90,7 @@ class NgState():
             List with two values, the converted quantity and it's metric in neuroglancer format.
         """
         
-        if dest_metric not in ['meters']:
+        if dest_metric not in ['meters', 'seconds']:
             raise NotImplementedError(f"{dest_metric} has not been implemented")
         
         # Converting to desired metric
@@ -101,6 +102,9 @@ class NgState():
         neuroglancer_metric = None
         if dest_metric == 'meters':
             neuroglancer_metric = 'm'
+        
+        elif dest_metric == 'seconds':
+            neuroglancer_metric = 's'
         
         return [dest_quantity.m, neuroglancer_metric]
     
@@ -122,10 +126,16 @@ class NgState():
         
         if not utils.check_type_helper(dimensions, dict):
             raise ValueError(f"Dimensions control accepts only dict. Received value: {dimensions}")
-    
+
+        regex_axis = r'([x-zX-Z])$'
+        
         for axis, axis_values in dimensions.items():
-            self.dimensions[axis] = self.__unpack_axis(axis_values)
-    
+            
+            if re.search(regex_axis, axis):
+                self.dimensions[axis] = self.__unpack_axis(axis_values)
+            else:
+                self.dimensions[axis] = self.__unpack_axis(axis_values, 'seconds')
+                
     @property
     def layers(self) -> List[dict]:
         return self.__layers
@@ -162,25 +172,41 @@ class NgState():
     def state(self, new_state:dict) -> None:
         pass
     
-    def save_state_as_json(self, output_json:Optional[PathLike]='', update_state:Optional[bool]=False) -> None:
+    def save_state_as_json(
+        self, 
+        output_json:Optional[PathLike]='', 
+        update_state:Optional[bool]=False
+    ) -> None:
+        
+        output_json = str(output_json)
         
         if not len(output_json):
             output_json = self.output_json
         else:
             output_json = self.__fix_output_json_path(output_json)
+            self.output_json = output_json
         
         if update_state:
             self.__state = self.state()
     
         utils.save_dict_as_json(output_json, self.__state, verbose=self.verbose)
     
-    def get_url_link(self, base_url:Optional[str]='https://neuroglancer-demo.appspot.com/', save_txt:Optional[bool]=True) -> str:
+    def get_url_link(
+        self, 
+        base_url:Optional[str]='https://neuroglancer-demo.appspot.com/',
+        save_txt:Optional[bool]=True,
+        output_txt:Optional[PathLike]=''
+    ) -> str:
         
+        output_txt = str(output_txt)
         link = f"{base_url}#!{self.output_json}"
         
         if save_txt:
-            path = self.output_json.parent
-            utils.save_string_to_txt(link, path.joinpath('ng_link.txt'))
+            
+            if not len(output_txt):
+                output_txt = self.output_json.parent
+            
+            utils.save_string_to_txt(link, Path(output_txt).joinpath('ng_link.txt'))
         
         return link
     
@@ -200,6 +226,10 @@ if __name__ == '__main__':
             "x": {
                 "voxel_size": 1.8,
                 "unit": 'microns'
+            },
+            "t": {
+                "voxel_size": 0.001,
+                "unit": 'seconds'
             },
         },
         'layers': [

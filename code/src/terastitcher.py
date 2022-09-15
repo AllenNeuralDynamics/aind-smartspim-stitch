@@ -15,6 +15,7 @@ from zarr_converter import ZarrConverter
 import warnings
 import logging
 import re
+from nglink import NgState
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -83,6 +84,7 @@ class TeraStitcher():
         self.__python_terminal = None
         self.metadata_path = self.__output_folder.joinpath("metadata/params")
         self.xmls_path = self.__output_folder.joinpath("metadata/xmls")
+        self.ome_zarr_path = self.__output_folder.joinpath('OMEZarr')
         
         # Check python
         self.__check_python()
@@ -676,7 +678,7 @@ class TeraStitcher():
         
         converter = ZarrConverter(
             self.__output_folder.joinpath(path[0]), 
-            self.__output_folder.joinpath('OMEZarr'), 
+            self.ome_zarr_path, 
             {'codec': config['codec'], 'clevel': config['clevel']},
             channels,
             config['physical_pixels']
@@ -685,6 +687,72 @@ class TeraStitcher():
         converter.convert(
             config
         )
+        
+    def create_ng_link(self, config:dict, channels:List[str]) -> None:
+        
+        dimensions = {
+            'z': {
+                'voxel_size': config['physical_pixels'][0],
+                'unit': 'microns'
+            },
+            'y': {
+                'voxel_size': config['physical_pixels'][1],
+                'unit': 'microns'
+            },
+            'x': {
+                'voxel_size': config['physical_pixels'][2],
+                'unit': 'microns'
+            },
+            't': {
+                'voxel_size': 0.001,
+                'unit': 'seconds'
+            }
+        }
+        
+        colors = [
+            'red',
+            'green',
+            'purple',
+            'yellow'
+        ]
+        
+        # Creating layer per channel
+        layers = []
+        for channel_idx in range(len(channels)):
+            layers.append(
+                {
+                    'source': self.ome_zarr_path.joinpath(channel[channel_idx] + '.zarr'),
+                    'channel': channel_idx,
+                    'name': channel[channel_idx],
+                    'shader': {
+                        'color': colors[channel_idx],
+                        'emitter': 'RGB',
+                        'vec': 'vec3'
+                    },
+                    'shaderControls': { # Optional
+                        "normalized": {
+                            "range": [0, 500]
+                        }
+                    }
+                }
+            )
+        
+        dataset_path = self.__output_folder.parent
+        dataset_name = dataset_path.stem
+        
+        # TODO Check it's actually on GCP or a mounted disk on-prem
+        if dataset_path.is_mount():
+            dataset_path = Path(
+                str(dataset_path).replace(os.getcwd()+'/', 'gs://'), 
+            )
+        
+        neuroglancer_link = NgState(
+            {'dimensions':dimensions, 'layers':layers}, 
+            dataset_path.joinpath(dataset_name)
+        )
+        
+        neuroglancer_link.save_state_as_json()
+        self.logger.info(f"Visualization link: {neuroglancer_link.get_url_link()}")
     
     def __preprocessing_tool_cmd(
             self, 
@@ -1036,6 +1104,8 @@ class TeraStitcher():
             
         self.logger.info("Converting to OME-Zarr...")
         self.convert_to_ome_zarr(config['ome_zarr_params'], channels)
+        
+        self.create_ng_link(config['ome_zarr_params'], channels)
         
         if config['clean_output']:
             destriped_folder = Path(os.path.sep.join(list(self.__output_folder.parts)[:-1])).joinpath('destriped')
