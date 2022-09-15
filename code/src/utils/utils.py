@@ -2,7 +2,7 @@ import os
 import subprocess
 import json
 from pathlib import Path
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Any
 import shutil
 from glob import glob
 import platform
@@ -412,3 +412,26 @@ def generate_data_description(input_folder:PathLike, tools:List[dict]) -> dict:
         data_description['GeneratedBy'] = tools
     
     return data_description
+
+def check_type_helper(value:Any, val_type:type) -> bool:
+    """
+    Checks if a value belongs to a specific type.
+    
+    Parameters
+    ------------------------
+    value: Any
+        variable data.
+        
+    val_type: type
+        Type that we want to check.
+    
+    Returns
+    ------------------------
+    bool:
+        True if the type is what we expect from the variable data, False otherwise.
+    """
+    
+    if type(value) != val_type:
+        return False
+    
+    return True

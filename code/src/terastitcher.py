@@ -115,8 +115,8 @@ class TeraStitcher():
             },
             {
                 'Name': 'aicsimageio',
-                'Version': 'feature/zarrwriter-multiscales',
-                'CodeURL': 'https://github.com/carshadi/aicsimageio/tree/feature/zarrwriter-multiscales'
+                'Version': 'feature/zarrwriter-multiscales-daskjobs',
+                'CodeURL': 'https://github.com/camilolaiton/aicsimageio.git@feature/zarrwriter-multiscales-daskjobs'
             }
         ]
         
@@ -162,14 +162,6 @@ class TeraStitcher():
         Changes the file order to add an extra folder for pystriped and stitched data.
         It is necessary to take the striped data for terastitcher to include it in the pipeline.
         Thus, it should be saved.
-        
-        Parameters
-        ------------------------
-        None
-        
-        Returns
-        ------------------------
-        None
         
         """
         
