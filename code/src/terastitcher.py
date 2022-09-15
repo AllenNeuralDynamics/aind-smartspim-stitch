@@ -41,6 +41,7 @@ class TeraStitcher():
             computation:Optional[str]='cpu',
             preprocessing:Optional[dict]=None,
             verbose:Optional[bool]=False,
+            gcloud_execution:Optional[bool]=False
         ) -> None:
         
         """
@@ -85,6 +86,7 @@ class TeraStitcher():
         self.metadata_path = self.__output_folder.joinpath("metadata/params")
         self.xmls_path = self.__output_folder.joinpath("metadata/xmls")
         self.ome_zarr_path = self.__output_folder.joinpath('OMEZarr')
+        self.gcloud_execution = gcloud_execution
         
         # Check python
         self.__check_python()
@@ -721,9 +723,9 @@ class TeraStitcher():
         for channel_idx in range(len(channels)):
             layers.append(
                 {
-                    'source': self.ome_zarr_path.joinpath(channel[channel_idx] + '.zarr'),
+                    'source': self.ome_zarr_path.joinpath(channels[channel_idx] + '.zarr'),
                     'channel': channel_idx,
-                    'name': channel[channel_idx],
+                    'name': channels[channel_idx],
                     'shader': {
                         'color': colors[channel_idx],
                         'emitter': 'RGB',
@@ -739,12 +741,6 @@ class TeraStitcher():
         
         dataset_path = self.__output_folder.parent
         dataset_name = dataset_path.stem
-        
-        # TODO Check it's actually on GCP or a mounted disk on-prem
-        if dataset_path.is_mount():
-            dataset_path = Path(
-                str(dataset_path).replace(os.getcwd()+'/', 'gs://'), 
-            )
         
         neuroglancer_link = NgState(
             {'dimensions':dimensions, 'layers':layers}, 
@@ -1105,7 +1101,8 @@ class TeraStitcher():
         self.logger.info("Converting to OME-Zarr...")
         self.convert_to_ome_zarr(config['ome_zarr_params'], channels)
         
-        self.create_ng_link(config['ome_zarr_params'], channels)
+        if self.gcloud_execution:
+            self.create_ng_link(config['ome_zarr_params'], channels)
         
         if config['clean_output']:
             destriped_folder = Path(os.path.sep.join(list(self.__output_folder.parts)[:-1])).joinpath('destriped')
@@ -1132,7 +1129,16 @@ def find_channels(path:PathLike, channel_regex:str=r'Ex_([0-9]*)_Em_([0-9]*)$'):
         with the given regular expression.
     """
     return [path for path in os.listdir(path) if re.search(channel_regex, path)]
-    
+
+def unmounting_gcloud(parser_result:List[str]) -> None:
+    if len(parser_result):
+        # unmounting dirs
+        if parser_result[0] == parser_result[1]:
+            utils.gscfuse_unmount(parser_result[0])
+        else:
+            utils.gscfuse_unmount(parser_result[0])
+            utils.gscfuse_unmount(parser_result[1])
+
 def execute_terastitcher(
         input_data:PathLike, 
         output_folder:PathLike,
@@ -1161,13 +1167,34 @@ def execute_terastitcher(
         input_data,
         output_folder
     )
-
+    
+    # If true, we're in a google bucket
+    gcloud_execution = False
+    
     if len(parser_result):
         # changing paths to mounted dirs
         input_data = input_data.replace('gs://', os.getcwd()+'/')
         output_folder = output_folder.replace('gs://', os.getcwd()+'/')
         print(f"- New input folder: {input_data}")
         print(f"- New output folder: {output_folder}")
+        gcloud_execution = True
+    
+    # Setting handling error to unmounting cloud for any unexpected error
+    def onAnyError(exception_type, value, traceback):
+        
+        logger = logging.getLogger(__name__)
+        
+        if issubclass(exception_type, KeyboardInterrupt):
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+
+        else:
+            logger.error("Error while executing stitching pipeline: ", exc_info=(exception_type, value, traceback))
+        
+        if gcloud_execution and not issubclass(exception_type, OSError):
+            logger.info("Unmounting gcloud because of an unexpected error.")
+            unmounting_gcloud(parser_result)
+
+    sys.excepthook = onAnyError
     
     regexpression = config_teras['regex_channels']
     regexpression = "({})".format(regexpression)
@@ -1194,7 +1221,8 @@ def execute_terastitcher(
             parastitcher_path=config_teras["parastitcher_path"],
             paraconverter_path=config_teras["paraconverter_path"],
             verbose=True,
-            preprocessing=config_teras['preprocessing_steps']
+            preprocessing=config_teras['preprocessing_steps'],
+            gcloud_execution=gcloud_execution
         )
         
         # Saving log command
@@ -1206,13 +1234,7 @@ def execute_terastitcher(
             channels
         )
         
-        if len(parser_result):
-            # unmounting dirs
-            if parser_result[0] == parser_result[1]:
-                utils.gscfuse_unmount(parser_result[0])
-            else:
-                utils.gscfuse_unmount(parser_result[0])
-                utils.gscfuse_unmount(parser_result[1])
+        unmounting_gcloud(parser_result)
 
 def process_multiple_datasets() -> None:
     default_config = get_default_config()

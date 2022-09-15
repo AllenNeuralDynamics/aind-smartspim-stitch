@@ -1,9 +1,12 @@
-from typing import Any, Optional
+from typing import Any, Optional, Union
 from pathlib import Path
 import sys
 
 sys.path.append('../')
 from utils import utils
+
+# IO types
+PathLike = Union[str, Path]
 
 class NgLayer():
     
@@ -22,10 +25,39 @@ class NgLayer():
         
         self.layer_state = {}
         self.image_config = image_config
-        self.image_source = image_config['source']
+        self.image_source = self.__fix_image_source(image_config['source'])
         self.image_type = image_type
         
         self.update_state(image_config)
+    
+    def __fix_image_source(self, source_path:PathLike) -> str:
+        """
+        Fixes the image source path to include the type of image neuroglancer accepts.
+        
+        Parameters
+        ------------------------
+        source_path: PathLike
+            Path where the image is located.
+        
+        Returns
+        ------------------------
+        str
+            Fixed path for neuroglancer json configuration.
+        """
+        
+        source_path = str(source_path)
+        
+        # replacing jupyter path
+        source_path = source_path.replace('/home/jupyter/', '')
+        source_path = 'gs://' + source_path
+        
+        if source_path.endswith('.zarr'):
+            source_path = "zarr://" + source_path
+            
+        else:
+            raise NotImplementedError("This format has not been implemented yet for visualization")
+        
+        return source_path
     
     def set_default_values(self, image_config:dict={}, overwrite:bool=False) -> None:
         """
@@ -152,6 +184,8 @@ class NgLayer():
             
         """
         
+        if param == 'source':
+            value = str(self.image_source)            
         
         if not utils.check_type_helper(value, str):
             raise ValueError(f"{param} accepts only str. Received value: {value}")

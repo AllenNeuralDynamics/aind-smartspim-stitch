@@ -1,5 +1,5 @@
 from typing import List, Any, Optional, Union
-from ng_layer import NgLayer
+from .ng_layer import NgLayer
 from pint import UnitRegistry
 from pathlib import Path
 import sys
@@ -36,6 +36,8 @@ class NgState():
         self.dimensions = {}
         self.__layers = []
         
+        self.__prefix = 'ng_link_'
+        
         # Initialize principal attributes
         self.initialize_attributes(self.input_config)
     
@@ -54,7 +56,6 @@ class NgState():
         str
             String with the fixed outputh path.
         """
-        
         output_json = Path(output_json)
         name = str(output_json.name)
         
@@ -65,10 +66,10 @@ class NgState():
             name = 'ng_link_' + name
         
         output_json = output_json.parent.joinpath(name)
+        
         return output_json
     
     def __unpack_axis(self, axis_values:dict, dest_metric:Optional[str]='meters') -> List:
-        
         """
         Unpack axis voxel sizes converting them to meters which neuroglancer uses by default.
         
@@ -125,7 +126,7 @@ class NgState():
         """
         
         if not utils.check_type_helper(dimensions, dict):
-            raise ValueError(f"Dimensions control accepts only dict. Received value: {dimensions}")
+            raise ValueError(f"Dimensions accepts only dict. Received value: {dimensions}")
 
         regex_axis = r'([x-zX-Z])$'
         
@@ -138,17 +139,43 @@ class NgState():
                 
     @property
     def layers(self) -> List[dict]:
+        """
+        Property getter of layers.
+        
+        Returns
+        ------------------------
+        List[dict]
+            List with neuroglancer layers' configuration.
+        """
         return self.__layers
     
-    def set_layers(self, layers:list) -> None:
+    def set_layers(self, layers:List[dict]) -> None:
+        """
+        Property setter of layers.
+        
+        Parameters
+        ------------------------
+        layers: List[dict]
+            List that contains a configuration for each image layer.
+            
+        """
         
         if not utils.check_type_helper(layers, list):
-            raise ValueError(f"Dimensions control accepts only list. Received value: {layers}")
+            raise ValueError(f"layers accepts only list. Received value: {layers}")
 
         for layer in layers:
             self.__layers.append(NgLayer(layer).get_layer())
         
     def initialize_attributes(self, input_config:dict) -> None:
+        """
+        Initializes the following attributes for a given image layer: dimensions, layers.
+        
+        Parameters
+        ------------------------
+        input_config: dict
+            Dictionary with the configuration for each image layer
+    
+        """
         
         # Initializing dimension
         self.set_dimensions(input_config['dimensions'])
@@ -156,28 +183,46 @@ class NgState():
         # Initializing layers
         self.set_layers(input_config['layers'])
         
-    @property
-    def state(self) -> dict:
-        self.__state['dimensions'] = {}
+        self.__state = self.get_state()
+    
+    def get_state(self) -> dict:
+        """
+        Property getter of state.
+        
+        Returns
+        ------------------------
+        dict
+            Dictionary with the actual layer state.
+        """
+        
+        actual_state = {}
+        actual_state['dimensions'] = {}
 
         # Getting actual state for all attributes
         for axis, value_list in self.dimensions.items():
-            self.__state['dimensions'][axis] = value_list
+            actual_state['dimensions'][axis] = value_list
             
-        self.__state['layers'] = self.__layers
+        actual_state['layers'] = self.__layers
         
-        return self.__state
-    
-    @state.setter
-    def state(self, new_state:dict) -> None:
-        pass
+        return actual_state
     
     def save_state_as_json(
         self, 
         output_json:Optional[PathLike]='', 
         update_state:Optional[bool]=False
     ) -> None:
+        """
+        Saves a neuroglancer state as json.
         
+        Parameters
+        ------------------------
+        output_json: Optional[PathLike]
+            Path where the neuroglancer state will be written as json
+        
+        update_state: Optional[bool]
+            Updates the neuroglancer state with dimensions and layers in case they were changed 
+            using class methods.
+        """
         output_json = str(output_json)
         
         if not len(output_json):
@@ -197,9 +242,33 @@ class NgState():
         save_txt:Optional[bool]=True,
         output_txt:Optional[PathLike]=''
     ) -> str:
+        """
+        Creates the neuroglancer link based on where the json will be written.
         
+        Parameters
+        ------------------------
+        base_url: Optional[str]
+            Base url where neuroglancer app was deployed. Default: https://neuroglancer-demo.appspot.com/
+        
+        save_txt: Optional[bool]
+            Saves the url link to visualize data as a .txt file in a specific path given by 
+            output_txt parameter.
+        
+        output_txt: Optional[PathLike]
+            Path where the .txt file will be written. Default: '' which then will be converted to 
+            self.output_json value.
+        
+        Returns
+        ------------------------
+        str
+            Neuroglancer url to visualize data.
+        """
         output_txt = str(output_txt)
-        link = f"{base_url}#!{self.output_json}"
+        
+        json_path = str(self.output_json).replace('/home/jupyter/', '')
+        json_path = 'gs://' + json_path
+        
+        link = f"{base_url}#!{json_path}"
         
         if save_txt:
             
