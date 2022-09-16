@@ -9,10 +9,9 @@ from dask.array import moveaxis, concatenate, stack
 import argparse
 import time
 from typing import List, Optional, Union, Tuple, Any
-from xarray_multiscale import multiscale
-from xarray_multiscale.reducers import windowed_mean
+import xarray_multiscale
 import numpy as np
-from .zarr_converter_params import ZarrConvertParams, get_default_config
+from zarr_converter_params import ZarrConvertParams, get_default_config
 from argschema import ArgSchemaParser
 from glob import glob
 from aicsimageio.types import PhysicalPixelSizes
@@ -186,16 +185,36 @@ class ZarrConverter():
             List with the downsampled image(s)
         """
         
-        pyramid = multiscale(
+        pyramid = xarray_multiscale.multiscale(
             data,
-            windowed_mean,  # func
+            xarray_multiscale.reducers.windowed_mean,  # func
             scale_axis,  # scale factors
             depth=n_lvls - 1,
             preserve_dtype=True
         )
         
         return [arr.data for arr in pyramid]
+    
+    def get_pyramid_metadata(self) -> dict:
+        """
+        Gets pyramid metadata in OMEZarr format
         
+        Returns
+        ------------------------
+        dict:
+            Dictionary with the downscaling OMEZarr metadata
+        """
+        
+        return {
+            "metadata": {
+                "description": "Downscaling implementation based on the windowed mean of the original array",
+                "method": "xarray_multiscale.reducers.windowed_mean",
+                "version": str(xarray_multiscale.__version__),
+                "args": "[false]",
+                "kwargs": {} # No extra parameters were used different from the orig. array and scales
+            }
+        }
+    
     def convert(
         self,
         writer_config:dict,
@@ -280,7 +299,8 @@ class ZarrConverter():
                     scale_factor=scale_axis,  # : float = 2.0,
                     chunks=pyramid_data[0].chunksize,#chunks,#writer_config['chunks'],
                     storage_options=self.opts,
-                    compute_dask=False
+                    compute_dask=False,
+                    **self.get_pyramid_metadata()
                 )
 
                 if len(dask_jobs):
@@ -312,6 +332,7 @@ def main():
             'codec': args['writer']['codec'], 
             'clevel': args['writer']['clevel']
         },
+        channels=['CH_1', 'CH_2'],
         physical_pixels=[2.0, 1.8, 1.8]
     )
     

@@ -185,6 +185,7 @@ class TeraStitcher():
             # Organizing output paths
             self.metadata_path = self.__output_folder.joinpath("metadata/params")
             self.xmls_path = self.__output_folder.joinpath("metadata/xmls")
+            self.ome_zarr_path = self.__output_folder.joinpath('OMEZarr')
     
     def __check_installation(self, tool_name:str="terastitcher") -> bool:
         """
@@ -721,10 +722,11 @@ class TeraStitcher():
         # Creating layer per channel
         layers = []
         for channel_idx in range(len(channels)):
+            print(self.ome_zarr_path)
             layers.append(
                 {
                     'source': self.ome_zarr_path.joinpath(channels[channel_idx] + '.zarr'),
-                    'channel': channel_idx,
+                    'channel': 0,#channel_idx, # use channel idx when source is the same in zarr to change channel
                     'name': channels[channel_idx],
                     'shader': {
                         'color': colors[channel_idx],
