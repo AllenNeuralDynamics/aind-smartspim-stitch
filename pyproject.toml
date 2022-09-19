@@ -3,37 +3,44 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "terastitcher-module"
-version = "0.1.0"
-description = "Striping and stitching module for 3D teravoxel-sized microscopy images using TeraStitcher and Pystripe"
+name = "terastitcher_module"
+description = "Striping and stitching module for 3D teravoxel-sized microscopy images"
+license = {text = "MIT"}
+requires-python = ">=3.8"
 authors = [
     {name = "David Feng", email="david.feng@alleninstitute.org"},
     {name = "Sharmishtaa Seshamani", email="sharmishtaas@alleninstitute.org"},
-    {name = "Camilo Laiton", email="camilo.laiton@alleninstitute.org"},
+    {name = "Camilo Laiton", email="camilo.laiton@alleninstitute.org"}
 ]
-license = {text = "MIT"}
-requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Python :: 3"
 ]
-dynamic = ["readme"]
+dynamic = ["version", "readme"]
 
 dependencies = [
+    'pandas',
+    'sphinx',
     'tifffile < 2022.4.22',
     'xarray_multiscale',
     'argschema',
-    'distributed',
     'mpi4py',
     'bokeh',
     'pint',
+    'dask',
     'pystripe@https://github.com/chunglabmit/pystripe/archive/master.zip',
     'ome-zarr@git+https://github.com/camilolaiton/ome-zarr-py.git@feature/delayed-dask-poc',
-    'aicsimageio@git+https://github.com/camilolaiton/aicsimageio.git@feature/zarrwriter-multiscales-daskjobs',
+    'aicsimageio@git+https://github.com/camilolaiton/aicsimageio.git@feature/zarrwriter-multiscales-daskjobs'
 ]
 
 [project.optional-dependencies]
 dev = [
-    
+    'black',
+    'coverage',
+    'flake8',
+    'interrogate',
+    'isort',
+    'Sphinx',
+    'pygit2'
 ]
 
 [project.urls]
@@ -45,4 +52,41 @@ repository = "https://github.com/AllenNeuralDynamics/terastitcher-module"
 where = ["code/src"]
 
 [tool.setuptools.dynamic]
+version = {attr = "terastitcher_module.__version__"}
 readme = {file = ["README.md"]}
+
+[tool.black]
+line-length = 79
+target_version = ['py36']
+exclude = '''
+
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | build
+    | dist
+  )/
+  | .gitignore
+)
+'''
+
+[tool.coverage.run]
+omit = ["*__init__*"]
+source = ["terastitcher_module", "ng_link", "utils", "zarr_converter", "tests"]
+
+[tool.coverage.report]
+exclude_lines = ["if __name__ == .__main__.:"]
+fail_under = 100
+
+[tool.isort]
+line_length = 79
+
+[tool.interrogate]
+exclude = ["setup.py", "docs", "build"]
+fail-under = 100

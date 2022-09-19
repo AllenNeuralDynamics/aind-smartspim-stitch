@@ -15,7 +15,7 @@ from zarr_converter import ZarrConverter
 import warnings
 import logging
 import re
-from nglink import NgState
+from ng_link import NgState
 
 logging.basicConfig(
     level=logging.DEBUG,

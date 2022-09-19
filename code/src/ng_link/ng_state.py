@@ -4,8 +4,6 @@ from pint import UnitRegistry
 from pathlib import Path
 import sys
 import re
-
-sys.path.append('../')
 from utils import utils
 
 # IO types
