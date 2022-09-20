@@ -16,9 +16,6 @@ from argschema import ArgSchemaParser
 from glob import glob
 from aicsimageio.types import PhysicalPixelSizes
 from xarray import DataArray
-
-#pip install git+https://github.com/carshadi/aicsimageio.git@feature/zarrwriter-multiscales
-#pip install git+https://github.com/AllenInstitute/argschema.git
 from aicsimageio.writers import OmeZarrWriter
 from aicsimageio.readers.tiff_reader import TiffReader
 

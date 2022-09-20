@@ -26,7 +26,7 @@ dependencies = [
     'mpi4py',
     'bokeh',
     'pint',
-    'dask',
+    'dask[distributed]',
     'pystripe@https://github.com/chunglabmit/pystripe/archive/master.zip',
     'ome-zarr@git+https://github.com/camilolaiton/ome-zarr-py.git@feature/delayed-dask-poc',
     'aicsimageio@git+https://github.com/camilolaiton/aicsimageio.git@feature/zarrwriter-multiscales-daskjobs'

@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 
-tar -xzf /home/openmpi-4.1.4.tar.gz 
+wget https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-4.1.4.tar.gz
 
-cd /home/openmpi-4.1.4
+tar -xzf openmpi-4.1.4.tar.gz 
+
+cd openmpi-4.1.4
 
 ./configure --prefix=/usr/local/openmpi
 
 make all
 
-sudo make install 
+make install

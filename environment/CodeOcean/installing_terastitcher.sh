@@ -1,45 +1,33 @@
+#!/usr/bin/env bash
+
 # From the run file
-# chmod +x installing_terastitcher.sh
+# chmod +x terastitcher_installer.sh
 
-# Installing gcc compiler for openmpi
-# apt-get install -y build-essential
+sudo apt-get update
 
-# Installing make
-# apt-get install -y make
+# Giving execution permission to java setup
+sudo chmod +x ./terastitcher_java_setup.sh
 
-echo "- Starting terastitcher installation with MPI"
+# Executing installation of java setup
+./terastitcher_java_setup.sh
 
-chmod +x /home/terastitcher_openmpi_setup.sh
+# Updating paths in current terminal
+source ~/.bash_profile
 
-./home/terastitcher_openmpi_setup.sh
+tar -xzf TeraStitcher-portable-1.11.10-with-BF-Linux.tar.gz
+echo "export PATH=$PATH:$PWD/TeraStitcher-portable-1.11.10-with-BF-Linux" >> ~/.bash_profile
 
-python_cmd=1
-python -V
-status=$?
+sudo chmod +x ./terastitcher_openmpi_setup.sh
 
-if ! (exit $status)
-then
-    python_version=2
-    apt install -y python3-pip
-    python3 -m pip install mpi4py
-else
-    apt install -y python-pip
-    python -m pip install mpi4py
-fi
+./terastitcher_openmpi_setup.sh
 
-status=$?
+# Creating hostfile
+echo "localhost slots=70" > $PWD/hostfile
 
-if ! (exit $status)
-then
-    echo "- mpi4py could not be installed."
-    echo "- Trying installing libopenmpi first..."
+# Moving all used tar.gz to terastitcher_installers 
+mkdir terastitcher_installers
+mv zulu*.tar.gz openmpi*tar.gz apache*.tar.gz terastitcher_installers/
 
-    apt-get install -y libopenmpi-dev
-
-    if (( $python_version == 1 ))
-    then
-        python -m pip install mpi4py
-    else
-        python3 -m pip install mpi4py
-    fi
-fi
+# Autopep parastitcher python code
+pip install --no-input --upgrade autopep8
+autopep8 -i $PWD/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/*.py
