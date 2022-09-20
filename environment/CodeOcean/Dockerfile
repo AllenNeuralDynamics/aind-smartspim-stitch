@@ -1,5 +1,7 @@
-FROM python:3.8 AS stage2
+FROM mfisherman/openmpi AS stage1
 
+FROM python:3.8 AS stage2
+COPY --from=stage1 /project /home/
 LABEL org.opencontainers.image.authors="camilo.laiton@alleninstitute.org"
 
 RUN apt-get update -y \
@@ -12,7 +14,7 @@ RUN apt-get update -y \
     pip install --upgrade pip && \
     pip install --upgrade autopep8
 
-# Installing pystripe and terastitcher
+# Installing pystripe and terastitcher with fixed bugs
 RUN git clone https://github.com/chunglabmit/pystripe.git home/pystripe && \
     cd /home/pystripe && python setup.py install && \
     curl 'https://unicampus365-my.sharepoint.com/personal/g_iannello_unicampus_it/_layouts/15/download.aspx?SourceUrl=%2Fpersonal%2Fg%5Fiannello%5Funicampus%5Fit%2FDocuments%2FTeraStitcher%5Fdistributions%2F1%2E11%2F1%2E11%2E10%2FTeraStitcher%2Dportable%2D1%2E11%2E10%2Dwith%2DBF%2DLinux%2Etar%2Egz' \
@@ -32,8 +34,13 @@ RUN git clone https://github.com/chunglabmit/pystripe.git home/pystripe && \
     -H 'upgrade-insecure-requests: 1' \
     -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36' \
     --compressed \
-    --output /home/TeraStitcher-portable-1.11.10-with-BF-Linux.tar.gz && \
-    cd /home && tar -xzf TeraStitcher-portable-1.11.10-with-BF-Linux.tar.gz && \
+    --output /home/TeraStitcher-portable-1.11.10-with-BF-Linux.tar.gz
+
+# Installing terastitcher
+RUN cd /home && tar -xzf TeraStitcher-portable-1.11.10-with-BF-Linux.tar.gz && \
+    cd /home/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts && rm Parastitcher.py && \
+    wget https://raw.githubusercontent.com/camilolaiton/TeraStitcher/fix/data_paths/src/utils/pyscripts/Parastitcher.py && \
+    wget https://raw.githubusercontent.com/camilolaiton/TeraStitcher/fix/data_paths/src/utils/pyscripts/paraconverter.py && \
     autopep8 -i /home/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/*.py
 
 ENV PATH "$PATH:/home/TeraStitcher-portable-1.11.10-with-BF-Linux"
@@ -54,17 +61,8 @@ RUN cd /home && \
 ENV PATH "/home/apache-maven-3.8.6/bin:$PATH"
 ENV PATH "/home/zulu8.62.0.19-ca-jdk8.0.332-linux_x64/bin:$PATH"
 
-# # Installing OpenMPI and stitching module
-RUN cd /home && \ 
-    wget https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-4.1.4.tar.gz && \
-    tar -xzf openmpi-4.1.4.tar.gz && \
-    cd /home/openmpi-4.1.4 && \ 
-    ./configure --prefix=/usr/local/openmpi && \
-    make all && \
-    make install && \
-    echo "localhost slots=70" > /home/hostfile
-
-RUN git clone https://github.com/AllenNeuralDynamics/terastitcher-module home/terastitcher-module && \
+RUN echo "localhost slots=70" > /home/hostfile && \
+    git clone https://github.com/AllenNeuralDynamics/terastitcher-module home/terastitcher-module && \
     cd /home/terastitcher-module && \
     git checkout remotes/origin/feature/ng_link && \
     pip install -e .
