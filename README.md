@@ -57,7 +57,7 @@ $ cd terastitcher-module
 $ pip install -e .
 ```
 
-Afterwards, set --parastitcher_path parameter to the Parastitcher python script. You can do this in the command line or directly in the code. It should be located in `YOUR_DIRECTORY/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/Parastitcher.py`.
+Afterwards, set --pyscripts_path parameter to the directory where Parastitcher and paraconverter python scripts are. You can do this in the command line or directly in the code. It should be located in `YOUR_DIRECTORY/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts`. (place both scripts there).
 
 ## Parameters
 This module uses the following principal parameters:

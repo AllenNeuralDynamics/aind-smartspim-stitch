@@ -83,7 +83,7 @@ class ZarrConverter():
         
         channel_paths = glob(path+'/*/')
         
-        if not len(channel_paths):
+        if len(channel_paths) <= 1:
             return None
         
         for path in channel_paths:
@@ -258,8 +258,12 @@ class ZarrConverter():
         
         image = self.read_multichannel_image(self.input_data)
         
+        # Reading single channel
         if not isinstance(image, dask.array.core.Array) and not isinstance(image, list):
-            image = self.read_channel_image(str(self.input_data)+'/*/*/')
+            image = self.pad_array_n_d(
+                self.read_channel_image(str(self.input_data)+'/*/*/'),
+                4
+            )
         
         scale_axis = []
         for axis in range(len(image[0].shape)-len(writer_config['scale_factor'])):
@@ -286,7 +290,7 @@ class ZarrConverter():
                 pyramid_data = [self.pad_array_n_d(pyramid) for pyramid in pyramid_data]
 
                 print(pyramid_data)
-
+                
                 dask_jobs = self.writer.write_multiscale(
                     pyramid=pyramid_data,  # : types.ArrayLike,  # must be 5D TCZYX
                     image_name=self.channels[idx] + '.zarr',  #: str,

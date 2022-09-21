@@ -252,20 +252,12 @@ class PipelineParams(ArgSchema):
         dump_default='Ex_([0-9]*)_Em_([0-9]*)$'
     )
     
-    parastitcher_path = InputFile(
+    pyscripts_path = InputDir(
         required=False, 
         metadata={
-            'description':'Path to parastitcher'
+            'description':'Path to stitched parallel scripts (parastitcher and paraconverter must be there).'
         },
-        dump_default='/home/jupyter/terastitcher-module/environment/GCloud/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/Parastitcher.py'
-    )
-    
-    paraconverter_path = InputFile(
-        required=False, 
-        metadata={
-            'description':'Path to parastitcher'
-        },
-        dump_default='/home/jupyter/terastitcher-module/environment/GCloud/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/paraconverter.py'
+        dump_default='/home/jupyter/terastitcher-module/environment/GCloud/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts'
     )
     
     # Processing params

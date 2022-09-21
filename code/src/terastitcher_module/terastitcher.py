@@ -36,8 +36,7 @@ class TeraStitcher():
             input_data:PathLike, 
             output_folder:PathLike, 
             parallel:bool=True,
-            parastitcher_path:Optional[PathLike]=None,
-            paraconverter_path:Optional[PathLike]=None,
+            pyscripts_path:Optional[PathLike]=None,
             computation:Optional[str]='cpu',
             preprocessing:Optional[dict]=None,
             verbose:Optional[bool]=False,
@@ -55,10 +54,8 @@ class TeraStitcher():
             Path where the stitched data will be stored.
         parallel: Optional[bool]
             True if you want to run terastitcher in parallel, False otherwise.
-        parastitcher_path: Optional[PathLike] 
-            Path where parastitcher execution file is located.
-        paraconverter_path: Optional[PathLike] 
-            Path where paraconverter execution file is located.
+        pyscripts_path: Optional[PathLike] 
+            Path where parastitcher and paraconverter execution files are located.
         computation: Optional[str]
             String that indicates where will terastitcher run. Available options are: ['cpu', 'gpu']
         preprocessing: Optional[dict]:
@@ -78,8 +75,8 @@ class TeraStitcher():
         self.__parallel = parallel
         self.__computation = computation
         self.__platform = platform.system()
-        self.__parastitcher_path = Path(parastitcher_path)
-        self.__paraconverter_path = Path(paraconverter_path)
+        self.__parastitcher_path = Path(pyscripts_path).joinpath('Parastitcher.py')
+        self.__paraconverter_path = Path(pyscripts_path).joinpath('paraconverter.py')
         self.preprocessing = preprocessing
         self.__verbose = verbose
         self.__python_terminal = None
@@ -525,7 +522,8 @@ class TeraStitcher():
         self, 
         step_name:str, 
         input_xml:str, 
-        output_xml:str, 
+        output_xml:str,
+        channel:str,
         params:Optional[dict]=None,
     ) -> str:
         
@@ -565,9 +563,8 @@ class TeraStitcher():
         if params:
             parameters = utils.helper_build_param_value_command(params)
         
-        cmd = f"terastitcher --{step_name} {input_xml} {output_xml} {parameters}"
+        cmd = f"terastitcher --{step_name} {input_xml} {output_xml} {parameters}"        
         
-        channel = output_xml.replace('.xml', '').split('_')[-1]
         output_json = self.metadata_path.joinpath(f"{step_name}_params_{channel}.json")
         utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
         
@@ -869,7 +866,7 @@ class TeraStitcher():
         # Step 3
         self.logger.info("Projection step...")
         exec_config['command'] = self.input_output_step_cmd(
-            'displproj', f'xml_displcomp_{informative_channel}.xml', f'xml_displproj_{informative_channel}.xml'
+            'displproj', f'xml_displcomp_{informative_channel}.xml', f'xml_displproj_{informative_channel}.xml', informative_channel
         )
         utils.execute_command(
             exec_config
@@ -879,7 +876,7 @@ class TeraStitcher():
         self.logger.info("Threshold step...")
         threshold_cnf = {'threshold': config['threshold']['reliability_threshold']}
         exec_config['command'] = self.input_output_step_cmd(
-            'displthres', f'xml_displproj_{informative_channel}.xml', f'xml_displthres_{informative_channel}.xml', threshold_cnf
+            'displthres', f'xml_displproj_{informative_channel}.xml', f'xml_displthres_{informative_channel}.xml', informative_channel, threshold_cnf
         )
         utils.execute_command(
             exec_config
@@ -888,7 +885,7 @@ class TeraStitcher():
         # Step 5
         self.logger.info("Placing tiles step...")
         exec_config['command'] = self.input_output_step_cmd(
-            'placetiles', f'xml_displthres_{informative_channel}.xml', f'{fuse_xmls}/xml_merging_{informative_channel}.xml'
+            'placetiles', f'xml_displthres_{informative_channel}.xml', f'{fuse_xmls}/xml_merging_{informative_channel}.xml', informative_channel
         )
         utils.execute_command(
             exec_config
@@ -1025,7 +1022,7 @@ class TeraStitcher():
         # Step 3
         self.logger.info("Projection step...")
         exec_config['command'] = self.input_output_step_cmd(
-            'displproj', f'xml_displcomp_{channel}.xml', f'xml_displproj_{channel}.xml'
+            'displproj', f'xml_displcomp_{channel}.xml', f'xml_displproj_{channel}.xml', channel
         )
         utils.execute_command(
             exec_config
@@ -1035,7 +1032,7 @@ class TeraStitcher():
         self.logger.info("Threshold step...")
         threshold_cnf = {'threshold': config['threshold']['reliability_threshold']}
         exec_config['command'] = self.input_output_step_cmd(
-            'displthres', f'xml_displproj_{channel}.xml', f'xml_displthres_{channel}.xml', threshold_cnf
+            'displthres', f'xml_displproj_{channel}.xml', f'xml_displthres_{channel}.xml', channel, threshold_cnf
         )
         utils.execute_command(
             exec_config
@@ -1044,7 +1041,7 @@ class TeraStitcher():
         # Step 5
         self.logger.info("Placing tiles step...")
         exec_config['command'] = self.input_output_step_cmd(
-            'placetiles', f'xml_displthres_{channel}.xml', f'xml_merging_{channel}.xml'
+            'placetiles', f'xml_displthres_{channel}.xml', f'xml_merging_{channel}.xml', channel
         )
         utils.execute_command(
             exec_config
@@ -1082,9 +1079,9 @@ class TeraStitcher():
             'exists_stdout': os.path.exists(self.stdout_log_file)
         }
         
-        self.logger.info(f"Processing {channels} channels with informative channel {channels[config['stitch_channel']]}")
-        
         if len(channels) > 1:
+            self.logger.info(f"Processing {channels} channels with informative channel {channels[config['stitch_channel']]}")
+            
             self.process_multiple_channels(
                 config,
                 exec_config,
@@ -1093,6 +1090,7 @@ class TeraStitcher():
             )
             
         else:
+            self.logger.info(f"Processing single channel {channels[0]}")
             
             self.process_single_channel(
                 config,
@@ -1220,8 +1218,7 @@ def execute_terastitcher(
             output_folder=output_folder,
             parallel=True,
             computation='cpu',
-            parastitcher_path=config_teras["parastitcher_path"],
-            paraconverter_path=config_teras["paraconverter_path"],
+            pyscripts_path=config_teras["pyscripts_path"],
             verbose=True,
             preprocessing=config_teras['preprocessing_steps'],
             gcloud_execution=gcloud_execution
