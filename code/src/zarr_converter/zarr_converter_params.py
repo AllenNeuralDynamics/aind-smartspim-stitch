@@ -47,6 +47,13 @@ class OmeZarrParams(DefaultSchema):
         },
         dump_default=5
     )
+    
+    ng_base_url = Str(
+        required=True,
+        metadata={
+            'description':'Base url for neuroglancer web app'
+        }
+    )
 
 class ZarrConvertParams(ArgSchema):
     input_data = InputDir(

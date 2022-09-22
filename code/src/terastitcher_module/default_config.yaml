@@ -1,0 +1,59 @@
+---
+preprocessing_steps:
+  pystripe:
+    sigma1:
+    - 256
+    - 800
+    - 800
+    - 800
+    sigma2:
+    - 256
+    - 800
+    - 800
+    - 800
+    workers: 8
+import_data:
+  ref1: X
+  ref2: Y
+  ref3: D
+  vxl1: 1.8
+  vxl2: 1.8
+  vxl3: 2
+  additional_params:
+  - sparse_data
+  - libtiff_uncompress
+align:
+  cpu_params:
+    estimate_processes: false
+    image_depth: 4200
+    number_processes: 8
+    hostfile: "/home/hostfile"
+    additional_params:
+    - use-hwthread-cpus
+    - allow-run-as-root
+  subvoldim: 100
+threshold:
+  reliability_threshold: 0.7
+merge:
+  cpu_params:
+    estimate_processes: false
+    image_depth: 1000
+    number_processes: 8
+    hostfile: "/home/hostfile"
+    additional_params:
+    - use-hwthread-cpus
+    - allow-run-as-root
+  volout_plugin: '"TiledXY|2Dseries"'
+  slice_extent:
+  - 20000
+  - 20000
+  - 1
+ome_zarr_params:
+  codec: zstd
+  clevel: 1
+  scale_factor:
+  - 2
+  - 2
+  - 2
+  pyramid_levels: 5
+  ng_base_url: "https://aind-neuroglancer-sauujisjxq-uw.a.run.app"

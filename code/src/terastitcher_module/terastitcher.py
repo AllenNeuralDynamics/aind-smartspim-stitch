@@ -748,7 +748,7 @@ class TeraStitcher():
         
         neuroglancer_link.save_state_as_json()
         link = neuroglancer_link.get_url_link(
-            base_url="https://aind-neuroglancer-sauujisjxq-uw.a.run.app"
+            base_url=config['ng_base_url']
         )
         self.logger.info(f"Visualization link: {link}")
     

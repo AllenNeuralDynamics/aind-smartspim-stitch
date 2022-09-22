@@ -59,6 +59,8 @@ $ pip install -e .
 
 Afterwards, set --pyscripts_path parameter to the directory where Parastitcher and paraconverter python scripts are. You can do this in the command line or directly in the code. It should be located in `YOUR_DIRECTORY/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts`. (place both scripts there).
 
+Additionally, there are some known bugs related to the input parameters in terastitcher's python scripts. Some of them were solved in **https://github.com/camilolaiton/TeraStitcher/tree/fix/data_paths**. You might want to update **parastitcher.py** and **paraconverter.py** files with the ones provided here.
+
 ## Parameters
 This module uses the following principal parameters:
 - --input_data: Path where the data is located. If it's located in a GCS bucket, please refer to it such as: `gs://bucket-name/dataset_name/image_folder`.

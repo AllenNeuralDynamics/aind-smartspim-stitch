@@ -3,6 +3,7 @@ from argschema.fields import NumpyArray, Boolean, Int, Str, Nested, List, Float,
 from argschema.schemas import DefaultSchema
 from marshmallow import validate
 from zarr_converter import OmeZarrParams
+import yaml
 import pprint as pp
 import platform
 
@@ -114,11 +115,11 @@ class CPUParams(DefaultSchema):
     
     
     hostfile = InputFileBasedLinux(
-        required=False, 
+        required=True, 
         metadata={
             'description':'Path to MPI hostfile. Only for Linux kernel machines'
         },
-        dump_default='/home/jupyter/terastitcher-module/environment/GCloud/hostfile'
+        dump_default='/home/hostfile'
     )
     
     additional_params = List(
@@ -253,11 +254,10 @@ class PipelineParams(ArgSchema):
     )
     
     pyscripts_path = InputDir(
-        required=False, 
+        required=True, 
         metadata={
             'description':'Path to stitched parallel scripts (parastitcher and paraconverter must be there).'
-        },
-        dump_default='/home/jupyter/terastitcher-module/environment/GCloud/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts'
+        }
     )
     
     # Processing params
@@ -278,70 +278,20 @@ class PipelineParams(ArgSchema):
         dump_default=False
     )
 
-def get_default_config():
-    return {
-        'preprocessing_steps': {
-            'pystripe': {
-                "sigma1" : [256, 800, 800, 800],
-                "sigma2" : [256, 800, 800, 800],
-                "workers" : 16
-            }
-        },
-        'import_data' : {
-            "ref1":"X",
-            "ref2":"Y",
-            "ref3":"D",
-            "vxl1":1.800,
-            "vxl2":1.800,
-            "vxl3":2,
-            "additional_params": [
-                "sparse_data",
-                "libtiff_uncompress"
-            ]
-        },
-        "align" : {
-            "cpu_params": {
-                "estimate_processes": False,
-                "image_depth": 4200,
-                "number_processes": 16,
-                "hostfile": "/home/jupyter/terastitcher-module/environment/GCloud/hostfile",
-                "additional_params": [
-                    "use-hwthread-cpus",
-                    "allow-run-as-root"
-                ]
-            },
-            "subvoldim": 100
-        },
-        "threshold" : {
-            "reliability_threshold" : 0.7
-        },
-        "merge" : {
-            "cpu_params": {
-                "estimate_processes": False,
-                "image_depth": 1000,
-                "number_processes": 16,
-                "hostfile": "/home/jupyter/terastitcher-module/environment/GCloud/hostfile",
-                "additional_params": [
-                    "use-hwthread-cpus",
-                    "allow-run-as-root"
-                ]
-            },
-            "volout_plugin": "\"TiledXY|2Dseries\"",
-            "slice_extent": [20000, 20000, 1]
-        },
-        'ome_zarr_params': {
-            'codec': 'zstd',
-            'clevel': 1,
-            'scale_factor': [2, 2, 2],
-            'pyramid_levels': 5
-        }
-    }
+def get_default_config(filepath:str='default_config.yaml'):
+    
+    config = None
+    try:
+        with open(filepath, "r") as stream:
+            config = yaml.safe_load(stream)
+    except Exception as error:
+        raise error
+    
+    return config
 
 if __name__ == '__main__':
-
     # this defines a default dictionary that will be used if input_json is not specified
     example = get_default_config()
-
     mod = ArgSchemaParser(
         input_data=example,
         schema_type=PipelineParams
