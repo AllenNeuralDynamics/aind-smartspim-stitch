@@ -54,7 +54,13 @@ class NgState():
         str
             String with the fixed outputh path.
         """
-        output_json = Path(output_json)
+        output_json = Path(
+            str(output_json).replace(
+                '/home/jupyter/', ''
+            ).replace(
+                "////", "//"
+            )
+        )
         name = str(output_json.name)
         
         if not name.endswith('.json'):
@@ -263,7 +269,7 @@ class NgState():
         """
         output_txt = str(output_txt)
         
-        json_path = str(self.output_json).replace('/home/jupyter/', '')
+        json_path = str(self.output_json)
         json_path = 'gs://' + json_path
         
         link = f"{base_url}#!{json_path}"

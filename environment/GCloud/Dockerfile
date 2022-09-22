@@ -15,7 +15,18 @@ RUN apt-get update -y \
     "software-properties-common" \
     "git" && \
     pip install --upgrade pip && \
-    pip install --upgrade autopep8
+    pip install --upgrade autopep8 && \
+    gcsFuseRepo=gcsfuse-`lsb_release -c -s`; \
+    echo "deb http://packages.cloud.google.com/apt $gcsFuseRepo main" | \
+    tee /etc/apt/sources.list.d/gcsfuse.list; \
+    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | \
+    apt-key add -; \
+    apt-get update; \
+    apt-get install -y gcsfuse \
+    && apt-get clean
+
+# Set fallback mount directory
+ENV MNT_DIR /mnt/gcs
 
 # Installing pystripe and terastitcher with fixed bugs
 RUN git clone https://github.com/chunglabmit/pystripe.git home/pystripe && \
@@ -55,4 +66,5 @@ RUN echo "localhost slots=70" > /home/hostfile && \
     git checkout remotes/origin/feature/ng_link && \
     pip install -e .
 
-CMD ["/bin/bash"]
+ENTRYPOINT ["python", "/home/terastitcher-module/code/src/terastitcher_module/terastitcher.py", "--pyscripts_path", "/home/TeraStitcher/src/utils/pyscripts", "--align.cpu_params.hostfile", "/home/hostfile", "--merge.cpu_params.hostfile", "/home/hostfile"]
+CMD ["--help"]

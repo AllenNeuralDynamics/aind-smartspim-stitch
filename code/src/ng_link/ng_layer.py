@@ -47,8 +47,13 @@ class NgLayer():
         
         source_path = str(source_path)
         
-        # replacing jupyter path
-        source_path = source_path.replace('/home/jupyter/', '')
+        # replacing jupyter path or cloud run job path
+        source_path = source_path.replace(
+            '/home/jupyter/', ''
+        ).replace(
+            "////", "//"
+        )
+        
         source_path = 'gs://' + source_path
         
         if source_path.endswith('.zarr'):

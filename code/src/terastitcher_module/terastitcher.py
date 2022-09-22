@@ -747,7 +747,10 @@ class TeraStitcher():
         )
         
         neuroglancer_link.save_state_as_json()
-        self.logger.info(f"Visualization link: {neuroglancer_link.get_url_link()}")
+        link = neuroglancer_link.get_url_link(
+            base_url="https://aind-neuroglancer-sauujisjxq-uw.a.run.app"
+        )
+        self.logger.info(f"Visualization link: {link}")
     
     def __preprocessing_tool_cmd(
             self, 
