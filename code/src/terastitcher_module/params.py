@@ -6,6 +6,8 @@ from zarr_converter import OmeZarrParams
 import yaml
 import pprint as pp
 import platform
+from pathlib import Path
+import os
 
 class InputFileBasedLinux(InputFile):
     """
@@ -278,11 +280,13 @@ class PipelineParams(ArgSchema):
         dump_default=False
     )
 
-def get_default_config(filepath:str='default_config.yaml'):
+def get_default_config(filename:str='default_config.yaml'):
+    
+    filename = Path(os.path.dirname(__file__)).joinpath(filename)
     
     config = None
     try:
-        with open(filepath, "r") as stream:
+        with open(filename, "r") as stream:
             config = yaml.safe_load(stream)
     except Exception as error:
         raise error
