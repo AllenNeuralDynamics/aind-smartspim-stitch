@@ -233,6 +233,13 @@ class PipelineParams(ArgSchema):
         }
     )
     
+    preprocessed_data = Str(
+        required=True, 
+        metadata={
+            'description':"Path where the preprocessed data will be saved (this includes terastitcher output)"
+        }
+    )
+    
     stitch_channel = Int(
         required=True, 
         metadata={

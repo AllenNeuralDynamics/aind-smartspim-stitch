@@ -34,13 +34,14 @@ class TeraStitcher():
     
     def __init__(self, 
             input_data:PathLike, 
-            output_folder:PathLike, 
+            output_folder:PathLike,
             parallel:bool=True,
             pyscripts_path:Optional[PathLike]=None,
             computation:Optional[str]='cpu',
             preprocessing:Optional[dict]=None,
             verbose:Optional[bool]=False,
-            gcloud_execution:Optional[bool]=False
+            gcloud_execution:Optional[bool]=False,
+            preprocessing_folder:Optional[PathLike]=None
         ) -> None:
         
         """
@@ -72,6 +73,8 @@ class TeraStitcher():
         
         self.__input_data = Path(input_data)
         self.__output_folder = Path(output_folder)
+        self.__preprocessing_folder = Path(preprocessing_folder)
+        self.__stitched_folder = self.__preprocessing_folder.joinpath('stitched')
         self.__parallel = parallel
         self.__computation = computation
         self.__platform = platform.system()
@@ -133,12 +136,10 @@ class TeraStitcher():
         # If parastitcher or paraconverter paths are not found, we set computation to sequential cpu as default.
         self.__check_teras_parallel_scripts()
         
-        if self.preprocessing:
-            self.__change_io_paths()
-        
         # We create the folders for the xmls and metadata in the output directory
         utils.create_folder(self.xmls_path, self.__verbose)
         utils.create_folder(self.metadata_path, self.__verbose)
+        utils.create_folder(self.__stitched_folder)
         
         # Setting stdout log file last because the folder structure depends if preprocessing steps are provided
         self.stdout_log_file = self.metadata_path.joinpath("stdout_log.txt")
@@ -147,7 +148,6 @@ class TeraStitcher():
         
         if preprocessing and 'pystripe' in preprocessing:
             tools.insert(0, pystripe_info)
-            data_description_path = Path(*self.__output_folder.parts[:-1]).joinpath('data_description.json')
         
         utils.save_dict_as_json(
             data_description_path, 
@@ -157,32 +157,6 @@ class TeraStitcher():
         # Setting logger
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
-        
-    def __change_io_paths(self) -> None:
-        """
-        Changes the file order to add an extra folder for pystriped and stitched data.
-        It is necessary to take the striped data for terastitcher to include it in the pipeline.
-        Thus, it should be saved.
-        
-        """
-        
-        change_file_order = False
-        
-        for tool_name, params in self.preprocessing.items():
-            if tool_name == 'pystripe':
-                change_file_order = True
-                self.preprocessing['pystripe']['input'] = Path(self.preprocessing['pystripe']['input'])
-                self.preprocessing['pystripe']['output'] = Path(self.preprocessing['pystripe']['output']).joinpath("destriped")
-        
-        if change_file_order:
-            # Organizing repo to add striping folder
-            self.__input_data = self.__output_folder.joinpath("destriped")
-            self.__output_folder = self.__output_folder.joinpath("stitched")
-            
-            # Organizing output paths
-            self.metadata_path = self.__output_folder.joinpath("metadata/params")
-            self.xmls_path = self.__output_folder.joinpath("metadata/xmls")
-            self.ome_zarr_path = self.__output_folder.joinpath('OMEZarr')
     
     def __check_installation(self, tool_name:str="terastitcher") -> bool:
         """
@@ -384,6 +358,7 @@ class TeraStitcher():
         # TODO Check if params comes with all necessary keys so it does not raise KeyNotFound error
         
         input_path = self.__input_data.joinpath(channel)
+        
         volume_input = f"--volin={input_path}"
         
         output_path = self.xmls_path.joinpath(f"xml_import_{channel}.xml")
@@ -593,7 +568,7 @@ class TeraStitcher():
         input_path = self.xmls_path.joinpath(f"xml_merging_{channel}.xml")
         input_xml = f"--projin={input_path}"
         
-        output_path = f"--volout={self.__output_folder}"
+        output_path = f"--volout={self.__stitched_folder}"
         parallel_command = ''
         
         params = {
@@ -674,11 +649,11 @@ class TeraStitcher():
         output_json = self.metadata_path.joinpath("ome_zarr_params.json")
         utils.save_dict_as_json(output_json, config, self.__verbose)
         
-        path = [folder for folder in os.listdir(self.__output_folder) if 'RES' in folder]
+        path = [folder for folder in os.listdir(self.__stitched_folder) if 'RES' in folder]
         
         converter = ZarrConverter(
-            self.__output_folder.joinpath(path[0]), 
-            self.ome_zarr_path, 
+            self.__stitched_folder.joinpath(path[0]), 
+            self.ome_zarr_path,
             {'codec': config['codec'], 'clevel': config['clevel']},
             channels,
             config['physical_pixels']
@@ -719,7 +694,6 @@ class TeraStitcher():
         # Creating layer per channel
         layers = []
         for channel_idx in range(len(channels)):
-            print(self.ome_zarr_path)
             layers.append(
                 {
                     'source': self.ome_zarr_path.joinpath(channels[channel_idx] + '.zarr'),
@@ -894,7 +868,7 @@ class TeraStitcher():
             exec_config
         )
     
-    def process_multiple_channels(
+    def stitch_multiple_channels(
         self, 
         config:dict, 
         exec_config:dict,
@@ -916,10 +890,6 @@ class TeraStitcher():
         pos_informative_channel:int
             Position of the channels list where the informative channel is located.
         """
-        
-        
-        if self.preprocessing:
-            self.__execute_preprocessing_steps(exec_config, channels)
         
         # Creating fuse folder
         informative_channel = channels[pos_informative_channel]
@@ -970,7 +940,7 @@ class TeraStitcher():
         self.logger.info("Merging channels step...")
         merge_config = {
             's' : params_multivolume['projout'],
-            'd' : self.__output_folder,
+            'd' : self.__stitched_folder,
             'sfmt': "\"TIFF (unstitched, 3D)\"",
             'dfmt': "\"TIFF (tiled, 4D)\"",
             'cpu_params':config['merge']['cpu_params'],
@@ -985,7 +955,7 @@ class TeraStitcher():
             exec_config
         )
     
-    def process_single_channel(
+    def stitch_single_channels(
         self, 
         config:dict, 
         exec_config:dict, 
@@ -1002,11 +972,7 @@ class TeraStitcher():
             Configuration for command line execution. Mostly for logger.
         channel:str
             Name of the dataset channel that will be imported
-        """
-        
-        # Preprocessing steps
-        if self.preprocessing:
-            self.__execute_preprocessing_steps(exec_config, [channel])
+        """   
         
         # Step 1
         exec_config['command'] = self.import_step_cmd(config['import_data'], channel)
@@ -1082,10 +1048,16 @@ class TeraStitcher():
             'exists_stdout': os.path.exists(self.stdout_log_file)
         }
         
+        if self.preprocessing:
+            self.__execute_preprocessing_steps(exec_config, channels)
+            
+            if 'pystripe' in self.preprocessing:
+                self.__input_data = self.__preprocessing_folder.joinpath('destriped')
+        
         if len(channels) > 1:
             self.logger.info(f"Processing {channels} channels with informative channel {channels[config['stitch_channel']]}")
             
-            self.process_multiple_channels(
+            self.stitch_multiple_channels(
                 config,
                 exec_config,
                 channels,
@@ -1095,7 +1067,7 @@ class TeraStitcher():
         else:
             self.logger.info(f"Processing single channel {channels[0]}")
             
-            self.process_single_channel(
+            self.stitch_single_channels(
                 config,
                 exec_config,
                 channels[0]
@@ -1104,15 +1076,8 @@ class TeraStitcher():
         self.logger.info("Converting to OME-Zarr...")
         self.convert_to_ome_zarr(config['ome_zarr_params'], channels)
         
-        if self.gcloud_execution:
-            self.create_ng_link(config['ome_zarr_params'], channels)
-        
         if config['clean_output']:
-            destriped_folder = Path(os.path.sep.join(list(self.__output_folder.parts)[:-1])).joinpath('destriped')
-            utils.delete_folder(destriped_folder, self.__verbose)
-            
-            stitched_folder = Path(glob(str(self.__output_folder) + '/RES*')[0])
-            utils.delete_folder(stitched_folder, self.__verbose)
+            utils.delete_folder(self.__preprocessing_folder, self.__verbose)
 
 def find_channels(path:PathLike, channel_regex:str=r'Ex_([0-9]*)_Em_([0-9]*)$'):
     """
@@ -1133,18 +1098,10 @@ def find_channels(path:PathLike, channel_regex:str=r'Ex_([0-9]*)_Em_([0-9]*)$'):
     """
     return [path for path in os.listdir(path) if re.search(channel_regex, path)]
 
-def unmounting_gcloud(parser_result:List[str]) -> None:
-    if len(parser_result):
-        # unmounting dirs
-        if parser_result[0] == parser_result[1]:
-            utils.gscfuse_unmount(parser_result[0])
-        else:
-            utils.gscfuse_unmount(parser_result[0])
-            utils.gscfuse_unmount(parser_result[1])
-
 def execute_terastitcher(
         input_data:PathLike, 
         output_folder:PathLike,
+        preprocessed_data:PathLike,
         config_teras:PathLike
     ) -> None:
     
@@ -1161,43 +1118,13 @@ def execute_terastitcher(
     output_folder: PathLike
         Path where the data will be saved.
         
+    preprocessed_data: PathLike
+        Path where the preprocessed data will be saved (this includes terastitcher output).
+        
     config_teras: Dict
         Dictionary with terastitcher's configuration.
     
     """
-    
-    parser_result = PathParser.parse_path_gcs(
-        input_data,
-        output_folder
-    )
-    
-    # If true, we're in a google bucket
-    gcloud_execution = False
-    
-    if len(parser_result):
-        # changing paths to mounted dirs
-        input_data = input_data.replace('gs://', os.getcwd()+'/')
-        output_folder = output_folder.replace('gs://', os.getcwd()+'/')
-        print(f"- New input folder: {input_data}")
-        print(f"- New output folder: {output_folder}")
-        gcloud_execution = True
-    
-    # Setting handling error to unmounting cloud for any unexpected error
-    def onAnyError(exception_type, value, traceback):
-        
-        logger = logging.getLogger(__name__)
-        
-        if issubclass(exception_type, KeyboardInterrupt):
-            sys.__excepthook__(exc_type, exc_value, exc_traceback)
-
-        else:
-            logger.error("Error while executing stitching pipeline: ", exc_info=(exception_type, value, traceback))
-        
-        if gcloud_execution and not issubclass(exception_type, OSError):
-            logger.info("Unmounting gcloud because of an unexpected error.")
-            unmounting_gcloud(parser_result)
-
-    sys.excepthook = onAnyError
     
     regexpression = config_teras['regex_channels']
     regexpression = "({})".format(regexpression)
@@ -1211,20 +1138,20 @@ def execute_terastitcher(
     else:
         
         try:
-            config_teras['preprocessing_steps']['pystripe']['input'] = input_data
-            config_teras['preprocessing_steps']['pystripe']['output'] = output_folder
+            config_teras['preprocessing_steps']['pystripe']['input'] = Path(input_data)
+            config_teras['preprocessing_steps']['pystripe']['output'] = Path(preprocessed_data).joinpath('destriped')
         except KeyError:
             config_teras['preprocessing_steps'] = None
             
         terastitcher_tool = TeraStitcher(
             input_data=input_data,
             output_folder=output_folder,
+            preprocessing_folder=preprocessed_data,
             parallel=True,
             computation='cpu',
             pyscripts_path=config_teras["pyscripts_path"],
-            verbose=True,
-            preprocessing=config_teras['preprocessing_steps'],
-            gcloud_execution=gcloud_execution
+            verbose=False,
+            preprocessing=config_teras['preprocessing_steps']
         )
         
         # Saving log command
@@ -1235,8 +1162,6 @@ def execute_terastitcher(
             config_teras,
             channels
         )
-        
-        unmounting_gcloud(parser_result)
 
 def process_multiple_datasets() -> None:
     default_config = get_default_config()
@@ -1304,6 +1229,7 @@ def main() -> None:
     execute_terastitcher(
         input_data=args['input_data'],
         output_folder=args['output_data'],
+        preprocessed_data=args['preprocessed_data'],
         config_teras=args
     )
         

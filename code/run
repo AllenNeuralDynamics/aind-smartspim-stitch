@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -ex
+
+# This is the master script for the capsule. When you click "Reproducible Run", the code in this file will execute.
+
+# Activate stitch env to solve argschema python version bug
+source /opt/conda/etc/profile.d/conda.sh
+conda activate stitch
+
+# Split parameters for argschema
+python -u main.py --input_data /data/"$1" --output_data /root/capsule/results/"$2" --pyscripts_path "$3" --regex_channels "$4"
+
+# Copying processed dataset to aws
+aws s3 cp --recursive /root/capsule/results s3://$5

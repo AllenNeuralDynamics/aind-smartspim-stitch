@@ -272,15 +272,8 @@ class ZarrConverter():
         scale_axis.extend(list(writer_config['scale_factor']))
         scale_axis = tuple(scale_axis)
         
-        # chunks = [1, image[0].shape[-2]//2, image[0].shape[-1]//2]
-        # print(chunks, scale_axis, image)
-        
         with performance_report(filename="dask-report.html"):
             for idx in range(len(image)):
-                # Rechunking image chunks
-                # image[idx] = image[idx].rechunk(tuple(chunks))
-                # print("Number of partitions: ", image[idx].npartitions)
-                
                 pyramid_data = self.compute_pyramid(
                     image[idx], 
                     writer_config['pyramid_levels'],
@@ -288,8 +281,6 @@ class ZarrConverter():
                 )
 
                 pyramid_data = [self.pad_array_n_d(pyramid) for pyramid in pyramid_data]
-
-                print(pyramid_data)
                 
                 dask_jobs = self.writer.write_multiscale(
                     pyramid=pyramid_data,  # : types.ArrayLike,  # must be 5D TCZYX
@@ -305,7 +296,6 @@ class ZarrConverter():
                 )
 
                 if len(dask_jobs):
-                    print("jobs: ", len(dask_jobs))
                     dask_jobs = dask.persist(*dask_jobs)#, get=dask.threaded.get)
                     # dask_jobs = dask_jobs.persist()
                     progress(dask_jobs)
