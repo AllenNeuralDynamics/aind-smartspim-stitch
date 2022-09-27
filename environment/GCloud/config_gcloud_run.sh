@@ -26,14 +26,11 @@ else
 fi
 
 # Setting project
-gcloud config set $1
-
+gcloud config set project $1 && \
 # Setting run region
-gcloud config set run/region $region
-
+gcloud config set run/region $region && \
 # Build image
-gcloud builds submit --tag us.gcr.io/$1/stitch-images/terastitcher
-
+gcloud builds submit --tag us.gcr.io/$1/stitch-images/terastitcher && \
 # Creating job
 gcloud beta run jobs create terastitcher --image us.gcr.io/$1/stitch-images/terastitcher --cpu 8 --memory 32G
 
@@ -42,3 +39,14 @@ gcloud beta run jobs create terastitcher --image us.gcr.io/$1/stitch-images/tera
 
 # Execute job
 # gcloud beta run jobs execute terastitcher
+
+python3 -m \
+    apache_beam.examples.wordcount \
+    --region us-central1 --input \
+    gs://dataflow-samples/shakespeare/kinglear.txt \
+    --output \
+    gs://aind-data-dev/camilo.laiton/dataflow_test \
+    --runner DataflowRunner \
+    --project neural-dynamics-dev \
+    --temp_location \
+    gs://aind-data-dev/camilo.laiton/dataflow_test/temp/

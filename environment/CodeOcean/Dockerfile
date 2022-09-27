@@ -1,10 +1,11 @@
-# gcloud builds submit --tag us.gcr.io/neural-dynamics-dev/stitch-images/terastitcher
+# hash:sha256:3c09b543c48e44c5101c6214c0ea6b12b9be7764a1be670f4e8152f31acd1e1d
+FROM registry.codeocean.allenneuraldynamics.org/codeocean/jupyterlab:3.0.9-miniconda4.9.2-python3.8-ubuntu20.04
 
-FROM mfisherman/openmpi AS stage1
+ARG DEBIAN_FRONTEND=noninteractive
 
-FROM python:3.8 AS stage2
-COPY --from=stage1 /project /home/
-LABEL org.opencontainers.image.authors="camilo.laiton@alleninstitute.org"
+ARG GIT_ASKPASS
+ARG GIT_ACCESS_TOKEN
+COPY git-askpass /
 
 RUN apt-get update -y \
     && apt-get install -y --no-install-recommends \
@@ -13,7 +14,7 @@ RUN apt-get update -y \
     "make" \
     "cmake" \
     "software-properties-common" \
-    "git" && \
+    "git" "wget" && \
     pip install --upgrade pip && \
     pip install --upgrade autopep8
 
@@ -50,9 +51,8 @@ ENV PATH "/home/apache-maven-3.8.6/bin:$PATH"
 ENV PATH "/home/zulu8.62.0.19-ca-jdk8.0.332-linux_x64/bin:$PATH"
 
 RUN echo "localhost slots=70" > /home/hostfile && \
-    git clone https://github.com/AllenNeuralDynamics/terastitcher-module home/terastitcher-module && \
-    cd /home/terastitcher-module && \
-    git checkout remotes/origin/feature/ng_link && \
+    git clone --branch feature/ng_link https://github.com/AllenNeuralDynamics/terastitcher-module /root/capsule/code/terastitcher-module && \
+    cd /root/capsule/code/terastitcher-module \
     pip install -e .
 
-CMD ["/bin/bash"]
+# CMD ["/bin/bash"]

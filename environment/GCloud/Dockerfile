@@ -25,9 +25,6 @@ RUN apt-get update -y \
     apt-get install -y gcsfuse \
     && apt-get clean
 
-# Set fallback mount directory
-ENV MNT_DIR /mnt/gcs
-
 # Installing pystripe and terastitcher with fixed bugs
 RUN git clone https://github.com/chunglabmit/pystripe.git home/pystripe && \
     cd /home/pystripe && python setup.py install
