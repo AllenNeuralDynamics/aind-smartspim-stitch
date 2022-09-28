@@ -50,7 +50,7 @@ merge:
   - 1
 ome_zarr_params:
   codec: zstd
-  clevel: 1
+  clevel: 9
   scale_factor:
   - 2
   - 2

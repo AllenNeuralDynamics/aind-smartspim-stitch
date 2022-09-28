@@ -138,5 +138,6 @@ dmypy.json
 # MacOs
 **/.DS_Store
 
-# installation files
+# module files
 environment/TeraStitcher-portable-1.11.10-with-BF-Linux.tar.gz
+dask-report.html

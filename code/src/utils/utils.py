@@ -7,6 +7,7 @@ import shutil
 from glob import glob
 import platform
 import numpy as np
+from datetime import datetime
 
 # IO types
 PathLike = Union[str, Path]
@@ -435,3 +436,19 @@ def check_type_helper(value:Any, val_type:type) -> bool:
         return False
     
     return True
+
+def generate_timestamp(time_format:str='%Y_%m_%d_%H_%M_%S') -> str:
+    """
+    Generates a timestamp in string format.
+    
+    Parameters
+    ------------------------
+    time_format: str
+        String following the conventions to generate the timestamp (https://strftime.org/).
+    
+    Returns
+    ------------------------
+    str:
+        String with the actual datetime moment in string format.
+    """
+    return datetime.now().strftime(time_format)

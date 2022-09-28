@@ -1116,15 +1116,22 @@ def execute_terastitcher(
         Path where the data is located.
         
     output_folder: PathLike
-        Path where the data will be saved.
+        Path where the data will be saved. The module adds the timestamp and '_stitched' suffix.
+        e.g. path/to/file/dataset_name -> path/to/file/dataset_name_%Y_%m_%d_%H_%M_%S_stitched
         
     preprocessed_data: PathLike
-        Path where the preprocessed data will be saved (this includes terastitcher output).
+        Path where the preprocessed data will be saved (this includes terastitcher output). 
+        The module adds the timestamp and '_preprocessed' suffix. e.g. 
+        path/to/file/dataset_name -> path/to/file/dataset_name_%Y_%m_%d_%H_%M_%S_preprocessed
         
     config_teras: Dict
         Dictionary with terastitcher's configuration.
     
     """
+    # Adding timestamps
+    time_stamp = utils.generate_timestamp()
+    preprocessed_data = preprocessed_data + '_' + time_stamp + '_preprocessed'
+    output_folder = output_folder + '_' + time_stamp + '_stitched'
     
     regexpression = config_teras['regex_channels']
     regexpression = "({})".format(regexpression)
@@ -1162,6 +1169,8 @@ def execute_terastitcher(
             config_teras,
             channels
         )
+    
+    return output_folder
 
 def process_multiple_datasets() -> None:
     default_config = get_default_config()
@@ -1216,7 +1225,7 @@ def process_multiple_datasets() -> None:
             config_teras=args
         )
 
-def main() -> None:
+def main() -> str:
     default_config = get_default_config()
 
     mod = ArgSchemaParser(
@@ -1226,12 +1235,14 @@ def main() -> None:
     
     args = mod.args
     
-    execute_terastitcher(
+    output_folder = execute_terastitcher(
         input_data=args['input_data'],
         output_folder=args['output_data'],
         preprocessed_data=args['preprocessed_data'],
         config_teras=args
     )
+    
+    return output_folder
         
 if __name__ == "__main__":
     main()
