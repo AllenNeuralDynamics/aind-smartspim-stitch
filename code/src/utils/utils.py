@@ -208,7 +208,7 @@ def read_json_as_dict(
         
     """
     
-    dictionary = None
+    dictionary = {}
     
     if os.path.exists(filepath):
         with open(filepath) as json_file:

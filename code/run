@@ -8,7 +8,9 @@ source /opt/conda/etc/profile.d/conda.sh
 conda activate stitch
 
 # Split parameters for argschema
-python -u main.py --input_data /data/"$1" --output_data /root/capsule/results/"$2" --pyscripts_path "$3" --regex_channels "$4"
+# provide preprocessed_data path. The module adds timestamp and suffix '_preprocessed'
+# provide output_data path. The module adds timestamp and suffix '_stitched'
+python -u main.py --input_data /data/"$1" --preprocessed_data /scratch/"$2" --output_data /scratch/"$2" --pyscripts_path /home/TeraStitcher/src/utils/pyscripts --regex_channels "$3"
 
 # Copying processed dataset to aws
-aws s3 cp --recursive /root/capsule/results s3://$5
+# aws s3 cp --recursive /root/capsule/results s3://$4

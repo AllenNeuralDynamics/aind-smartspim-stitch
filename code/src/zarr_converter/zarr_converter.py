@@ -37,7 +37,11 @@ class ZarrConverter():
         
         self.input_data = input_data
         self.output_data = output_data
-        self.physical_pixels = PhysicalPixelSizes(physical_pixels[0], physical_pixels[1], physical_pixels[2])
+        self.physical_pixels = None
+        
+        if physical_pixels:
+            self.physical_pixels = PhysicalPixelSizes(physical_pixels[0], physical_pixels[1], physical_pixels[2])
+            
         self.file_format = file_format
         
         self.writer = OmeZarrWriter(
@@ -282,12 +286,16 @@ class ZarrConverter():
 
                 pyramid_data = [self.pad_array_n_d(pyramid) for pyramid in pyramid_data]
                 
+                image_name = self.channels[idx] + '.zarr' if self.channels else image_name
+                channel_names = [self.channels[idx]] if self.channels else None
+                channel_colors = [self.channel_colors[idx]] if self.channel_colors else None
+                
                 dask_jobs = self.writer.write_multiscale(
                     pyramid=pyramid_data,  # : types.ArrayLike,  # must be 5D TCZYX
-                    image_name=self.channels[idx] + '.zarr',  #: str,
+                    image_name=image_name,  #: str,
                     physical_pixel_sizes=self.physical_pixels,
-                    channel_names=[self.channels[idx]],#['CH_0', 'CH_1', 'CH_2', 'CH_3'],
-                    channel_colors=[self.channel_colors[idx]],
+                    channel_names=channel_names,#['CH_0', 'CH_1', 'CH_2', 'CH_3'],
+                    channel_colors=channel_colors,
                     scale_factor=scale_axis,  # : float = 2.0,
                     chunks=pyramid_data[0].chunksize,#chunks,#writer_config['chunks'],
                     storage_options=self.opts,
