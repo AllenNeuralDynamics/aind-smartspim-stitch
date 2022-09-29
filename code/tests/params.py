@@ -6,14 +6,14 @@ def get_save_dict_as_json_params():
                 "number": 13,
                 "text": "this is a test"
             },
-            'tmp/test_json.json'
+            'test_json.json'
         ]
     ]
 
 def get_read_json_as_dict_params():
     return [
         [
-            "tmp/test_json_2.json",
+            "test_json_2.json",
             {
                 "number": 13,
                 "text": "this is a test"

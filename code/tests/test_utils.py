@@ -5,6 +5,7 @@ import os
 from tests import params
 from typing import Optional, List, Union
 from pathlib import Path
+import tempfile
 
 # IO types
 PathLike = Union[str, Path]
@@ -12,8 +13,8 @@ PathLike = Union[str, Path]
 class TestUtils(unittest.TestCase):
     
     def setUp(self):
-        utils.create_folder('tmp')
-        utils.save_dict_as_json('tmp/test_json_2.json', 
+        self._tmp_dir = tempfile.TemporaryDirectory()
+        utils.save_dict_as_json(f"{self._tmp_dir.name}/test_json_2.json", 
             {
                 "number": 13,
                 "text": "this is a test"
@@ -22,12 +23,17 @@ class TestUtils(unittest.TestCase):
     
     @parameterized.expand(params.get_save_dict_as_json_params())
     def test_save_dict_as_json(self, dict_example:dict, filename:PathLike):
-        utils.save_dict_as_json(filename, dict_example)
-        self.assertTrue(os.path.exists(filename))
+        path = Path(self._tmp_dir.name).joinpath(filename)
+        utils.save_dict_as_json(
+            path, dict_example
+        )
+        self.assertTrue(os.path.isfile(path))
     
     @parameterized.expand(params.get_read_json_as_dict_params())
     def test_read_json_as_dict(self, path_to_file:PathLike, expected_dict:dict):
-        read_dict_example = utils.read_json_as_dict(path_to_file)
+        read_dict_example = utils.read_json_as_dict(
+            Path(self._tmp_dir.name).joinpath(path_to_file)
+        )
         self.assertDictEqual(read_dict_example, expected_dict)
 
     @parameterized.expand(params.get_helper_build_param_value_command_params())
@@ -44,13 +50,12 @@ class TestUtils(unittest.TestCase):
         
     def test_save_string_to_txt(self):
         string = "this is a message"
-        path = "text_file.txt"
-        
+        path = Path(self._tmp_dir.name).joinpath("text_file.txt")
         utils.save_string_to_txt(string, path)
-        self.assertTrue(os.path.exists(path))
+        self.assertTrue(os.path.isfile(path))
     
     def generate_timestamp(self):
         self.assertIsInstance(generate_timestamp(time_format), str)
         
     def tearDown(self):
-        utils.delete_folder('tmp')
+        self._tmp_dir.cleanup()
