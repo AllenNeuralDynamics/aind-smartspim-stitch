@@ -1072,7 +1072,10 @@ class TeraStitcher():
                 exec_config,
                 channels[0]
             )
-            
+        
+        if config['clean_output']:
+            utils.delete_folder(self.__preprocessing_folder.joinpath('destriped'), self.__verbose)
+        
         self.logger.info("Converting to OME-Zarr...")
         self.convert_to_ome_zarr(config['ome_zarr_params'], channels)
         

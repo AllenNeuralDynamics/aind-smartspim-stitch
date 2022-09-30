@@ -26,7 +26,7 @@ align:
   cpu_params:
     estimate_processes: false
     image_depth: 4200
-    number_processes: 8
+    number_processes: 16
     hostfile: "/home/hostfile"
     additional_params:
     - use-hwthread-cpus
@@ -38,7 +38,7 @@ merge:
   cpu_params:
     estimate_processes: false
     image_depth: 1000
-    number_processes: 8
+    number_processes: 16
     hostfile: "/home/hostfile"
     additional_params:
     - use-hwthread-cpus
@@ -50,7 +50,7 @@ merge:
   - 1
 ome_zarr_params:
   codec: zstd
-  clevel: 1
+  clevel: 3
   scale_factor:
   - 2
   - 2

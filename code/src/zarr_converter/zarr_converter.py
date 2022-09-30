@@ -283,7 +283,7 @@ class ZarrConverter():
                     writer_config['pyramid_levels'],
                     scale_axis
                 )
-
+                
                 pyramid_data = [self.pad_array_n_d(pyramid) for pyramid in pyramid_data]
                 image_name = self.channels[idx] + '.zarr' if self.channels else image_name
                 channel_names = [self.channels[idx]] if self.channels else None
