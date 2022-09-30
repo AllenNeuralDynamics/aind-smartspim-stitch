@@ -18,6 +18,7 @@ from aicsimageio.types import PhysicalPixelSizes
 from xarray import DataArray
 from aicsimageio.writers import OmeZarrWriter
 from aicsimageio.readers.tiff_reader import TiffReader
+from utils import utils
 
 PathLike = Union[str, Path]
 ArrayLike = Union[dask.array.core.Array, np.ndarray]
