@@ -1139,7 +1139,6 @@ def execute_terastitcher(
         
         if issubclass(exception_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
-            sys.exit(1)
 
         else:
             logger.error("Error while executing stitching pipeline: ", exc_info=(exception_type, value, traceback))
@@ -1175,7 +1174,7 @@ def execute_terastitcher(
             parallel=True,
             computation='cpu',
             pyscripts_path=config_teras["pyscripts_path"],
-            verbose=True,
+            verbose=config_teras['verbose'],
             preprocessing=config_teras['preprocessing_steps']
         )
         

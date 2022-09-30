@@ -275,6 +275,13 @@ class PipelineParams(ArgSchema):
     align = Nested(AlignParameters, required=False)
     threshold = Nested(ThresholdParameters, required=False)
     merge = Nested(MergeParameters, required=False)
+    verbose = Boolean(
+        required=False,
+        matadata={
+            'description':'Set verbose for stitching.'
+        },
+        dump_default=True
+    )
     
     # Conversion params
     ome_zarr_params = Nested(OmeZarrParams, required=False)

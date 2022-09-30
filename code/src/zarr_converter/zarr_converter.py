@@ -38,8 +38,8 @@ class ZarrConverter():
         self.input_data = input_data
         self.output_data = output_data
         self.physical_pixels = None
-        self.tmp_folder = Path('/scratch/tmp_dir')
-        utils.create_folder('/scratch/tmp_dir')
+        self.tmp_folder = Path('/root/capsule/scratch/tmp_dir')
+        utils.create_folder(self.tmp_folder)
         
         if physical_pixels:
             self.physical_pixels = PhysicalPixelSizes(physical_pixels[0], physical_pixels[1], physical_pixels[2])
