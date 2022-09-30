@@ -1131,6 +1131,21 @@ def execute_terastitcher(
         Dictionary with terastitcher's configuration.
     
     """
+    
+    # Setting handling error to unmounting cloud for any unexpected error
+    def onAnyError(exception_type, value, traceback):
+        
+        logger = logging.getLogger(__name__)
+        
+        if issubclass(exception_type, KeyboardInterrupt):
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+            sys.exit(1)
+
+        else:
+            logger.error("Error while executing stitching pipeline: ", exc_info=(exception_type, value, traceback))
+
+    sys.excepthook = onAnyError
+    
     # Adding timestamps
     time_stamp = utils.generate_timestamp()
     preprocessed_data = preprocessed_data + '_' + time_stamp + '_preprocessed'
@@ -1160,7 +1175,7 @@ def execute_terastitcher(
             parallel=True,
             computation='cpu',
             pyscripts_path=config_teras["pyscripts_path"],
-            verbose=False,
+            verbose=True,
             preprocessing=config_teras['preprocessing_steps']
         )
         

@@ -38,6 +38,8 @@ class ZarrConverter():
         self.input_data = input_data
         self.output_data = output_data
         self.physical_pixels = None
+        self.tmp_folder = Path('/scratch/tmp_dir')
+        utils.create_folder('/scratch/tmp_dir')
         
         if physical_pixels:
             self.physical_pixels = PhysicalPixelSizes(physical_pixels[0], physical_pixels[1], physical_pixels[2])
@@ -239,7 +241,7 @@ class ZarrConverter():
         
         dask.config.set(
             {
-                'temporary-directory':'/home/jupyter/tmp_dir',
+                'temporary-directory': self.tmp_folder,
                 'tcp-timeout': '60s',
                 'array.chunk-size': '384MiB',
                 'distributed.comm.timeouts': {
