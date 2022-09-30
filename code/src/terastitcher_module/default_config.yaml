@@ -11,7 +11,7 @@ preprocessing_steps:
     - 800
     - 800
     - 800
-    workers: 8
+    workers: 16
 import_data:
   ref1: X
   ref2: Y

@@ -39,8 +39,7 @@ class ZarrConverter():
         self.input_data = input_data
         self.output_data = output_data
         self.physical_pixels = None
-        self.tmp_folder = Path('/root/capsule/scratch/tmp_dir')
-        utils.create_folder(self.tmp_folder)
+        self.dask_folder = Path('/root/capsule/scratch')
         
         if physical_pixels:
             self.physical_pixels = PhysicalPixelSizes(physical_pixels[0], physical_pixels[1], physical_pixels[2])
@@ -242,7 +241,8 @@ class ZarrConverter():
         
         dask.config.set(
             {
-                'temporary-directory': self.tmp_folder,
+                'temporary-directory': self.dask_folder,
+                'local_directory': self.dask_folder,
                 'tcp-timeout': '60s',
                 'array.chunk-size': '384MiB',
                 'distributed.comm.timeouts': {
@@ -250,12 +250,14 @@ class ZarrConverter():
                     'tcp': '60s'
                 },
                 'distributed.scheduler.bandwidth': 100000000,
+                'distributed.worker.memory.target': False,
+                'distributed.worker.memory.spill': 0.8
                 # 'distributed.scheduler.unknown-task-duration': '15m',
                 # 'distributed.scheduler.default-task-durations': '2h',
             }
         )
         
-        # print(dask.config.config)
+        print(dask.config.config)
         
         cluster = LocalCluster()
         # cluster.adapt(

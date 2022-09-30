@@ -58,5 +58,4 @@ RUN conda create -n stitch python=3.8
 # Make RUN commands use the new environment:
 SHELL ["conda", "run", "-n", "stitch", "/bin/bash", "-c"]
 RUN conda install -c conda-forge awscli
-RUN pip install -U --no-cache-dir \
-    pip install git+https://github.com/AllenNeuralDynamics/terastitcher-module.git@code_ocean
+RUN pip install -U --no-cache-dir git+https://github.com/AllenNeuralDynamics/terastitcher-module.git@code_ocean 
