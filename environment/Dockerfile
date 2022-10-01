@@ -33,7 +33,8 @@ RUN cd /home && git clone --single-branch --branch fix/data_paths https://github
 
 # ENV PATH "$PATH:/home/TeraStitcher-portable-1.11.10-with-BF-Linux"
 ENV LD_LIBRARY_PATH "$LD_LIBRARY_PATH:/opt/java/openjdk/lib/server"
-
+# For dask processing on Linux OS
+ENV MALLOC_TRIM_THRESHOLD_ 0
 # Java setup
 # OpenJDK setup
 RUN cd /home && \ 
