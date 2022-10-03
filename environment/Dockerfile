@@ -33,8 +33,7 @@ RUN cd /home && git clone --single-branch --branch fix/data_paths https://github
 
 # ENV PATH "$PATH:/home/TeraStitcher-portable-1.11.10-with-BF-Linux"
 ENV LD_LIBRARY_PATH "$LD_LIBRARY_PATH:/opt/java/openjdk/lib/server"
-# For dask processing on Linux OS
-ENV MALLOC_TRIM_THRESHOLD_ 0
+
 # Java setup
 # OpenJDK setup
 RUN cd /home && \ 
@@ -60,3 +59,5 @@ RUN conda create -n stitch python=3.8
 SHELL ["conda", "run", "-n", "stitch", "/bin/bash", "-c"]
 RUN conda install -c conda-forge awscli
 RUN pip install -U --no-cache-dir git+https://github.com/AllenNeuralDynamics/terastitcher-module.git@code_ocean 
+# # For dask processing on Linux OS
+# ENV MALLOC_TRIM_THRESHOLD_ 0

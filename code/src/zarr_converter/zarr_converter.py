@@ -238,7 +238,7 @@ class ZarrConverter():
         Name of the image
         
         """
-        
+        os.environ['MALLOC_TRIM_THRESHOLD_'] = "4096"
         dask.config.set(
             {
                 'temporary-directory': self.dask_folder,
