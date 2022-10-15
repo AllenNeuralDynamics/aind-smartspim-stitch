@@ -238,7 +238,6 @@ class ZarrConverter():
         Name of the image
         
         """
-        os.environ['MALLOC_TRIM_THRESHOLD_'] = "0"
         dask.config.set(
             {
                 'temporary-directory': self.dask_folder,
@@ -250,11 +249,11 @@ class ZarrConverter():
                     'tcp': '60s'
                 },
                 'distributed.scheduler.bandwidth': 100000000,
-		        'distributed.worker.memory.rebalance.measure': 'managed_in_memory',
-                'distributed.worker.memory.target': False,
-                'distributed.worker.memory.spill': False,
-                'distributed.worker.memory.pause': False,
-                'distributed.worker.memory.terminate': False
+		        #'distributed.worker.memory.rebalance.measure': 'managed_in_memory',
+                'distributed.worker.memory.target': 0.60,
+                'distributed.worker.memory.spill': 0.70,
+                'distributed.worker.memory.pause': 0.80,
+                'distributed.worker.memory.terminate': 0.95
                 # 'distributed.scheduler.unknown-task-duration': '15m',
                 # 'distributed.scheduler.default-task-durations': '2h',
             }
