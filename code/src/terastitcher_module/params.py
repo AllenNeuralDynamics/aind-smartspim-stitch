@@ -214,6 +214,14 @@ class PystripeParams(DefaultSchema):
         dump_default=8
     )
 
+    output_format = Str(
+        required=False, 
+        metadata={
+            'description':'Output format for the images in pystripe step'
+        },
+        dump_default='.tiff'
+    )
+
 class PreprocessingSteps(DefaultSchema):
     pystripe = Nested(PystripeParams, required=False)
 
