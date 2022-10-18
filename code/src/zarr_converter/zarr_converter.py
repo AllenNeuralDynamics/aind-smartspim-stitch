@@ -243,17 +243,17 @@ class ZarrConverter():
                 'temporary-directory': self.dask_folder,
                 'local_directory': self.dask_folder,
                 'tcp-timeout': '60s',
-                'array.chunk-size': '128MiB',
+                'array.chunk-size': '384MiB',
                 'distributed.comm.timeouts': {
                     'connect': '60s', 
                     'tcp': '60s'
                 },
                 'distributed.scheduler.bandwidth': 100000000,
-		        #'distributed.worker.memory.rebalance.measure': 'managed_in_memory',
-                'distributed.worker.memory.target': 0.60,
-                'distributed.worker.memory.spill': 0.70,
-                'distributed.worker.memory.pause': 0.80,
-                'distributed.worker.memory.terminate': 0.95
+		        'distributed.worker.memory.rebalance.measure': 'managed_in_memory',
+                'distributed.worker.memory.target': False,
+                'distributed.worker.memory.spill': False,
+                'distributed.worker.memory.pause': False,
+                'distributed.worker.memory.terminate': False
                 # 'distributed.scheduler.unknown-task-duration': '15m',
                 # 'distributed.scheduler.default-task-durations': '2h',
             }
@@ -307,7 +307,7 @@ class ZarrConverter():
                     scale_factor=scale_axis,  # : float = 2.0,
                     chunks=pyramid_data[0].chunksize,#chunks,#writer_config['chunks'],
                     storage_options=self.opts,
-                    compute_dask=False,
+                    compute_dask=True,
                     **self.get_pyramid_metadata()
                 )
 

@@ -24,10 +24,10 @@ dependencies = [
     'xarray_multiscale',
     'argschema',
     'mpi4py',
-    'bokeh',
+    'bokeh>=2.1.1',
     'pint',
     'dask[distributed]',
-    'pystripe@https://github.com/chunglabmit/pystripe/archive/master.zip',
+    'pystripe@git+https://github.com/camilolaiton/pystripe.git/feature/png_format',
     'ome-zarr@git+https://github.com/camilolaiton/ome-zarr-py.git@feature/delayed-dask-poc',
     'aicsimageio@git+https://github.com/camilolaiton/aicsimageio.git@feature/zarrwriter-multiscales-daskjobs'
 ]

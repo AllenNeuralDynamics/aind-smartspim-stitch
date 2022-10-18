@@ -12,6 +12,7 @@ preprocessing_steps:
     - 800
     - 800
     workers: 16
+    output_format: ".tiff"
 import_data:
   ref1: X
   ref2: Y
