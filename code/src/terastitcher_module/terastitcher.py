@@ -716,8 +716,9 @@ class TeraStitcher():
         dataset_name = dataset_path.stem
         
         neuroglancer_link = NgState(
-            {'dimensions':dimensions, 'layers':layers}, 
-            dataset_path.joinpath(dataset_name)
+            input_config={'dimensions':dimensions, 'layers':layers}, 
+            output_json=dataset_path.joinpath(dataset_name),
+            mount_service=config["mount_service"]
         )
         
         neuroglancer_link.save_state_as_json()
@@ -1079,6 +1080,8 @@ class TeraStitcher():
         self.logger.info("Converting to OME-Zarr...")
         self.convert_to_ome_zarr(config['ome_zarr_params'], channels)
         
+        self.create_ng_link(config['ome_zarr_params'], channels)
+
         if config['clean_output']:
             utils.delete_folder(self.__preprocessing_folder, self.__verbose)
 

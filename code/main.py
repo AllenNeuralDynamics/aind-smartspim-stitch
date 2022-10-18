@@ -4,7 +4,7 @@ import sys
 
 def main() -> None:
     output_folder = terastitcher.main()
-    bucket_path = "aind-msma-morphology-data/smartSPIM"
+    bucket_path = "aind-open-data"
     
     print(f"Bucket path: {bucket_path} - Output path: {output_folder}")
     # Copying output to bucket
