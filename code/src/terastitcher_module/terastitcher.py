@@ -1150,8 +1150,8 @@ def execute_terastitcher(
     
     # Adding timestamps
     time_stamp = utils.generate_timestamp()
-    preprocessed_data = preprocessed_data + '_' + time_stamp + '_preprocessed'
-    output_folder = output_folder + '_' + time_stamp + '_stitched'
+    preprocessed_data = preprocessed_data + '_preprocessed_' + time_stamp
+    output_folder = output_folder + '_stitched_' + time_stamp
     
     regexpression = config_teras['regex_channels']
     regexpression = "({})".format(regexpression)

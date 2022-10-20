@@ -10,15 +10,11 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     build-essential \
     cmake=3.16.3-1ubuntu1 \
-    git=1:2.25.1-1ubuntu3.5 \
+    git \
     libopenmpi-dev=4.0.3-0ubuntu1 \
     software-properties-common=0.99.9.8 \
     wget=1.20.3-1ubuntu2 \
     && rm -rf /var/lib/apt/lists/*
-
-# Installing pystripe and terastitcher with fixed bugs
-RUN git clone https://github.com/chunglabmit/pystripe.git home/pystripe && \
-    cd /home/pystripe && python setup.py install
 
 RUN cd /home && git clone --single-branch --branch fix/data_paths https://github.com/camilolaiton/TeraStitcher.git && \
     mkdir build-terastitcher && \
@@ -59,3 +55,4 @@ RUN conda create -n stitch python=3.8
 SHELL ["conda", "run", "-n", "stitch", "/bin/bash", "-c"]
 RUN conda install -c conda-forge awscli
 RUN pip install -U --no-cache-dir git+https://github.com/AllenNeuralDynamics/terastitcher-module.git
+# ENV MALLOC_TRIM_THRESHOLD_ 0
