@@ -713,11 +713,10 @@ class TeraStitcher():
             )
         
         dataset_path = self.__output_folder.parent
-        dataset_name = dataset_path.stem
-        
+
         neuroglancer_link = NgState(
             input_config={'dimensions':dimensions, 'layers':layers}, 
-            output_json=dataset_path.joinpath(dataset_name),
+            output_json=dataset_path,
             mount_service=config["mount_service"]
         )
         
