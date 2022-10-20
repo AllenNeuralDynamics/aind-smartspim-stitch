@@ -437,7 +437,7 @@ class TeraStitcher():
         """
         
         if config_params['image_depth'] < config_params['number_processes'] or config_params['subvoldim'] > config_params['image_depth']:
-            self.logger.info("Please check the parameters for aproximate number of processes in align step")
+            print("Please check the parameters for aproximate number of processes in align step")
             return 2
         
         # Partitioning depth for the tiles
@@ -1081,7 +1081,7 @@ class TeraStitcher():
 
         ng_config['ng_base_url'] = config['visualization']['ng_base_url']
         ng_config['mount_service'] = config['visualization']['mount_service']
-        ng_config['bucket_name'] = config['visualization']['bucket_name']
+        ng_config['bucket_path'] = config['visualization']['bucket_path']
 
         self.create_ng_link(ng_config, channels)
 
