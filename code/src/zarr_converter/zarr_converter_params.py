@@ -47,21 +47,6 @@ class OmeZarrParams(DefaultSchema):
         },
         dump_default=5
     )
-    
-    ng_base_url = Str(
-        required=True,
-        metadata={
-            'description':'Base url for neuroglancer web app'
-        }
-    )
-
-    mount_service = Str(
-        required=True,
-        metadata={
-            'description':'Set to s3 if the dataset will be saved in a Amazon Bucket, gs for a Google Bucket'
-        },
-        dump_default='s3'
-    )
 
 class ZarrConvertParams(ArgSchema):
     input_data = InputDir(

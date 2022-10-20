@@ -712,18 +712,16 @@ class TeraStitcher():
                 }
             )
         
-        dataset_path = self.__output_folder.parent
-
         neuroglancer_link = NgState(
-            input_config={'dimensions':dimensions, 'layers':layers}, 
-            output_json=dataset_path,
-            mount_service=config["mount_service"]
+            input_config={'dimensions':dimensions, 'layers':layers},
+            mount_service=config["mount_service"],
+            bucket_path=config["bucket_path"],
+            output_json=self.__output_folder,
+            base_url=config['ng_base_url']
         )
         
         neuroglancer_link.save_state_as_json()
-        link = neuroglancer_link.get_url_link(
-            base_url=config['ng_base_url']
-        )
+        link = neuroglancer_link.get_url_link()
         self.logger.info(f"Visualization link: {link}")
     
     def __preprocessing_tool_cmd(
@@ -1079,7 +1077,13 @@ class TeraStitcher():
         self.logger.info("Converting to OME-Zarr...")
         self.convert_to_ome_zarr(config['ome_zarr_params'], channels)
         
-        self.create_ng_link(config['ome_zarr_params'], channels)
+        ng_config = config['ome_zarr_params'].copy()
+
+        ng_config['ng_base_url'] = config['visualization']['ng_base_url']
+        ng_config['mount_service'] = config['visualization']['mount_service']
+        ng_config['bucket_name'] = config['visualization']['bucket_name']
+
+        self.create_ng_link(ng_config, channels)
 
         if config['clean_output']:
             utils.delete_folder(self.__preprocessing_folder, self.__verbose)
