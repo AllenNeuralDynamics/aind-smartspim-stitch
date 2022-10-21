@@ -4,7 +4,7 @@ import sys
 
 def main() -> None:
     output_folder = terastitcher.main()
-    bucket_path = "aind-open-data"
+    bucket_path = sys.argv[-1]
     
     print(f"Bucket path: {bucket_path} - Output path: {output_folder}")
     # Copying output to bucket

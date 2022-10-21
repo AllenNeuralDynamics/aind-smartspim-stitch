@@ -11,7 +11,7 @@ import time
 from typing import List, Optional, Union, Tuple, Any
 import xarray_multiscale
 import numpy as np
-from .zarr_converter_params import ZarrConvertParams, get_default_config
+from zarr_converter_params import ZarrConvertParams, get_default_config
 from argschema import ArgSchemaParser
 from glob import glob
 from aicsimageio.types import PhysicalPixelSizes
@@ -19,10 +19,24 @@ from xarray import DataArray
 from aicsimageio.writers import OmeZarrWriter
 from aicsimageio.readers.tiff_reader import TiffReader
 from utils import utils
+import re
 
 PathLike = Union[str, Path]
 ArrayLike = Union[dask.array.core.Array, np.ndarray]
 blosc.use_threads = False
+
+def search_images_in_folder(path:PathLike, format_ext_regex:str) -> str:
+
+    level = 0
+
+    # Search until images are found
+    for root, dirs, files in os.walk(path):
+        if not len(dirs) and len(files):
+            if re.match(format_ext_regex, files[0]):
+                break
+        level += 1
+        
+    return level
 
 class ZarrConverter():
     
@@ -70,13 +84,13 @@ class ZarrConverter():
     
     def read_multichannel_image(
         self,
-        path:PathLike
+        channel_paths:List[PathLike]
     ) -> dask.array.core.Array:
         """
             Reads image files and stores them in a dask array.
             
-            path:PathLike
-                Path where the images are located
+            channel_paths:List[PathLike]
+                Paths where the images are located in multiple channels
             
             Returns
             ------------------------
@@ -85,19 +99,15 @@ class ZarrConverter():
         """
         
         image_channel = []
-        path = str(path)
-        
-        channel_paths = glob(path+'/*/')
-        
+    
         if len(channel_paths) <= 1:
             return None
         
-        for path in channel_paths:
-            for stitched_path in glob(path + '/*/*/'):
-                print("- Reading channel: ", Path(path).stem)
-                image_channel.append(
-                    self.read_channel_image(stitched_path)
-                )
+        for channel_path in channel_paths:
+            print("- Reading channel: ", Path(channel_path).stem)
+            image_channel.append(
+                self.read_channel_image(channel_path)
+            )
         
         # try:
         #     image_channel = stack(image_channel, axis=0)
@@ -117,9 +127,6 @@ class ZarrConverter():
             path:PathLike
                 Path where the images are located
             
-            file_format:str
-                Accepted file format
-            
             Returns
             ------------------------
             dask.array.core.Array:
@@ -129,7 +136,8 @@ class ZarrConverter():
         images = None
         
         try:
-            filename_pattern = f'{path}/*.{self.file_format}*'
+            # Path comes with '/' then just adding the file name and format
+            filename_pattern = f'{path}*.{self.file_format}*'
             images = imread(filename_pattern)
             
         except ValueError:
@@ -268,13 +276,23 @@ class ZarrConverter():
         client = Client(cluster)
         
         # print(client.scheduler_info())
+        regex_files = f'[^"]*.{self.file_format}*'
+        regex_files = "({})".format(regex_files)
+
+        # Looking for channels
+        level_folder = search_images_in_folder(self.input_data, regex_files)
+        glob_search = '/*'*level_folder
         
-        image = self.read_multichannel_image(self.input_data)
+        # Listing channels with '/' # TODO Works with only one dir
+        list_channels = glob(str(self.input_data) + glob_search + '/')
+
+        print("Check reads: ", list_channels)
+        image = self.read_multichannel_image(list_channels)
         
         # Reading single channel
         if not isinstance(image, dask.array.core.Array) and not isinstance(image, list):
             image = self.pad_array_n_d(
-                self.read_channel_image(str(self.input_data)+'/*/*/'),
+                self.read_channel_image(list_channels[0]),
                 4
             )
         
@@ -354,4 +372,11 @@ def main():
     )
 
 if __name__ == "__main__":
-    main()
+    # main()
+    regex = r'[^"]*.tif*'
+    path = Path("/Users/camilo.laiton/tests/test/20220907_10_44_52_638779")
+    level = search_images_in_folder(path, regex)
+
+    glob_search = '/*'*level
+    see = glob(str(path) + glob_search + '/')
+    print(see)
