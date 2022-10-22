@@ -372,11 +372,4 @@ def main():
     )
 
 if __name__ == "__main__":
-    # main()
-    regex = r'[^"]*.tif*'
-    path = Path("/Users/camilo.laiton/tests/test/20220907_10_44_52_638779")
-    level = search_images_in_folder(path, regex)
-
-    glob_search = '/*'*level
-    see = glob(str(path) + glob_search + '/')
-    print(see)
+    main()
