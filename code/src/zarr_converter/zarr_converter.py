@@ -11,7 +11,7 @@ import time
 from typing import List, Optional, Union, Tuple, Any
 import xarray_multiscale
 import numpy as np
-from zarr_converter_params import ZarrConvertParams, get_default_config
+from .zarr_converter_params import ZarrConvertParams, get_default_config
 from argschema import ArgSchemaParser
 from glob import glob
 from aicsimageio.types import PhysicalPixelSizes
