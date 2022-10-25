@@ -437,7 +437,7 @@ def check_type_helper(value:Any, val_type:type) -> bool:
     
     return True
 
-def generate_timestamp(time_format:str='%Y-%m-%d-%H-%M-%S') -> str:
+def generate_timestamp(time_format:str='%Y-%m-%d_%H-%M-%S') -> str:
     """
     Generates a timestamp in string format.
     
