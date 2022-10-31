@@ -72,7 +72,7 @@ class TeraStitcher():
         """
         
         self.__input_data = Path(input_data)
-        self.__output_folder = Path(output_folder)
+        self.__output_folder = Path(output_folder).joinpath('processed')
         self.__preprocessing_folder = Path(preprocessing_folder)
         self.__stitched_folder = self.__preprocessing_folder.joinpath('stitched')
         self.__parallel = parallel
