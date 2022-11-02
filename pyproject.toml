@@ -24,7 +24,7 @@ dependencies = [
     'xarray_multiscale',
     'argschema',
     'mpi4py',
-    'bokeh>=2.1.1',
+    'bokeh==2.4',
     'pint',
     'dask[distributed]',
     'aind-ng-link@git+https://github.com/AllenNeuralDynamics/aind-ng-link.git',
