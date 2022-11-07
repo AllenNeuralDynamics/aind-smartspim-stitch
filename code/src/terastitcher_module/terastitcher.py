@@ -8,8 +8,8 @@ import sys
 import errno
 from pathlib import Path
 from glob import glob
-from path_parser import PathParser
-from params import PipelineParams, get_default_config
+from .path_parser import PathParser
+from .params import PipelineParams, get_default_config
 from argschema import ArgSchemaParser
 from zarr_converter import ZarrConverter
 import warnings
