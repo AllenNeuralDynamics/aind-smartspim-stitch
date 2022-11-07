@@ -8,8 +8,8 @@ import sys
 import errno
 from pathlib import Path
 from glob import glob
-from .path_parser import PathParser
-from .params import PipelineParams, get_default_config
+from path_parser import PathParser
+from params import PipelineParams, get_default_config
 from argschema import ArgSchemaParser
 from zarr_converter import ZarrConverter
 import warnings
@@ -73,6 +73,7 @@ class TeraStitcher():
         
         self.__input_data = Path(input_data)
         self.__output_folder = Path(output_folder).joinpath('processed')
+        self.__output_jsons_path = Path(output_folder)
         self.__preprocessing_folder = Path(preprocessing_folder)
         self.__stitched_folder = self.__preprocessing_folder.joinpath('stitched')
         self.__parallel = parallel
@@ -115,7 +116,7 @@ class TeraStitcher():
             {
                 'Name': 'TeraStitcher',
                 'Version': '1.11.10',
-                'CodeURL': 'http://abria.github.io/TeraStitcher'
+                'CodeURL': 'https://github.com/camilolaiton/TeraStitcher.git@fix/data_paths'
             },
             {
                 'Name': 'aicsimageio',
@@ -127,11 +128,11 @@ class TeraStitcher():
         pystripe_info = {
             'Name': 'pystripe',
             'Version': '0.2.0',
-            'CodeURL': 'https://github.com/chunglabmit/pystripe'
+            'CodeURL': 'https://github.com/camilolaiton/pystripe.git@feature/output_format'
         }
         
         data_description = utils.generate_data_description(input_folder=self.__input_data, tools=tools)
-        data_description_path = self.__output_folder.joinpath('data_description.json')
+        data_description_path = self.__output_jsons_path.joinpath('data_description.json')
         
         # If parastitcher or paraconverter paths are not found, we set computation to sequential cpu as default.
         self.__check_teras_parallel_scripts()
@@ -716,7 +717,7 @@ class TeraStitcher():
             input_config={'dimensions':dimensions, 'layers':layers},
             mount_service=config["mount_service"],
             bucket_path=config["bucket_path"],
-            output_json=self.__output_folder,
+            output_json=self.__output_jsons_path,
             base_url=config['ng_base_url']
         )
         
