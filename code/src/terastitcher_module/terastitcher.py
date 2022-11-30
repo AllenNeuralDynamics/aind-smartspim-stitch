@@ -1242,18 +1242,14 @@ def execute_terastitcher(
 
     else:
 
-        if config_teras["preprocessing_steps"]["pystripe"]["execute_pystripe"]:
-            try:
-                config_teras["preprocessing_steps"]["pystripe"][
-                    "input"
-                ] = Path(input_data)
-                config_teras["preprocessing_steps"]["pystripe"][
-                    "output"
-                ] = Path(preprocessed_data).joinpath("destriped")
-            except KeyError:
-                config_teras["preprocessing_steps"] = None
-
-        else:
+        try:
+            config_teras["preprocessing_steps"]["pystripe"][
+                "input"
+            ] = Path(input_data)
+            config_teras["preprocessing_steps"]["pystripe"][
+                "output"
+            ] = Path(preprocessed_data).joinpath("destriped")
+        except KeyError:
             config_teras["preprocessing_steps"] = None
 
         terastitcher_tool = TeraStitcher(
