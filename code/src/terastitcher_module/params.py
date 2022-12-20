@@ -5,8 +5,17 @@ from pathlib import Path
 
 import yaml
 from argschema import ArgSchema, ArgSchemaParser
-from argschema.fields import (Boolean, Float, InputDir, InputFile, Int, List,
-                              Nested, NumpyArray, Str)
+from argschema.fields import (
+    Boolean,
+    Float,
+    InputDir,
+    InputFile,
+    Int,
+    List,
+    Nested,
+    NumpyArray,
+    Str,
+)
 from argschema.schemas import DefaultSchema
 from marshmallow import validate
 from zarr_converter import OmeZarrParams
@@ -14,10 +23,10 @@ from zarr_converter import OmeZarrParams
 
 class InputFileBasedLinux(InputFile):
     """
-    
+
     InputFileBasedOS is a :class:`argschema.fields.InputFile` subclass which is a path to
     a file location which can be read by the user depending if it's on Linux or not.
-    
+
     """
 
     def _validate(self, value):
@@ -27,10 +36,10 @@ class InputFileBasedLinux(InputFile):
 
 class InputDirGCloud(InputDir):
     """
-    
+
     InputDirGCloud is a :class:`argschema.fields.InputDir` subclass which is a path to
     a directory location which will be validated if the user is not on GCloud.
-    
+
     """
 
     def _validate(self, value):

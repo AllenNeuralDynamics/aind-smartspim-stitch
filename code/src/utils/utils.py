@@ -3,12 +3,17 @@ import os
 import platform
 import shutil
 import subprocess
-from datetime import datetime
+from datetime import date, datetime, time
 from glob import glob
 from pathlib import Path
 from typing import Any, List, Optional, Union
 
 import numpy as np
+from aind_data_schema import (
+    DerivedDataDescription,
+    Processing,
+    RawDataDescription,
+)
 
 # IO types
 PathLike = Union[str, Path]
@@ -17,19 +22,19 @@ PathLike = Union[str, Path]
 def create_folder(dest_dir: PathLike, verbose: Optional[bool] = False) -> None:
     """
     Create new folders.
-    
+
     Parameters
     ------------------------
-    dest_dir: PathLike 
+    dest_dir: PathLike
         Path where the folder will be created if it does not exist.
     verbose: Optional[bool]
         If we want to show information about the folder status. Default False.
-        
+
     Raises
     ------------------------
-    OSError: 
+    OSError:
         if the folder exists.
-    
+
     """
 
     if not (os.path.exists(dest_dir)):
@@ -51,16 +56,16 @@ def delete_folder(dest_dir: PathLike, verbose: Optional[bool] = False) -> None:
         Path that will be removed.
     verbose: Optional[bool]
         If we want to show information about the folder status. Default False.
-        
+
     Raises
     ------------------------
     shutil.Error:
         If the folder could not be removed.
-    
+
     Returns
     ------------------------
         None
-    
+
     """
     if os.path.exists(dest_dir):
         try:
@@ -79,19 +84,19 @@ def execute_command_helper(
 
     """
     Execute a shell command.
-    
+
     Parameters
     ------------------------
     command: str
         Command that we want to execute.
     print_command: bool
         Bool that dictates if we print the command in the console.
-        
+
     Raises
     ------------------------
-    CalledProcessError: 
+    CalledProcessError:
         if the command could not be executed (Returned non-zero status).
-    
+
     """
 
     if print_command:
@@ -114,19 +119,19 @@ def execute_command_helper(
 def execute_command(config: dict) -> None:
     """
     Execute a shell command with a given configuration.
-    
+
     Parameters
     ------------------------
     command: str
         Command that we want to execute.
     print_command: bool
         Bool that dictates if we print the command in the console.
-        
+
     Raises
     ------------------------
-    CalledProcessError: 
+    CalledProcessError:
         if the command could not be executed (Returned non-zero status).
-    
+
     """
 
     for out in execute_command_helper(
@@ -142,12 +147,12 @@ def execute_command(config: dict) -> None:
 def check_path_instance(obj: object) -> bool:
     """
     Checks if an objects belongs to pathlib.Path subclasses.
-    
+
     Parameters
     ------------------------
     obj: object
         Object that wants to be validated.
-    
+
     Returns
     ------------------------
     bool:
@@ -166,7 +171,7 @@ def save_dict_as_json(
 ) -> None:
     """
     Saves a dictionary as a json file.
-    
+
     Parameters
     ------------------------
     filename: str
@@ -175,7 +180,7 @@ def save_dict_as_json(
         Dictionary that will be saved as json.
     verbose: Optional[bool]
         True if you want to print the path where the file was saved.
-        
+
     """
 
     if dictionary == None:
@@ -199,17 +204,17 @@ def read_json_as_dict(filepath: str) -> dict:
 
     """
     Reads a json as dictionary.
-    
+
     Parameters
     ------------------------
     filepath: PathLike
         Path where the json is located.
-        
+
     Returns
     ------------------------
     dict:
         Dictionary with the data the json has.
-        
+
     """
 
     dictionary = {}
@@ -226,7 +231,7 @@ def helper_build_param_value_command(
 ) -> str:
     """
     Helper function to build a command based on key:value pairs.
-    
+
     Parameters
     ------------------------
     params: dict
@@ -237,7 +242,7 @@ def helper_build_param_value_command(
     ------------------------
     str:
         String with the parameters.
-    
+
     """
     equal = " "
     if equal_con:
@@ -254,17 +259,17 @@ def helper_build_param_value_command(
 def helper_additional_params_command(params: List[str]) -> str:
     """
     Helper function to build a command based on values.
-    
+
     Parameters
     ------------------------
     params: list
         List with additional command values used.
-    
+
     Returns
     ------------------------
     str:
         String with the parameters.
-    
+
     """
     additional_params = ""
     for param in params:
@@ -276,15 +281,15 @@ def helper_additional_params_command(params: List[str]) -> str:
 def gscfuse_mount(bucket_name: PathLike, params: dict) -> None:
     """
     Mounts a bucket in a GCP Virtual Machine using GCSFUSE.
-    
+
     Parameters
     ------------------------
     bucket_name: str
         Name of the bucket.
-        
+
     params: dict
         Dictionary with the GCSFUSE params.
-        
+
     """
 
     built_params = helper_build_param_value_command(params, equal_con=False)
@@ -301,12 +306,12 @@ def gscfuse_mount(bucket_name: PathLike, params: dict) -> None:
 def gscfuse_unmount(mount_dir: PathLike) -> None:
     """
     Unmounts a bucket in a VM's local folder.
-    
+
     Parameters
     ------------------------
     bucket_name: str
         Name of the bucket.
-    
+
     """
 
     fuser_cmd = f"fusermount -u {mount_dir}"
@@ -318,18 +323,18 @@ def gscfuse_unmount(mount_dir: PathLike) -> None:
 def save_string_to_txt(txt: str, filepath: PathLike, mode="w") -> None:
     """
     Saves a text in a file in the given mode.
-    
+
     Parameters
     ------------------------
     txt: str
         String to be saved.
-        
+
     filepath: PathLike
         Path where the file is located or will be saved.
-        
+
     mode: str
         File open mode.
-    
+
     """
 
     with open(filepath, mode) as file:
@@ -341,15 +346,15 @@ def get_deepest_dirpath(
 ) -> PathLike:
     """
     Returns the deepest folder path in the provided folder.
-    
+
     Parameters
     ------------------------
     folder: PathLike
         Path where the search will be carried out.
-        
+
     ignore_folders: List[str]
         List of folders that need to be ignored
-    
+
     Returns
     ------------------------
     PathLike:
@@ -376,73 +381,94 @@ def get_deepest_dirpath(
 
 
 def generate_data_description(
-    input_folder: PathLike, tools: List[dict]
-) -> dict:
+    raw_data_description_path: PathLike,
+    dest_data_description: PathLike,
+    process_name: str = "stitched",
+) -> None:
     """
     Generates data description for the output folder.
-    
+
     Parameters
     ------------------------
-    input_folder: PathLike
-        Path where the data is located.
-        
-    tools: List[dict]
-        List with the used tools in the pipeline.
-    
-    Returns
-    ------------------------
-    dict:
-        Dictionary with the data description
+    raw_data_description_path: PathLike
+        Path where the data description file is located.
+
+    dest_data_description: PathLike
+        Path where the new data description will be placed.
+
+    process_name: str
+        Process name of the new dataset
+
     """
 
-    if type(input_folder) == str:
-        input_folder = Path(input_folder)
+    f = open(raw_data_description_path, "r")
+    data = json.load(f)
+    parsed_time = [int(val) for val in data["creation_time"].split(":")]
+    parsed_date = [int(val) for val in data["creation_date"].split("-")]
+    del data["name"]
 
-    separator = "/"
+    data["creation_time"] = time(
+        parsed_time[0], parsed_time[1], parsed_time[2]
+    )
+    data["creation_date"] = date(
+        parsed_date[0], parsed_date[1], parsed_date[2]
+    )
 
-    if platform.system() == "Windows":
-        separator = "\\"
+    data = RawDataDescription(**data)
 
-    splitted_path = list(input_folder.parts)
-    root_name = splitted_path[-2]
-    root_folder = splitted_path[0:-1]
-    root_folder = separator.join(root_folder)
+    dt = datetime.now()
 
-    data_description = glob(root_folder + "/data_description.json")
+    derived = DerivedDataDescription.from_data_description(
+        input_data=data,
+        process_name=process_name,
+        creation_date=dt.date(),
+        creation_time=dt.time(),
+        institution=data.institution,
+        funding_source=[],
+    )
 
-    if len(data_description):
-        data_description = read_json_as_dict(data_description[0])
+    with open(dest_data_description, "w") as f:
+        f.write(derived.json(indent=3))
 
-        data_description["Name"] = f"{data_description['Name']}_stitched"
-        data_description["DatasetType"] = "derived"
-        data_description["GeneratedBy"] = tools
 
-    else:
-        data_description = {}
+def generate_processing(
+    data_processes: List[dict], dest_processing: PathLike
+) -> None:
+    """
+    Generates data description for the output folder.
 
-        data_description["Name"] = f"{root_name}_stitched"
-        data_description["DatasetType"] = "derived"
-        data_description["License"] = "CC-BY-4.0"
-        data_description["Institute"] = "Allen Institute For Neural Dynamics"
-        data_description["Group"] = ""
-        data_description["Project"] = ""
-        data_description["GeneratedBy"] = tools
+    Parameters
+    ------------------------
+    data_processes: List[dict]
+        List with the processes aplied in the pipeline.
 
-    return data_description
+    dest_processing: PathLike
+        Path where the processing file will be placed.
+
+    """
+
+    processing = Processing(
+        pipeline_url="https://github.com/AllenNeuralDynamics/terastitcher-module",
+        pipeline_version="0.0.1",
+        data_processes=data_processes,
+    )
+
+    with open(dest_processing, "w") as f:
+        f.write(processing.json(indent=3))
 
 
 def check_type_helper(value: Any, val_type: type) -> bool:
     """
     Checks if a value belongs to a specific type.
-    
+
     Parameters
     ------------------------
     value: Any
         variable data.
-        
+
     val_type: type
         Type that we want to check.
-    
+
     Returns
     ------------------------
     bool:
@@ -458,12 +484,12 @@ def check_type_helper(value: Any, val_type: type) -> bool:
 def generate_timestamp(time_format: str = "%Y-%m-%d_%H-%M-%S") -> str:
     """
     Generates a timestamp in string format.
-    
+
     Parameters
     ------------------------
     time_format: str
         String following the conventions to generate the timestamp (https://strftime.org/).
-    
+
     Returns
     ------------------------
     str:

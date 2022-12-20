@@ -14,20 +14,20 @@ class PathParser:
     ) -> List[str]:
         """
         GCloud parser to know how many buckets we need to mount with gcsfuse.
-        
+
         Parameters
         ------------------------
         input_path: PathLike
             Path where the data is located in the bucket.
-            
+
         output_path: PathLike
             Path where the data will be saved in the same or a different bucket.
-        
+
         Returns
         ------------------------
         List[str]:
             List with the bucket name(s).
-            
+
         """
         gcs_regex = "gs://(.*?)/"
 

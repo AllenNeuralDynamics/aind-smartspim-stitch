@@ -93,15 +93,15 @@ class ZarrConverter:
         self, channel_paths: List[PathLike]
     ) -> dask.array.core.Array:
         """
-            Reads image files and stores them in a dask array.
-            
-            channel_paths:List[PathLike]
-                Paths where the images are located in multiple channels
-            
-            Returns
-            ------------------------
-            dask.array.core.Array:
-                Dask array with the images. Returns None if it was not possible to read the images.
+        Reads image files and stores them in a dask array.
+
+        channel_paths:List[PathLike]
+            Paths where the images are located in multiple channels
+
+        Returns
+        ------------------------
+        dask.array.core.Array:
+            Dask array with the images. Returns None if it was not possible to read the images.
         """
 
         image_channel = []
@@ -123,15 +123,15 @@ class ZarrConverter:
     def read_channel_image(self, path: PathLike) -> dask.array.core.Array:
 
         """
-            Reads image files and stores them in a dask array.
-            
-            path:PathLike
-                Path where the images are located
-            
-            Returns
-            ------------------------
-            dask.array.core.Array:
-                Dask array with the images. Returns None if it was not possible to read the images.
+        Reads image files and stores them in a dask array.
+
+        path:PathLike
+            Path where the images are located
+
+        Returns
+        ------------------------
+        dask.array.core.Array:
+            Dask array with the images. Returns None if it was not possible to read the images.
         """
 
         images = None
@@ -149,19 +149,19 @@ class ZarrConverter:
     def pad_array_n_d(self, arr: ArrayLike, dim: int = 5) -> ArrayLike:
 
         """
-            Pads a daks array to be in a 5D shape.
-            
-            Parameters
-            ------------------------
-            arr: ArrayLike
-                Dask/numpy array that contains image data.
-                
-            dim: int
-                Number of dimensions that the array will be padded
-            Returns
-            ------------------------
-            ArrayLike:
-                Padded dask/numpy array.
+        Pads a daks array to be in a 5D shape.
+
+        Parameters
+        ------------------------
+        arr: ArrayLike
+            Dask/numpy array that contains image data.
+
+        dim: int
+            Number of dimensions that the array will be padded
+        Returns
+        ------------------------
+        ArrayLike:
+            Padded dask/numpy array.
         """
         if dim > 5:
             raise ValueError(
@@ -178,18 +178,18 @@ class ZarrConverter:
 
         """
         Computes the pyramid levels given an input full resolution image data
-        
+
         Parameters
         ------------------------
         data: dask.array.core.Array
             Dask array of the image data
-            
+
         n_lvls: int
             Number of downsampling levels that will be applied to the original image
-        
+
         scale_axis: Tuple[int]
             Scaling applied to each axis
-        
+
         Returns
         ------------------------
         List[dask.array.core.Array]:
@@ -209,7 +209,7 @@ class ZarrConverter:
     def get_pyramid_metadata(self) -> dict:
         """
         Gets pyramid metadata in OMEZarr format
-        
+
         Returns
         ------------------------
         dict:
@@ -235,16 +235,16 @@ class ZarrConverter:
 
         """
         Executes the OME-Zarr conversion
-        
+
         Parameters
         ------------------------
-        
+
         writer_config: dict
             OME-Zarr writer configuration
-        
+
         image_name: str
         Name of the image
-        
+
         """
         dask.config.set(
             {
