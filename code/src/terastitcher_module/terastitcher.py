@@ -880,6 +880,7 @@ class TeraStitcher:
                             "sigma1": params_copy["sigma1"],
                             "sigma2": params_copy["sigma2"],
                         },
+                        notes=f"Destriping channel {channels[idx]}"
                     )
                 )
 
@@ -936,6 +937,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters=config["import_data"],
+                notes=f"Importing data from channel {informative_channel}"
             )
         )
 
@@ -971,7 +973,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters=config["align"],
-                notes="Aligning pairwise-stacks using NCC algorithm",
+                notes=f"Aligning pairwise-stacks using NCC algorithm channel {informative_channel}",
             )
         )
 
@@ -1010,6 +1012,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters={},
+                notes=f"Projection in channel {informative_channel}"
             )
         )
 
@@ -1052,6 +1055,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters=config["threshold"],
+                notes=f"Thresholding in channel {informative_channel}"
             )
         )
 
@@ -1086,7 +1090,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters={},
-                notes="Placing tiles to the most optimal position",
+                notes=f"Placing tiles to the most optimal position channel {informative_channel}",
             )
         )
 
@@ -1155,6 +1159,7 @@ class TeraStitcher:
                         "codeURL"
                     ],
                     parameters=config["import_data"],
+                    notes=f"Importing data from channel {channels[idx]}"
                 )
             )
 
@@ -1197,6 +1202,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters=params_multivolume,
+                notes="Importing multivolume data from all channels"
             )
         )
 
@@ -1234,6 +1240,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters=merge_config,
+                notes="Fusing multichannel volume"
             )
         )
 
@@ -1280,6 +1287,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters=config["import_data"],
+                notes=f"Importing data from channel {channel}"
             )
         )
 
@@ -1310,6 +1318,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters=config["align"],
+                notes=f"Aligning pairwise-stacks using NCC algorithm channel {channel}"
             )
         )
 
@@ -1345,6 +1354,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters={},
+                notes=f"Projection in channel {channel}"
             )
         )
 
@@ -1383,6 +1393,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters=config["threshold"],
+                notes=f"Thresholding in channel {channel}"
             )
         )
 
@@ -1417,6 +1428,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters={},
+                notes=f"Placing tiles to the most optimal position channel {channel}"
             )
         )
 
@@ -1444,6 +1456,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters=config["merge"],
+                notes=f"Merging volume with channel {channel}"
             )
         )
 
