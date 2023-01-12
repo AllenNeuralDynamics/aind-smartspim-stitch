@@ -1,3 +1,7 @@
+"""
+Module for executing TeraStitcher software automatically
+for the smartspim data
+"""
 import errno
 import logging
 import math
@@ -35,6 +39,11 @@ PathLike = Union[str, Path]
 
 
 class TeraStitcher:
+    """
+    Class for executing the terastitcher module automatically
+    to the AIND smartspim data
+    """
+
     def __init__(
         self,
         input_data: PathLike,
@@ -273,6 +282,9 @@ class TeraStitcher:
         """
 
         def check_file_helper(path: PathLike) -> bool:
+            """
+            Checks if the file in the path exists
+            """
             if path != None:
                 if not os.path.exists(path):
                     raise FileNotFoundError(f"{path} not found.")
@@ -730,6 +742,18 @@ class TeraStitcher:
         converter.convert(config)
 
     def create_ng_link(self, config: dict, channels: List[str]) -> None:
+        """
+        Creates the neuroglancer link for the processed dataset
+
+        Parameters
+        -------------
+        config: dict
+            Image configuration necessary to build the
+            neuroglancer link
+
+        channels: List[str]
+            Channel names in the datasets
+        """
 
         dimensions = {
             "z": {
@@ -880,7 +904,7 @@ class TeraStitcher:
                             "sigma1": params_copy["sigma1"],
                             "sigma2": params_copy["sigma2"],
                         },
-                        notes=f"Destriping channel {channels[idx]}"
+                        notes=f"Destriping channel {channels[idx]}",
                     )
                 )
 
@@ -937,7 +961,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters=config["import_data"],
-                notes=f"Importing data from channel {informative_channel}"
+                notes=f"Importing data from channel {informative_channel}",
             )
         )
 
@@ -1012,7 +1036,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters={},
-                notes=f"Projection in channel {informative_channel}"
+                notes=f"Projection in channel {informative_channel}",
             )
         )
 
@@ -1055,7 +1079,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters=config["threshold"],
-                notes=f"Thresholding in channel {informative_channel}"
+                notes=f"Thresholding in channel {informative_channel}",
             )
         )
 
@@ -1159,7 +1183,7 @@ class TeraStitcher:
                         "codeURL"
                     ],
                     parameters=config["import_data"],
-                    notes=f"Importing data from channel {channels[idx]}"
+                    notes=f"Importing data from channel {channels[idx]}",
                 )
             )
 
@@ -1202,7 +1226,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters=params_multivolume,
-                notes="Importing multivolume data from all channels"
+                notes="Importing multivolume data from all channels",
             )
         )
 
@@ -1240,7 +1264,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters=merge_config,
-                notes="Fusing multichannel volume"
+                notes="Fusing multichannel volume",
             )
         )
 
@@ -1287,7 +1311,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters=config["import_data"],
-                notes=f"Importing data from channel {channel}"
+                notes=f"Importing data from channel {channel}",
             )
         )
 
@@ -1318,7 +1342,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters=config["align"],
-                notes=f"Aligning pairwise-stacks using NCC algorithm channel {channel}"
+                notes=f"Aligning pairwise-stacks using NCC algorithm channel {channel}",
             )
         )
 
@@ -1354,7 +1378,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters={},
-                notes=f"Projection in channel {channel}"
+                notes=f"Projection in channel {channel}",
             )
         )
 
@@ -1393,7 +1417,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters=config["threshold"],
-                notes=f"Thresholding in channel {channel}"
+                notes=f"Thresholding in channel {channel}",
             )
         )
 
@@ -1428,7 +1452,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters={},
-                notes=f"Placing tiles to the most optimal position channel {channel}"
+                notes=f"Placing tiles to the most optimal position channel {channel}",
             )
         )
 
@@ -1456,7 +1480,7 @@ class TeraStitcher:
                     "codeURL"
                 ],
                 parameters=config["merge"],
-                notes=f"Merging volume with channel {channel}"
+                notes=f"Merging volume with channel {channel}",
             )
         )
 
@@ -1610,6 +1634,10 @@ def execute_terastitcher(
 
     # Setting handling error to unmounting cloud for any unexpected error
     def onAnyError(exception_type, value, traceback):
+        """
+        Function to stop the stitching pipeline if
+        there is any error
+        """
 
         logger = logging.getLogger(__name__)
 
@@ -1675,6 +1703,10 @@ def execute_terastitcher(
 
 
 def process_multiple_datasets() -> None:
+    """
+    Function to process multiple datasets in a row.
+    Useful when we are processing in the laboratory
+    """
     default_config = get_default_config()
     # print(default_config)
 
@@ -1728,6 +1760,9 @@ def process_multiple_datasets() -> None:
 
 
 def main() -> str:
+    """
+    Main function to execute the stitching pipeline
+    """
     default_config = get_default_config()
 
     mod = ArgSchemaParser(

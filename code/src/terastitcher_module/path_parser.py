@@ -1,6 +1,9 @@
+"""
+Path parser class when we're using GCP
+"""
 import re
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Union
 
 from utils import utils
 
@@ -8,6 +11,10 @@ PathLike = Union[str, Path]
 
 
 class PathParser:
+    """
+    Path parser class when we're using GCP (Vertex AI)
+    """
+
     @staticmethod
     def parse_path_gcs(
         input_path: PathLike, output_path: PathLike

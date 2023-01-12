@@ -1,9 +1,16 @@
-from argschema import ArgSchema, ArgSchemaParser
+"""
+Parameters for the OME-Zarr converter
+"""
+
+from argschema import ArgSchema
 from argschema.fields import Float, InputDir, Int, List, Nested, Str
 from argschema.schemas import DefaultSchema
 
 
 class OmeZarrParams(DefaultSchema):
+    """
+    OMEZarr parameters for the smartspim images
+    """
 
     codec = Str(
         required=False,
@@ -45,6 +52,11 @@ class OmeZarrParams(DefaultSchema):
 
 
 class ZarrConvertParams(ArgSchema):
+    """
+    Input and output paths for OMEZarr writer with
+    image configuration
+    """
+
     input_data = InputDir(
         required=True,
         metadata={"description": "Path where the data is located"},
@@ -59,6 +71,9 @@ class ZarrConvertParams(ArgSchema):
 
 
 def get_default_config() -> dict:
+    """
+    Returns the default image converter parameters
+    """
     return {
         "writer": {
             "codec": "zstd",

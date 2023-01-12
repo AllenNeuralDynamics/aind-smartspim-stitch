@@ -1,15 +1,16 @@
+"""
+Tests for the stitching module 
+"""
 import os
 import tempfile
 import unittest
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import numpy as np
 import tifffile
-from parameterized import parameterized
 from terastitcher_module import terastitcher
 from terastitcher_module.params import get_default_config
-from tests import params
 from utils import utils
 
 # IO types
@@ -21,6 +22,20 @@ def _create_images(
     n_tiffs: Optional[int] = 4,
     shape: Optional[Tuple[int]] = (128, 128),
 ):
+    """
+    Creates images for tests
+
+    Parameters
+    -------------
+    path: PathLike
+        Path where toy images are going to be stored
+
+    n_tiffs: Optional[int]
+        Number of tiffs per folder. Default: 4
+
+    shape: Optional[Tuple[int]]
+        Shape of each tiff image
+    """
 
     for idx in range(3):
         name = f"00{idx*2}000"
@@ -45,6 +60,23 @@ def _create_sample_channel(
     n_tiffs: Optional[int] = 4,
     shape: Optional[Tuple[int]] = (128, 128),
 ):
+    """
+    Creates a dataset with a single/multiple channel(s)
+
+    Parameters
+    -------------
+    input_path: PathLike
+        Path where toy images are going to be stored
+
+    n_channels: Optional[int]
+        Number of channels in the toy dataset
+
+    n_tiffs: Optional[int]
+        Number of tiffs per folder. Default: 4
+
+    shape: Optional[Tuple[int]]
+        Shape of each tiff image
+    """
 
     for channel_idx in range(n_channels):
         channel_name = f"CH_{channel_idx}"
@@ -56,7 +88,15 @@ def _create_sample_channel(
 
 
 class TestTerastitcher(unittest.TestCase):
+    """
+    Class for testing the methods in the Terastitcher
+    module
+    """
+
     def setUp(self):
+        """
+        Sets up the testing environment
+        """
         self._tmp_dir = tempfile.TemporaryDirectory()
         path = Path(self._tmp_dir.name)
         self._single_channel_path = path.joinpath("single_channel")
@@ -71,6 +111,9 @@ class TestTerastitcher(unittest.TestCase):
         _create_sample_channel(self._multi_channel_path, n_channels=3)
 
     def test_single_channel_stitching(self):
+        """
+        Tests the single channel stitching
+        """
         default_config = get_default_config()
         default_config["regex_channels"] = "CH_([0-9])$"
         default_config["stitch_channel"] = 0
@@ -96,6 +139,9 @@ class TestTerastitcher(unittest.TestCase):
         self.assertTrue(os.path.isdir(stitched_folder))
 
     def test_multi_channel_stitching(self):
+        """
+        Tests the multichannel stitching
+        """
         default_config = get_default_config()
         default_config["regex_channels"] = "CH_([0-9])$"
         default_config["stitch_channel"] = 0
@@ -119,4 +165,7 @@ class TestTerastitcher(unittest.TestCase):
         self.assertTrue(os.path.isdir(stitched_folder))
 
     def tearDown(self):
+        """
+        Cleans the environment
+        """
         self._tmp_dir.cleanup()

@@ -1,14 +1,14 @@
+"""
+Utility functions
+"""
 import json
 import os
-import platform
 import shutil
 import subprocess
 from datetime import date, datetime, time
-from glob import glob
 from pathlib import Path
 from typing import Any, List, Optional, Union
 
-import numpy as np
 from aind_data_schema import (
     DerivedDataDescription,
     Processing,

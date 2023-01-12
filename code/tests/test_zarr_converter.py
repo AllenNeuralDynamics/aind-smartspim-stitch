@@ -1,3 +1,8 @@
+"""
+Tests the methods for the OME-Zarr
+conversion package
+"""
+
 import os
 import tempfile
 import unittest
@@ -19,6 +24,20 @@ PathLike = Union[str, Path]
 def _create_tiffs_files(
     path_to_tiffs: str, n_tiffs: int = 4, shape: Tuple[int] = (256, 256, 256)
 ):
+    """
+    Creates images for tests
+
+    Parameters
+    -------------
+    path: PathLike
+        Path where toy images are going to be stored
+
+    n_tiffs: Optional[int]
+        Number of tiffs per folder. Default: 4
+
+    shape: Optional[Tuple[int]]
+        Shape of each tiff image
+    """
     for idx_tiffs in range(n_tiffs):
         tiff_data = np.ones(shape, dtype=np.uint16)
         tifffile.imwrite(
@@ -32,6 +51,23 @@ def _create_multichannel_tiff_files(
     n_channels: int = 3,
     shape: Tuple[int] = (256, 256, 256),
 ):
+    """
+    Creates a dataset with a single/multiple channel(s)
+
+    Parameters
+    -------------
+    root: str
+        Root where the files will be stored
+
+    n_tiffs: Optional[int]
+        Number of tiffs per folder. Default: 4
+
+    n_channels: Optional[int]
+        Number of channels in the toy dataset
+
+    shape: Optional[Tuple[int]]
+        Shape of each tiff image
+    """
 
     for channel_idx in range(n_channels):
         channel_path = Path(root).joinpath(f"channel_{channel_idx}/x/y/")
@@ -45,6 +81,24 @@ def _create_zarr_file(
     image_name: Optional[str] = "test_zarr_1.zarr",
     channels: Optional[List[str]] = None,
 ):
+    """
+    Function to create the zarr file
+
+    Parameters
+    ------------
+    path_to_files: PathLike
+        Path where the raw images are stored
+
+    output_path: PathLike
+        Path where the OME-Zarr image will be stored
+
+    image_name: Optional[str]
+        Image name for the OME-Zarr file.
+        Default: test_zarr_1.zarr
+
+    channels: Optional[List[str]]
+        List with the channel names
+    """
     test_writer = ZarrConverter(
         path_to_files, output_path, {"codec": "zstd", "clevel": 1}, channels
     )
@@ -60,7 +114,14 @@ def _create_zarr_file(
 
 
 class TestZarrConverter(unittest.TestCase):
+    """
+    Tests methods of the ZarrConverter class
+    """
+
     def setUp(self):
+        """
+        Sets up the testing environment
+        """
         # io folders
         self.maxDiff = None
         self._tmp_dir = tempfile.TemporaryDirectory()
@@ -79,6 +140,9 @@ class TestZarrConverter(unittest.TestCase):
         _create_multichannel_tiff_files(f"{self._tmp_dir.name}/multichannel")
 
     def test_convert_to_ome_zarr(self):
+        """
+        Test the omezarr conversion
+        """
         path_to_tiffs = f"{self._tmp_dir.name}/tiffs_single_channel_2"
         converted_zarr = f"{self._tmp_dir.name}/converted"
 
@@ -99,6 +163,9 @@ class TestZarrConverter(unittest.TestCase):
         )
 
     def test_pad_array_n_d(self):
+        """
+        Tests the pad array method
+        """
         # io folders
         path_to_tiffs = f"{self._tmp_dir.name}/tiffs_single_channel_1"
 
@@ -120,6 +187,9 @@ class TestZarrConverter(unittest.TestCase):
 
     @parameterized.expand(params.get_compute_pyramid_params())
     def test_compute_pyramid(self, n_lvls: int, scale_axis: int):
+        """
+        Tests the compute pyramid method
+        """
         path_to_tiffs = f"{self._tmp_dir.name}/tiffs_single_channel_1"
         zarr_writer = ZarrConverter(
             path_to_tiffs, path_to_tiffs, {"codec": "zstd", "clevel": 1}
@@ -136,6 +206,9 @@ class TestZarrConverter(unittest.TestCase):
 
     @parameterized.expand(params.get_compute_pyramid_raises_params())
     def test_compute_pyramid_raises(self, n_lvls: int, scale_axis: int):
+        """
+        Tests the compute pyramid method
+        """
         path_to_tiffs = f"{self._tmp_dir.name}/tiffs_single_channel_1"
         zarr_writer = ZarrConverter(
             path_to_tiffs, path_to_tiffs, {"codec": "zstd", "clevel": 1}
@@ -143,13 +216,23 @@ class TestZarrConverter(unittest.TestCase):
         array = zarr_writer.read_channel_image(path_to_tiffs)
 
         with self.assertRaises(ValueError):
-            array_pyramid = zarr_writer.compute_pyramid(
-                array, n_lvls, scale_axis
-            )
+            zarr_writer.compute_pyramid(array, n_lvls, scale_axis)
 
     def _check_single_channel_omero(
         self, omero_metadata: dict, filename: PathLike
     ):
+        """
+        Checks the single channel omero metadata
+
+        Parameters
+        -------------
+        omero_metadata: dict
+            dictionary with the omero metadata from
+            the OME-Zarr image
+
+        filename: PathLike
+            Path where the image is stored
+        """
         expected_omero = {
             "channels": [
                 {
@@ -178,6 +261,21 @@ class TestZarrConverter(unittest.TestCase):
     def _check_multiple_channel_omero(
         self, omero_metadata: dict, filename: str, channels: List[str]
     ):
+        """
+        Checks the multi channel omero metadata
+
+        Parameters
+        -------------
+        omero_metadata: dict
+            dictionary with the omero metadata from
+            the OME-Zarr image
+
+        filename: PathLike
+            Path where the image is stored
+
+        channels: List[str]
+            List with channel names
+        """
         channels_metadata = []
 
         for channel_idx in range(len(channels)):
@@ -208,6 +306,9 @@ class TestZarrConverter(unittest.TestCase):
         self.assertDictEqual(omero_metadata, expected_omero)
 
     def _check_downsamplig_metadata(self, downsampling_metadata: dict):
+        """
+        Checks the downsampling metadata
+        """
         expected_downsampling = {
             "args": "[false]",
             "description": "Downscaling implementation based on the windowed mean of the original array",
@@ -218,6 +319,15 @@ class TestZarrConverter(unittest.TestCase):
         self.assertDictEqual(downsampling_metadata, expected_downsampling)
 
     def _check_single_image_axes(self, axes_metadata: list):
+        """
+        Checks the single image axes in the
+        omero metadata
+
+        Parameters
+        -----------
+        axes_metadata: list
+            Axes metadata in omero metadata configuration
+        """
         expected_axes = [
             {"name": "t", "type": "time", "unit": "millisecond"},
             {"name": "c", "type": "channel"},
@@ -233,8 +343,19 @@ class TestZarrConverter(unittest.TestCase):
                 axes_metadata[axes_idx], expected_axes[axes_idx]
             )
 
-    def _generate_single_channel_dataset_metadata(self, n_scaling=5):
+    def _generate_single_channel_dataset_metadata(
+        self, n_scaling: Optional[int] = 5
+    ):
+        """
+        Generates a single channel dataset metadata based on
+        OMERO structure
 
+        Parameters
+        -------------
+        n_scaling: Optional[int]
+            Scaling for each of the multiscale images
+            Default: 5
+        """
         datasets = []
         x_voxelsize = y_voxelsize = z_voxelsize = 1.0
 
@@ -264,6 +385,14 @@ class TestZarrConverter(unittest.TestCase):
         return datasets
 
     def _check_single_image_datasets(self, datasets_metadata: list):
+        """
+        Checks single channel image dataset metadata
+
+        Parameters
+        ------------
+        datasets_metadata: list
+            Metadata for each of the datasets
+        """
         expected_datasets = self._generate_single_channel_dataset_metadata()
 
         self.assertIsInstance(datasets_metadata, list)
@@ -273,7 +402,9 @@ class TestZarrConverter(unittest.TestCase):
             )
 
     def test_check_single_channel_zarr_attributes(self):
-
+        """
+        Tests the zarr attributes of a single channel image
+        """
         path_to_tiffs = f"{self._tmp_dir.name}/tiffs_single_channel_2"
         converted_zarr = f"{self._tmp_dir.name}/converted"
         filename = "test_tiffs_single_channel_2.zarr"
@@ -302,7 +433,9 @@ class TestZarrConverter(unittest.TestCase):
         self._check_single_channel_omero(attributes["omero"], filename)
 
     def test_check_multichannel_zarr_attributes(self):
-
+        """
+        Tests the zarr attributes of a multi channel image
+        """
         path_to_tiffs = f"{self._tmp_dir.name}/multichannel"
         converted_zarr = f"{self._tmp_dir.name}/converted"
         filename = "test_multichannel.zarr"
@@ -339,4 +472,7 @@ class TestZarrConverter(unittest.TestCase):
         )
 
     def tearDown(self):
+        """
+        Tears down the testing environment
+        """
         self._tmp_dir.cleanup()

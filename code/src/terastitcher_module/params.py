@@ -1,3 +1,6 @@
+"""
+Module to declare the parameters for the stitching package
+"""
 import os
 import platform
 import pprint as pp
@@ -13,7 +16,6 @@ from argschema.fields import (
     Int,
     List,
     Nested,
-    NumpyArray,
     Str,
 )
 from argschema.schemas import DefaultSchema
@@ -29,7 +31,15 @@ class InputFileBasedLinux(InputFile):
 
     """
 
-    def _validate(self, value):
+    def _validate(self, value: str):
+        """
+        Validates the filesystem
+
+        Parameters
+        -------------
+        value: str
+            Path where the file is located
+        """
         if platform.system() != "Windows":
             super()._validate(value)
 
@@ -42,7 +52,15 @@ class InputDirGCloud(InputDir):
 
     """
 
-    def _validate(self, value):
+    def _validate(self, value: str):
+        """
+        Validates the filesystem
+
+        Parameters
+        -------------
+        value: str
+            Path where the file is located
+        """
         if not value.startswith("gs://"):
             super()._validate(value)
         else:
@@ -51,6 +69,9 @@ class InputDirGCloud(InputDir):
 
 
 class ImportParameters(DefaultSchema):
+    """
+    Import parameters for the first stitching step
+    """
 
     ref1 = Str(
         required=False,
@@ -96,6 +117,9 @@ class ImportParameters(DefaultSchema):
 
 
 class CPUParams(DefaultSchema):
+    """
+    CPU parameters for multiprocessing
+    """
 
     estimate_processes = Boolean(
         required=False,
@@ -134,6 +158,9 @@ class CPUParams(DefaultSchema):
 
 
 class AlignParameters(DefaultSchema):
+    """
+    Parameters to align tiles in the stitching algorithm
+    """
 
     subvoldim = Int(
         required=False,
@@ -147,6 +174,9 @@ class AlignParameters(DefaultSchema):
 
 
 class ThresholdParameters(DefaultSchema):
+    """
+    Threshold value applied in the stitching algorithm
+    """
 
     reliability_threshold = Float(
         required=False,
@@ -161,6 +191,9 @@ class ThresholdParameters(DefaultSchema):
 
 
 class MergeParameters(DefaultSchema):
+    """
+    Merge parameters in the stitching algorithm.
+    """
 
     slice_extent = List(
         Int(),
@@ -184,6 +217,10 @@ class MergeParameters(DefaultSchema):
 
 
 class PystripeParams(DefaultSchema):
+    """
+    Parameters for destriping microscopic images
+    """
+
     # input and output are already defined in PipelineParams Class
     sigma1 = List(
         Int(),
@@ -223,10 +260,18 @@ class PystripeParams(DefaultSchema):
 
 
 class PreprocessingSteps(DefaultSchema):
+    """
+    All preprocessing steps applied to smartspim data
+    """
+
     pystripe = Nested(PystripeParams, required=False)
 
 
 class Visualization(DefaultSchema):
+    """
+    Parameters for generating the visualization link
+    """
+
     ng_base_url = Str(
         required=True,
         metadata={"description": "Base url for neuroglancer web app"},
@@ -247,6 +292,9 @@ class Visualization(DefaultSchema):
 
 
 class PipelineParams(ArgSchema):
+    """
+    Parameters for all the stitching pipeline
+    """
 
     input_data = InputDirGCloud(
         required=True,
@@ -315,8 +363,16 @@ class PipelineParams(ArgSchema):
     visualization = Nested(Visualization, required=True)
 
 
-def get_default_config(filename: str = "default_config.yaml"):
+def get_default_config(filename: str = "default_config.yaml") -> None:
+    """
+    Gets the default configuration from a YAML file
 
+    Parameters
+    --------------
+    filename: str
+        Path where the YAML is located
+
+    """
     filename = Path(os.path.dirname(__file__)).joinpath(filename)
 
     config = None

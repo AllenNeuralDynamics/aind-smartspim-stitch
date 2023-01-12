@@ -1,25 +1,23 @@
-import argparse
+"""
+Module to convert stitched images to the OME-Zarr format
+"""
 import logging
 import os
 import re
 import time
 from glob import glob
 from pathlib import Path
-from typing import Any, List, Optional, Tuple, Union
+from typing import List, Tuple, Union
 
 import dask
 import numpy as np
 import xarray_multiscale
-from aicsimageio.readers.tiff_reader import TiffReader
 from aicsimageio.types import PhysicalPixelSizes
 from aicsimageio.writers import OmeZarrWriter
 from argschema import ArgSchemaParser
-from dask.array import concatenate, moveaxis, stack
 from dask.array.image import imread
 from dask.distributed import Client, LocalCluster, performance_report, progress
 from numcodecs import blosc
-from utils import utils
-from xarray import DataArray
 
 from .zarr_converter_params import ZarrConvertParams, get_default_config
 
@@ -29,7 +27,21 @@ blosc.use_threads = False
 
 
 def search_images_in_folder(path: PathLike, format_ext_regex: str) -> str:
+    """
+    Searches images in a folder
 
+    Parameters
+    ------------
+    path: PathLike
+        Path to the folder where the images are stored
+
+    format_ext_regex: str
+        Regular expression to get the files
+
+    Returns
+    ---------
+    Folder level where images are stored
+    """
     level = 0
 
     # Search until images are found
@@ -43,6 +55,10 @@ def search_images_in_folder(path: PathLike, format_ext_regex: str) -> str:
 
 
 class ZarrConverter:
+    """
+    Class to convert smartspim datasets to the zarr format
+    """
+
     def __init__(
         self,
         input_data: PathLike,
@@ -52,7 +68,30 @@ class ZarrConverter:
         physical_pixels: List[float] = None,
         file_format: List[str] = "tif",
     ) -> None:
+        """
+        Class constructor
 
+        Parameters
+        ------------
+        input_data: PathLike
+            Path where the stitched images are stored
+
+        output_data: PathLike
+            Path where the OME-zarr file will be stored
+
+        blosc_config: dict
+            Configuration for image compression
+
+        channels: List[str]
+            List with the channel names
+
+        physical_pixels: List[float]
+            Physical pixel sizes per dimension
+
+        file_format: str
+            Image file extension
+
+        """
         self.input_data = input_data
         self.output_data = output_data
         self.physical_pixels = None
@@ -348,6 +387,10 @@ class ZarrConverter:
 
 
 def main():
+    """
+    Main function to convert a smartspim dataset to
+    the OME-zarr format
+    """
     default_config = get_default_config()
 
     mod = ArgSchemaParser(
