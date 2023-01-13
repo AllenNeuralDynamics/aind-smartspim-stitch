@@ -7,7 +7,7 @@ import re
 import time
 from glob import glob
 from pathlib import Path
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Dict, Hashable, Sequence
 
 import dask
 import numpy as np
@@ -212,7 +212,11 @@ class ZarrConverter:
         return arr
 
     def compute_pyramid(
-        self, data: dask.array.core.Array, n_lvls: int, scale_axis: Tuple[int]
+        self,
+        data: dask.array.core.Array,
+        n_lvls: int,
+        scale_axis: Tuple[int],
+        chunks: Union[str, Sequence[int], Dict[Hashable, int]] = "auto",
     ) -> List[dask.array.core.Array]:
 
         """
@@ -239,9 +243,9 @@ class ZarrConverter:
             data,
             xarray_multiscale.reducers.windowed_mean,  # func
             scale_axis,  # scale factors
-            depth=n_lvls - 1,
             preserve_dtype=True,
-        )
+            chunks=chunks,
+        )[:n_lvls]
 
         return [arr.data for arr in pyramid]
 
