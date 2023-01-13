@@ -233,6 +233,10 @@ class ZarrConverter:
         scale_axis: Tuple[int]
             Scaling applied to each axis
 
+        chunks: Union[str, Sequence[int], Dict[Hashable, int]]
+            chunksize that will be applied to the multiscales
+            Default: "auto"
+
         Returns
         ------------------------
         List[dask.array.core.Array]:
