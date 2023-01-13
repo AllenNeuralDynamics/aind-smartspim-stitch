@@ -183,7 +183,7 @@ def save_dict_as_json(
 
     """
 
-    if dictionary == None:
+    if dictionary is None:
         dictionary = {}
 
     else:
@@ -297,7 +297,8 @@ def gscfuse_mount(bucket_name: PathLike, params: dict) -> None:
         params["additional_params"]
     )
 
-    gfuse_cmd = f"gcsfuse {additional_params} {built_params} {bucket_name} {bucket_name}"
+    gfuse_cmd = f"""gcsfuse {additional_params}
+     {built_params} {bucket_name} {bucket_name}"""
 
     for out in execute_command_helper(gfuse_cmd, True):
         print(out)
@@ -447,6 +448,7 @@ def generate_processing(
 
     """
 
+    # flake8: noqa: E501
     processing = Processing(
         pipeline_url="https://github.com/AllenNeuralDynamics/terastitcher-module",
         pipeline_version="0.0.1",
@@ -472,7 +474,8 @@ def check_type_helper(value: Any, val_type: type) -> bool:
     Returns
     ------------------------
     bool:
-        True if the type is what we expect from the variable data, False otherwise.
+        True if the type is what we expect
+        from the variable data, False otherwise.
     """
 
     if type(value) != val_type:
@@ -488,11 +491,13 @@ def generate_timestamp(time_format: str = "%Y-%m-%d_%H-%M-%S") -> str:
     Parameters
     ------------------------
     time_format: str
-        String following the conventions to generate the timestamp (https://strftime.org/).
+        String following the conventions
+        to generate the timestamp (https://strftime.org/).
 
     Returns
     ------------------------
     str:
-        String with the actual datetime moment in string format.
+        String with the actual datetime
+        moment in string format.
     """
     return datetime.now().strftime(time_format)

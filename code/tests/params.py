@@ -2,7 +2,7 @@
 Parameters for tests
 """
 
-# Utils testing params
+
 def get_save_dict_as_json_params():
     """
     Returns parameters for the

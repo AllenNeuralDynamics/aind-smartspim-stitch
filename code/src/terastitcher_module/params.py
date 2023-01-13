@@ -26,8 +26,9 @@ from zarr_converter import OmeZarrParams
 class InputFileBasedLinux(InputFile):
     """
 
-    InputFileBasedOS is a :class:`argschema.fields.InputFile` subclass which is a path to
-    a file location which can be read by the user depending if it's on Linux or not.
+    InputFileBasedOS is a :class:`argschema.fields.InputFile`
+    subclass which is a path to a file location which can be
+    read by the user depending if it's on Linux or not.
 
     """
 
@@ -47,8 +48,9 @@ class InputFileBasedLinux(InputFile):
 class InputDirGCloud(InputDir):
     """
 
-    InputDirGCloud is a :class:`argschema.fields.InputDir` subclass which is a path to
-    a directory location which will be validated if the user is not on GCloud.
+    InputDirGCloud is a :class:`argschema.fields.InputDir`
+    subclass which is a path to a directory location which
+    will be validated if the user is not on GCloud.
 
     """
 
@@ -131,9 +133,7 @@ class CPUParams(DefaultSchema):
 
     image_depth = Int(
         required=False,
-        metadata={
-            "description": "Layer thickness along Z axis when processing layer by layer"
-        },
+        metadata={"description": "Layer thickness along Z axis"},
     )
 
     number_processes = Int(
@@ -143,9 +143,7 @@ class CPUParams(DefaultSchema):
 
     hostfile = InputFileBasedLinux(
         required=True,
-        metadata={
-            "description": "Path to MPI hostfile. Only for Linux kernel machines"
-        },
+        metadata={"description": "Path to MPI hostfile, only for Linux."},
         dump_default="/home/hostfile",
     )
 
@@ -164,9 +162,7 @@ class AlignParameters(DefaultSchema):
 
     subvoldim = Int(
         required=False,
-        metadata={
-            "description": "Layer thickness along Z axis when processing layer by layer"
-        },
+        metadata={"description": "Layer thickness along Z axis"},
         dump_default=100,
     )
 
@@ -181,7 +177,10 @@ class ThresholdParameters(DefaultSchema):
     reliability_threshold = Float(
         required=False,
         metadata={
-            "description": "Reliability threshold applied to the computed displacements to select the most reliable ones"
+            "description": """
+            Reliability threshold applied to the computed
+             displacements to select the most reliable ones
+            """
         },
         dump_default=0.7,
         validate=validate.Range(
@@ -199,7 +198,11 @@ class MergeParameters(DefaultSchema):
         Int(),
         required=True,
         metadata={
-            "description": "Supposing the output image is saved in a tiled format, this is an array that contains the slice size of output tiles in order [slicewidth, sliceheight, slicedepth]"
+            "description": """
+            Supposing the output image is saved in a tiled format,
+            this is an array that contains the slice size of output
+            tiles in order [slicewidth, sliceheight, slicedepth]
+            """
         },
         cli_as_single_argument=True,
         dump_default=[20000, 20000, 0],
@@ -208,7 +211,10 @@ class MergeParameters(DefaultSchema):
     volout_plugin = Str(
         required=False,
         metadata={
-            "description": "Tiling images output. For 2D 'TiledXY|2Dseries', for 3D 'TiledXY|3Dseries'"
+            "description": """
+            Tiling images output. For 2D 'TiledXY|2Dseries',
+             for 3D 'TiledXY|3Dseries'
+            """
         },
         dump_default='"TiledXY|2Dseries"',
     )
@@ -226,7 +232,10 @@ class PystripeParams(DefaultSchema):
         Int(),
         required=False,
         metadata={
-            "description": "bandwidth of the stripe filter for the foreground for each channel"
+            "description": """
+            bandwidth of the stripe filter
+            for the foreground for each channel
+            """
         },
         cli_as_single_argument=True,
         dump_default=[256, 800, 800],
@@ -236,7 +245,10 @@ class PystripeParams(DefaultSchema):
         Int(),
         required=False,
         metadata={
-            "description": "bandwidth of the stripe filter for the background for each channel"
+            "description": """
+            bandwidth of the stripe filter for
+            the background for each channel
+            """
         },
         cli_as_single_argument=True,
         dump_default=[256, 800, 800],
@@ -280,7 +292,10 @@ class Visualization(DefaultSchema):
     mount_service = Str(
         required=True,
         metadata={
-            "description": "Set to s3 if the dataset will be saved in a Amazon Bucket, gs for a Google Bucket"
+            "description": """
+            Set to s3 if the dataset will be saved
+            in a Amazon Bucket, gs for a Google Bucket
+            """
         },
         dump_default="s3",
     )
@@ -309,7 +324,10 @@ class PipelineParams(ArgSchema):
     preprocessed_data = Str(
         required=True,
         metadata={
-            "description": "Path where the preprocessed data will be saved (this includes terastitcher output)"
+            "description": """
+            Path where the preprocessed data
+            will be saved (this includes terastitcher output)
+            """
         },
     )
 
@@ -333,7 +351,10 @@ class PipelineParams(ArgSchema):
     pyscripts_path = InputDir(
         required=True,
         metadata={
-            "description": "Path to stitched parallel scripts (parastitcher and paraconverter must be there)."
+            "description": """
+            Path to stitched parallel scripts
+            (parastitcher and paraconverter must be there).
+            """
         },
     )
 
@@ -355,7 +376,12 @@ class PipelineParams(ArgSchema):
     clean_output = Boolean(
         required=False,
         matadata={
-            "description": "Set True if you want to delete intermediate output images (e.g. pystripe, terastitcher) and keep only OME-Zarr images. Set False otherwise."
+            "description": """
+            Set True if you want to delete intermediate
+            output images (e.g. pystripe, terastitcher)
+            and keep only OME-Zarr images.
+            Set False otherwise.
+            """
         },
         dump_default=False,
     )
@@ -386,7 +412,8 @@ def get_default_config(filename: str = "default_config.yaml") -> None:
 
 
 if __name__ == "__main__":
-    # this defines a default dictionary that will be used if input_json is not specified
+    # this defines a default dictionary
+    # that will be used if input_json is not specified
     example = get_default_config()
     mod = ArgSchemaParser(input_data=example, schema_type=PipelineParams)
 

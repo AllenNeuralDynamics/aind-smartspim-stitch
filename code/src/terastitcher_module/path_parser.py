@@ -28,7 +28,8 @@ class PathParser:
             Path where the data is located in the bucket.
 
         output_path: PathLike
-            Path where the data will be saved in the same or a different bucket.
+            Path where the data will be saved in the
+            same or a different bucket.
 
         Returns
         ------------------------
@@ -41,7 +42,7 @@ class PathParser:
         gcs_bucket_input_re = re.match(gcs_regex, str(input_path))
         gcs_bucket_output_re = re.match(gcs_regex, str(output_path))
 
-        if gcs_bucket_input_re == None or gcs_bucket_output_re == None:
+        if gcs_bucket_input_re is None or gcs_bucket_output_re is None:
             return []
 
         # Getting bucket names
@@ -52,6 +53,7 @@ class PathParser:
         bucket_name_output = gcs_bucket_output.split("/")[2]
 
         # Getting folder names for mount only dir
+        # flake8: noqa: F841
         folder_name_input = input_path[gcs_bucket_input_re.end() :]
         folder_name_output = output_path[gcs_bucket_output_re.end() :]
 

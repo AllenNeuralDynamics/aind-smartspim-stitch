@@ -1,5 +1,5 @@
 """
-Tests for the stitching module 
+Tests for the stitching module
 """
 import os
 import tempfile
@@ -121,7 +121,9 @@ class TestTerastitcher(unittest.TestCase):
         default_config["clean_output"] = False
         default_config["ome_zarr_params"]["physical_pixels"] = None
 
-        # TODO set pyscripts as env variables in the system when building to fix this hard coded?
+        # TODO set pyscripts as env variables in the system when
+        # building to fix this hard coded?
+        # flake8: noqa: E501
         default_config[
             "pyscripts_path"
         ] = "C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TeraStitcher-portable-1.11.10-win64/pyscripts"

@@ -117,7 +117,7 @@ class ZarrConverter:
         self.channels = channels
         self.channel_colors = None
 
-        if channels != None:
+        if channels is not None:
             colors = [
                 0xFF0000,  # Red
                 0x00FF00,  # green
@@ -140,7 +140,8 @@ class ZarrConverter:
         Returns
         ------------------------
         dask.array.core.Array:
-            Dask array with the images. Returns None if it was not possible to read the images.
+            Dask array with the images.
+            Returns None if it was not possible to read the images.
         """
 
         image_channel = []
@@ -170,7 +171,8 @@ class ZarrConverter:
         Returns
         ------------------------
         dask.array.core.Array:
-            Dask array with the images. Returns None if it was not possible to read the images.
+            Dask array with the images.
+            Returns None if it was not possible to read the images.
         """
 
         images = None
@@ -228,7 +230,8 @@ class ZarrConverter:
             Dask array of the image data
 
         n_lvls: int
-            Number of downsampling levels that will be applied to the original image
+            Number of downsampling levels
+            that will be applied to the original image
 
         scale_axis: Tuple[int]
             Scaling applied to each axis
@@ -265,11 +268,14 @@ class ZarrConverter:
 
         return {
             "metadata": {
-                "description": "Downscaling implementation based on the windowed mean of the original array",
+                "description": """Downscaling implementation based on the
+                 windowed mean of the original array""",
                 "method": "xarray_multiscale.reducers.windowed_mean",
                 "version": str(xarray_multiscale.__version__),
                 "args": "[false]",
-                "kwargs": {},  # No extra parameters were used different from the orig. array and scales
+                # No extra parameters were used different
+                # from the orig. array and scales
+                "kwargs": {},
             }
         }
 
@@ -301,6 +307,7 @@ class ZarrConverter:
                 "array.chunk-size": "384MiB",
                 "distributed.comm.timeouts": {"connect": "60s", "tcp": "60s"},
                 "distributed.scheduler.bandwidth": 100000000,
+                # flake8: noqa: E501
                 "distributed.worker.memory.rebalance.measure": "managed_in_memory",
                 "distributed.worker.memory.target": False,
                 "distributed.worker.memory.spill": False,
@@ -370,15 +377,13 @@ class ZarrConverter:
                 )
 
                 dask_jobs = self.writer.write_multiscale(
-                    pyramid=pyramid_data,  # : types.ArrayLike,  # must be 5D TCZYX
-                    image_name=image_name,  #: str,
+                    pyramid=pyramid_data,
+                    image_name=image_name,
                     physical_pixel_sizes=self.physical_pixels,
-                    channel_names=channel_names,  # ['CH_0', 'CH_1', 'CH_2', 'CH_3'],
+                    channel_names=channel_names,
                     channel_colors=channel_colors,
-                    scale_factor=scale_axis,  # : float = 2.0,
-                    chunks=pyramid_data[
-                        0
-                    ].chunksize,  # chunks,#writer_config['chunks'],
+                    scale_factor=scale_axis,
+                    chunks=pyramid_data[0].chunksize,
                     storage_options=self.opts,
                     compute_dask=True,
                     **self.get_pyramid_metadata(),
@@ -388,7 +393,6 @@ class ZarrConverter:
                     dask_jobs = dask.persist(
                         *dask_jobs
                     )  # , get=dask.threaded.get)
-                    # dask_jobs = dask_jobs.persist()
                     progress(dask_jobs)
 
         client.close()

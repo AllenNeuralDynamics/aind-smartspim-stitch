@@ -311,7 +311,8 @@ class TestZarrConverter(unittest.TestCase):
         """
         expected_downsampling = {
             "args": "[false]",
-            "description": "Downscaling implementation based on the windowed mean of the original array",
+            "description": """Downscaling implementation based on the
+             windowed mean of the original array""",
             "kwargs": {},
             "method": "xarray_multiscale.reducers.windowed_mean",
             "version": "0.2.2",
@@ -458,7 +459,8 @@ class TestZarrConverter(unittest.TestCase):
         # TODO Include when we fix chunksizes in zarr file
         # self._check_single_image_datasets(attributes['multiscales'][0]['datasets'])
 
-        # Checking omero metadata - channels are created if channels param is not given in converter
+        # Checking omero metadata
+        # channels are created if channels param is not given in converter
         # Channel:{filename}:counter
         # In setup I created a 3 channel dataset
         channels = [
