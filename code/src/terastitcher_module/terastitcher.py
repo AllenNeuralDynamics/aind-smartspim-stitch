@@ -841,15 +841,30 @@ class TeraStitcher:
 
         colors = ["red", "green", "purple", "yellow"]
 
+        # Finding the smartspim folder to avoid
+        # having the /results or /scratch in path
+        ome_zarr_parts = self.ome_zarr_path.parts
+
+        start_idx = -1
+        for ome_part_idx in range(len(ome_zarr_parts)):
+            if "SmartSPIM" in ome_zarr_parts[ome_part_idx]:
+                start_idx = ome_part_idx
+                break
+
+        root_folder = ""
+
+        if start_idx == -1:
+            root_folder = self.ome_zarr_path
+        else:
+            root_folder = Path("/".join(ome_zarr_parts[start_idx:]))
+
         # Creating layer per channel
         layers = []
         for channel_idx in range(len(channels)):
             layers.append(
                 {
                     "source": str(
-                        self.ome_zarr_path.joinpath(
-                            channels[channel_idx] + ".zarr"
-                        )
+                        root_folder.joinpath(channels[channel_idx] + ".zarr")
                     ),
                     # use channel idx when source is the same
                     # in zarr to change channel otherwise 0
