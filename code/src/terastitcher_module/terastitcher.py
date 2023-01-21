@@ -15,6 +15,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Union
 
+import xmltodict
 from aind_data_schema.processing import DataProcess
 from argschema import ArgSchemaParser
 from ng_link import NgState
@@ -47,6 +48,7 @@ class TeraStitcher:
         self,
         input_data: PathLike,
         output_folder: PathLike,
+        channel_regex: str,
         parallel: bool = True,
         pyscripts_path: Optional[PathLike] = None,
         computation: Optional[str] = "cpu",
@@ -64,6 +66,8 @@ class TeraStitcher:
             Path where the data is stored.
         output_folder: PathLike
             Path where the stitched data will be stored.
+        channel_regex: str
+            Regular expression to find the channels
         parallel: Optional[bool]
             True if you want to run terastitcher in parallel,
             False otherwise.
@@ -90,6 +94,7 @@ class TeraStitcher:
 
         self.__input_data = Path(input_data)
         self.__output_folder = Path(output_folder).joinpath("processed")
+        self.__channel_regex = channel_regex
         self.__output_jsons_path = Path(output_folder)
         self.__preprocessing_folder = Path(preprocessing_folder)
         self.__stitched_folder = self.__preprocessing_folder.joinpath(
@@ -1216,6 +1221,40 @@ class TeraStitcher:
             )
         )
 
+    def __get_multivolume_channel_order(
+        self, multivolume_xml: PathLike, encoding: str = "utf-8"
+    ) -> List[str]:
+        """
+        Returns the new order of the channels
+        after generating the multivolume xml
+
+        Parameters
+        --------------
+        multivolume_xml: PathLike
+            Path where the multivolume xml is stored
+
+        encoding: str
+            XML encoding. Default: utf-8
+
+        Returns
+        --------------
+        List[str]
+            List with the new order of the channels
+        """
+        with open(str(multivolume_xml), "r", encoding=encoding) as xml_reader:
+            xml_file = xml_reader.read()
+
+        xml_dict = xmltodict.parse(xml_file)
+        channels = []
+        for channel_path in xml_dict["TeraStitcher"]["SUBVOLUMES"][
+            "Subvolume"
+        ]:
+            name = Path(channel_path["@xml_fname"]).parts[-1]
+            name = re.findall(self.__channel_regex, name)[0]
+            channels.append(name)
+
+        return channels
+
     def stitch_multiple_channels(
         self,
         config: dict,
@@ -1368,6 +1407,13 @@ class TeraStitcher:
                 notes="Fusing multichannel volume",
             )
         )
+
+        # Read channel output order
+        new_channel_order = self.__get_multivolume_channel_order(
+            params_multivolume["projout"]
+        )
+
+        return new_channel_order
 
     def stitch_single_channels(
         self, config: dict, exec_config: dict, channel: str
@@ -1628,9 +1674,11 @@ class TeraStitcher:
                 f"Processing {channels} channels with informative channel {channels[config['stitch_channel']]}"
             )
 
-            self.stitch_multiple_channels(
+            channels = self.stitch_multiple_channels(
                 config, exec_config, channels, config["stitch_channel"]
             )
+
+            self.logger.info(f"New channel order: {channels}")
 
         else:
             self.logger.info(f"Processing single channel {channels[0]}")
@@ -1802,6 +1850,7 @@ def execute_terastitcher(
             input_data=input_data,
             output_folder=output_folder,
             preprocessing_folder=preprocessed_data,
+            channel_regex=regexpression,
             parallel=True,
             computation="cpu",
             pyscripts_path=config_teras["pyscripts_path"],
