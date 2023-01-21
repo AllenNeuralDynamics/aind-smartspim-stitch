@@ -7,7 +7,7 @@ import re
 import time
 from glob import glob
 from pathlib import Path
-from typing import List, Tuple, Union, Dict, Hashable, Sequence
+from typing import Dict, Hashable, List, Sequence, Tuple, Union
 
 import dask
 import numpy as np
@@ -17,6 +17,7 @@ from aicsimageio.writers import OmeZarrWriter
 from argschema import ArgSchemaParser
 from dask.array.image import imread
 from dask.distributed import Client, LocalCluster, performance_report, progress
+from natsort import natsorted
 from numcodecs import blosc
 
 from .zarr_converter_params import ZarrConvertParams, get_default_config
@@ -335,7 +336,9 @@ class ZarrConverter:
         glob_search = "/*" * level_folder
 
         # Listing channels with '/' # TODO Works with only one dir
-        list_channels = glob(str(self.input_data) + glob_search + "/")
+        list_channels = natsorted(
+            glob(str(self.input_data) + glob_search + "/")
+        )
 
         print("Check reads: ", list_channels)
         image = self.read_multichannel_image(list_channels)

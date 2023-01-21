@@ -166,6 +166,36 @@ class AlignParameters(DefaultSchema):
         dump_default=100,
     )
 
+    algorithm = Str(
+        required=False,
+        metadata={"description": "Algorithm used for stitching"},
+        dump_default="MIPNCC",
+    )
+
+    search_region_y = Int(
+        required=False,
+        metadata={
+            "description": "Radius of search (pixels) for displacements in Y"
+        },
+        dump_default=25,
+    )
+
+    search_region_x = Int(
+        required=False,
+        metadata={
+            "description": "Radius of search (pixels) for displacements in X"
+        },
+        dump_default=25,
+    )
+
+    search_region_z = Int(
+        required=False,
+        metadata={
+            "description": "Radius of search (pixels) for displacements in Z"
+        },
+        dump_default=25,
+    )
+
     cpu_params = Nested(CPUParams)
 
 
@@ -217,6 +247,12 @@ class MergeParameters(DefaultSchema):
             """
         },
         dump_default='"TiledXY|2Dseries"',
+    )
+
+    algorithm = Str(
+        required=False,
+        metadata={"description": "Algorithm used for blending"},
+        dump_default="SINBLEND",
     )
 
     cpu_params = Nested(CPUParams)

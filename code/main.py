@@ -1,11 +1,11 @@
 """
 Main function to execute dataset processing
 """
+import logging
 import sys
 
 from terastitcher_module import terastitcher
 from utils import utils
-import logging
 
 
 def main() -> None:
