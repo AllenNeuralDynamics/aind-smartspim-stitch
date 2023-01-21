@@ -381,7 +381,7 @@ class PipelineParams(ArgSchema):
     regex_channels = Str(
         required=False,
         metadata={"description": "Path where the data will be saved"},
-        dump_default="Ex_([0-9]*)_Em_([0-9]*)$",
+        dump_default="(Ex_[0-9]*_Em_[0-9]*)",
     )
 
     pyscripts_path = InputDir(
