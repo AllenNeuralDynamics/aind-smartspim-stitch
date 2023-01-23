@@ -20,7 +20,7 @@ from argschema.fields import (
 )
 from argschema.schemas import DefaultSchema
 from marshmallow import validate
-from zarr_converter import OmeZarrParams
+from zarr_converter.zarr_converter_params import OmeZarrParams
 
 
 class InputFileBasedLinux(InputFile):
@@ -172,7 +172,7 @@ class AlignParameters(DefaultSchema):
         dump_default="MIPNCC",
     )
 
-    search_region_y = Int(
+    sV = Int(
         required=False,
         metadata={
             "description": "Radius of search (pixels) for displacements in Y"
@@ -180,7 +180,7 @@ class AlignParameters(DefaultSchema):
         dump_default=25,
     )
 
-    search_region_x = Int(
+    sH = Int(
         required=False,
         metadata={
             "description": "Radius of search (pixels) for displacements in X"
@@ -188,7 +188,7 @@ class AlignParameters(DefaultSchema):
         dump_default=25,
     )
 
-    search_region_z = Int(
+    sD = Int(
         required=False,
         metadata={
             "description": "Radius of search (pixels) for displacements in Z"

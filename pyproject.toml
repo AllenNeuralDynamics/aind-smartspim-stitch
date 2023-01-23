@@ -21,19 +21,19 @@ dependencies = [
     'pandas',
     'sphinx',
     'tifffile < 2022.4.22',
-    'xarray_multiscale',
-    'argschema',
+    'xarray_multiscale==1.1.0',
+    'argschema==3.0.4',
     'mpi4py',
     'bokeh==2.4.2',
-    'pint',
-    'dask[distributed]',
+    'pint==0.20.1',
+    'dask[distributed]==2022.11.1',
     'aind-ng-link@git+https://github.com/AllenNeuralDynamics/aind-ng-link.git',
     'pystripe@git+https://github.com/AllenNeuralDynamics/pystripe.git@feature/output_format',
     'ome-zarr@git+https://github.com/AllenNeuralDynamics/ome-zarr-py.git@feature/delayed-dask-poc',
     'aicsimageio@git+https://github.com/camilolaiton/aicsimageio.git@feature/zarrwriter-multiscales-daskjobs',
     'aind-data-schema',
-    'xmltodict',
-    'natsort'
+    'xmltodict==0.13.0',
+    'natsort==8.2.0'
 ]
 
 [project.optional-dependencies]

@@ -5,12 +5,9 @@ set -ex
 
 # Activate stitch env to solve argschema python version bug
 source /opt/conda/etc/profile.d/conda.sh
-conda activate stitch
+conda activate smart_stitcher
 
 # Split parameters for argschema
 # provide preprocessed_data path. The module adds timestamp and suffix '_preprocessed'
 # provide output_data path. The module adds timestamp and suffix '_stitched'
 python -u main.py --input_data /data/"$1"/SmartSPIM --preprocessed_data /scratch/"$1" --output_data /scratch/"$1" --pyscripts_path /home/TeraStitcher/src/utils/pyscripts --visualization.ng_base_url https://neuroglancer-demo.appspot.com --visualization.mount_service s3 --visualization.bucket_path "$2"
-
-# Copying processed dataset to aws
-# aws s3 cp --recursive /root/capsule/results s3://$4
