@@ -20,9 +20,9 @@ from aind_data_schema.processing import DataProcess
 from argschema import ArgSchemaParser
 from ng_link import NgState
 from utils import utils
-from zarr_converter import ZarrConverter
+from zarr_converter.zarr_converter import ZarrConverter
 
-from .params import PipelineParams, get_default_config
+from params import PipelineParams, get_default_config
 
 logging.basicConfig(
     level=logging.DEBUG,

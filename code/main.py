@@ -4,8 +4,8 @@ Main function to execute dataset processing
 import logging
 import sys
 
-from terastitcher_module import terastitcher
-from utils import utils
+from src.terastitcher_module import terastitcher
+from src.terastitcher_module.utils import utils
 
 
 def main() -> None:
@@ -29,6 +29,7 @@ def main() -> None:
     logger.setLevel(logging.INFO)
 
     logger.info(f"Bucket path: {bucket_path} - Output path: {output_folder}")
+    exit()
     # Copying output to bucket
     dataset_name = output_folder.replace("/scratch/", "")
     s3_path = f"s3://{bucket_path}/{dataset_name}"

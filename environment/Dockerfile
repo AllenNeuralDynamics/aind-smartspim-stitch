@@ -9,11 +9,11 @@ COPY git-askpass /
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     build-essential \
-    cmake=3.16.3-1ubuntu1 \
+    cmake \
     git \
-    libopenmpi-dev=4.0.3-0ubuntu1 \
-    software-properties-common=0.99.9.8 \
-    wget=1.20.3-1ubuntu2 \
+    libopenmpi-dev \
+    software-properties-common \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 RUN cd /home && git clone --single-branch --branch fix/data_paths https://github.com/camilolaiton/TeraStitcher.git && \
@@ -45,14 +45,30 @@ RUN cd /home && \
 ENV PATH "/home/apache-maven-3.8.7/bin:$PATH"
 ENV PATH "/home/zulu8.62.0.19-ca-jdk8.0.332-linux_x64/bin:$PATH"
 
-RUN echo "localhost slots=70" > /home/hostfile && \
-    git clone --branch code_ocean https://github.com/AllenNeuralDynamics/terastitcher-module /root/capsule/code/terastitcher-module
+RUN echo "localhost slots=70" > /home/hostfile
 
 # Creating a new conda environment for argschema python bug
-RUN conda create -n stitch python=3.8
+RUN conda create -n smart_stitcher python=3.8
 
 # Make RUN commands use the new environment:
-SHELL ["conda", "run", "-n", "stitch", "/bin/bash", "-c"]
+SHELL ["conda", "run", "-n", "smart_stitcher", "/bin/bash", "-c"]
 RUN conda install -c conda-forge awscli
-RUN pip install -U --no-cache-dir git+https://github.com/AllenNeuralDynamics/terastitcher-module.git
+
+RUN pip install -U --no-cache-dir \
+    'tifffile < 2022.4.22' \
+    xarray_multiscale==1.1.0 \
+    argschema==3.0.4 \
+    mpi4py \
+    bokeh==2.4.2 \
+    zarr==2.13.3 \
+    pint==0.20.1 \
+    dask[distributed]==2022.11.1 \
+    git+https://github.com/AllenNeuralDynamics/aind-ng-link.git \
+    git+https://github.com/AllenNeuralDynamics/pystripe.git@feature/output_format \
+    git+https://github.com/AllenNeuralDynamics/ome-zarr-py.git@feature/delayed-dask-poc \
+    aicsimageio@git+https://github.com/camilolaiton/aicsimageio.git@feature/zarrwriter-multiscales-daskjobs \
+    aind-data-schema \
+    xmltodict==0.13.0 \
+    natsort==8.2.0
+
 # ENV MALLOC_TRIM_THRESHOLD_ 0
