@@ -20,7 +20,7 @@ from argschema.fields import (
 )
 from argschema.schemas import DefaultSchema
 from marshmallow import validate
-from zarr_converter.zarr_converter_params import OmeZarrParams
+from .zarr_converter.zarr_converter_params import OmeZarrParams
 
 
 class InputFileBasedLinux(InputFile):
