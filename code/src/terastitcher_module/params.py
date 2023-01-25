@@ -228,7 +228,7 @@ class MergeParameters(DefaultSchema):
             """
         },
         cli_as_single_argument=True,
-        dump_default=[20000, 20000, 0],
+        dump_default=[250, 250, 250],
     )
 
     volout_plugin = Str(
@@ -288,7 +288,7 @@ class PystripeParams(DefaultSchema):
         metadata={
             "description": "number of cpu workers to use in batch processing"
         },
-        dump_default=8,
+        dump_default=16,
     )
 
     output_format = Str(
@@ -314,8 +314,9 @@ class Visualization(DefaultSchema):
     """
 
     ng_base_url = Str(
-        required=True,
+        required=False,
         metadata={"description": "Base url for neuroglancer web app"},
+        dump_default="https://neuroglancer-demo.appspot.com",
     )
 
     mount_service = Str(
