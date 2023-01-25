@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import List, Optional, Union
 
 import xmltodict
+from __init__ import __version__
 from aind_data_schema.processing import DataProcess
 from argschema import ArgSchemaParser
 from ng_link import NgState
@@ -119,6 +120,10 @@ class TeraStitcher:
         # flake8: noqa: E501
         self.data_processes = {
             "tools": {
+                "terastitcher-module": {
+                    "version": __version__,
+                    "codeURL": "https://github.com/AllenNeuralDynamics/terastitcher-module",
+                },
                 "terastitcher": {
                     "version": "1.11.10",
                     "codeURL": "https://github.com/camilolaiton/TeraStitcher.git@fix/data_paths",
