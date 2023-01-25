@@ -9,11 +9,8 @@ from datetime import date, datetime, time
 from pathlib import Path
 from typing import Any, List, Optional, Union
 
-from aind_data_schema import (
-    DerivedDataDescription,
-    Processing,
-    RawDataDescription,
-)
+from aind_data_schema import (DerivedDataDescription, Processing,
+                              RawDataDescription)
 
 # IO types
 PathLike = Union[str, Path]

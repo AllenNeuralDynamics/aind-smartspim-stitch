@@ -8,18 +8,11 @@ from pathlib import Path
 
 import yaml
 from argschema import ArgSchema, ArgSchemaParser
-from argschema.fields import (
-    Boolean,
-    Float,
-    InputDir,
-    InputFile,
-    Int,
-    List,
-    Nested,
-    Str,
-)
+from argschema.fields import (Boolean, Float, InputDir, InputFile, Int, List,
+                              Nested, Str)
 from argschema.schemas import DefaultSchema
 from marshmallow import validate
+
 from .zarr_converter.zarr_converter_params import OmeZarrParams
 
 

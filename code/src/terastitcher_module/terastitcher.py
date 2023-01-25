@@ -19,10 +19,10 @@ import xmltodict
 from aind_data_schema.processing import DataProcess
 from argschema import ArgSchemaParser
 from ng_link import NgState
-from .utils import utils
-from .zarr_converter.zarr_converter import ZarrConverter
 
 from .params import PipelineParams, get_default_config
+from .utils import utils
+from .zarr_converter.zarr_converter import ZarrConverter
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -1252,7 +1252,7 @@ class TeraStitcher:
             name = Path(channel_path["@xml_fname"]).parts[-1]
             name = re.search(self.__channel_regex, name).group()
             channels.append(name)
-        
+
         return channels
 
     def stitch_multiple_channels(
