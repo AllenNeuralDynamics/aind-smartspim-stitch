@@ -562,8 +562,6 @@ def channel_parallel_reading(
             channel_name=channel_paths[channel_idx],
             start_slice=0,
             end_slice=n_images,
-            chunksize=sample_img.chunksize,
-            dtype=sample_img.dtype,
         )[0]
         print(f"No need for parallel reading... {dask_array}")
 
@@ -587,8 +585,6 @@ def channel_parallel_reading(
                 "channel_name": channel_paths[channel_idx],
                 "start_slice": start_slice,
                 "end_slice": end_slice,
-                "chunksize": sample_img.chunksize,
-                "dtype": sample_img.dtype,
             }
 
             args.append(arg_dict)
@@ -1045,19 +1041,12 @@ class ZarrConverter:
         n_channels = image.shape[1]
 
         # Getting scale axis
-        scale_axis = []
-        for axis in range(
-            len(image[0].shape) - len(writer_config["scale_factor"])
-        ):
-            scale_axis.append(1)
-
-        scale_axis.extend(list(writer_config["scale_factor"]))
-        scale_axis = tuple(scale_axis)
+        scale_axis = tuple(list(writer_config["scale_factor"]))
 
         # Writing multiscale image
         with performance_report(filename="dask-report.html"):
             for idx in range(n_channels):
-                channel_img = pad_array_n_d(image[0][idx])
+                channel_img = image[0][idx]
 
                 pyramid_data = self.compute_pyramid(
                     data=channel_img,
@@ -1068,9 +1057,9 @@ class ZarrConverter:
 
                 # Getting 5D
                 pyramid_data = [
-                    pad_array_n_d(pyramid.data) for pyramid in pyramid_data
+                    pad_array_n_d(pyramid) for pyramid in pyramid_data
                 ]
-                print(f"Pyramid {channel_img}: ", pyramid_data)
+                print(f"Pyramid {self.channels[idx]}: ", pyramid_data)
 
                 for pyramid in pyramid_data:
                     print(

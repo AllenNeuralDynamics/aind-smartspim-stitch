@@ -430,7 +430,9 @@ def generate_data_description(
 
 
 def generate_processing(
-    data_processes: List[dict], dest_processing: PathLike
+    data_processes: List[dict],
+    dest_processing: PathLike,
+    pipeline_version: str,
 ) -> None:
     """
     Generates data description for the output folder.
@@ -443,12 +445,15 @@ def generate_processing(
     dest_processing: PathLike
         Path where the processing file will be placed.
 
+    pipeline_version: str
+        Terastitcher pipeline version
+
     """
 
     # flake8: noqa: E501
     processing = Processing(
         pipeline_url="https://github.com/AllenNeuralDynamics/terastitcher-module",
-        pipeline_version="0.0.1",
+        pipeline_version=pipeline_version,
         data_processes=data_processes,
     )
 

@@ -16,18 +16,7 @@ RUN apt-get update \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-RUN cd /home && git clone --single-branch --branch fix/data_paths https://github.com/camilolaiton/TeraStitcher.git && \
-    mkdir build-terastitcher && \
-    cd build-terastitcher && \
-    cmake -DWITH_UTILITY_MODULE_teraconverter=ON -DWITH_UTILITY_MODULE_mdatagenerator=ON -DWITH_UTILITY_MODULE_volumeconverter=ON -DWITH_UTILITY_MODULE_mergedisplacements=ON ../TeraStitcher/src && \
-    make -j `nproc` && \
-    # need ownership of /usr/local to install without sudo
-    # chown -R ${USER}:${USER} /usr/local/ && \
-    make install && \
-    pip install --upgrade autopep8 && \
-    autopep8 -i ../TeraStitcher/src/utils/pyscripts/*.py
-
-# ENV PATH "$PATH:/home/TeraStitcher-portable-1.11.10-with-BF-Linux"
+ENV PATH "$PATH:/data/TeraStitcher-portable-1.11.10-with-BF-Linux"
 ENV LD_LIBRARY_PATH "$LD_LIBRARY_PATH:/opt/java/openjdk/lib/server"
 
 # Java setup
@@ -62,13 +51,14 @@ RUN pip install -U --no-cache-dir \
     bokeh==2.4.2 \
     zarr==2.13.3 \
     pint==0.20.1 \
+    aind-data-schema==0.9.5 \
+    xmltodict==0.13.0 \
+    natsort==8.2.0 \
+    pims==0.6.1 \
     dask[distributed]==2022.11.1 \
     git+https://github.com/AllenNeuralDynamics/aind-ng-link.git \
     git+https://github.com/AllenNeuralDynamics/pystripe.git@feature/output_format \
     git+https://github.com/AllenNeuralDynamics/ome-zarr-py.git@feature/delayed-dask-poc \
-    aicsimageio@git+https://github.com/camilolaiton/aicsimageio.git@feature/zarrwriter-multiscales-daskjobs \
-    aind-data-schema \
-    xmltodict==0.13.0 \
-    natsort==8.2.0
+    aicsimageio@git+https://github.com/camilolaiton/aicsimageio.git@feature/zarrwriter-multiscales-daskjobs
 
 # ENV MALLOC_TRIM_THRESHOLD_ 0

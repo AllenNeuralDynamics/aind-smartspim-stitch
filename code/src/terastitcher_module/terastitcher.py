@@ -16,11 +16,11 @@ from pathlib import Path
 from typing import List, Optional, Union
 
 import xmltodict
-from __init__ import __version__
 from aind_data_schema.processing import DataProcess
 from argschema import ArgSchemaParser
 from ng_link import NgState
 
+from .__init__ import __version__
 from .params import PipelineParams, get_default_config
 from .utils import utils
 from .zarr_converter.zarr_converter import ZarrConverter
@@ -1733,6 +1733,7 @@ class TeraStitcher:
         utils.generate_processing(
             self.data_processes["steps"],
             str(self.__output_jsons_path.joinpath("processing.json")),
+            __version__,
         )
 
 
