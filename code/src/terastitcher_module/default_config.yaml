@@ -27,7 +27,7 @@ align:
   cpu_params:
     estimate_processes: false
     image_depth: 4200
-    number_processes: 5
+    number_processes: 16
     hostfile: "/home/hostfile"
     additional_params:
     - use-hwthread-cpus

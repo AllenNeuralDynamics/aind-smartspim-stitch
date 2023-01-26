@@ -758,7 +758,7 @@ def get_sample_img(directory_structure: dict) -> ArrayLike:
 
                     if sample_img.chunksize != sample_img_2.chunksize:
                         print("Changes ", sample_img, sample_img_2)
-                        return sample_img_2
+                        return sample_img
 
     return sample_img
 

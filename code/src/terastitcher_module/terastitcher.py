@@ -775,7 +775,13 @@ class TeraStitcher:
 
         parameters = utils.helper_build_param_value_command(params)
 
-        cmd = f"{parallel_command} {parameters}"  # > {self.xmls_path}/step6par.txt"
+        additional_params = ""
+        if len(params["additional_params"]):
+            additional_params = utils.helper_additional_params_command(
+                params["additional_params"]
+            )
+
+        cmd = f"{parallel_command} {parameters} {additional_params}"  # > {self.xmls_path}/step6par.txt"
         cmd = cmd.replace("--s=", "-s=")
         cmd = cmd.replace("--d=", "-d=")
 
@@ -1386,6 +1392,7 @@ class TeraStitcher:
             "width": config["merge"]["slice_extent"][0],
             "height": config["merge"]["slice_extent"][1],
             "depth": config["merge"]["slice_extent"][2],
+            "additional_params": ["fixed_tiling"]
             # 'clist':'0'
         }
 
