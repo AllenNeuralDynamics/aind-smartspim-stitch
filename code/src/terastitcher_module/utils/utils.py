@@ -130,15 +130,19 @@ def execute_command(config: dict) -> None:
         if the command could not be executed (Returned non-zero status).
 
     """
+    # Command is not executed when info
+    # is True
+    if config["info"]:
+        config["logger"].info(config["command"])
+    else:
+        for out in execute_command_helper(
+            config["command"], config["verbose"], config["stdout_log_file"]
+        ):
+            if len(out):
+                config["logger"].info(out)
 
-    for out in execute_command_helper(
-        config["command"], config["verbose"], config["stdout_log_file"]
-    ):
-        if len(out):
-            config["logger"].info(out)
-
-        if config["exists_stdout"]:
-            save_string_to_txt(out, config["stdout_log_file"], "a")
+            if config["exists_stdout"]:
+                save_string_to_txt(out, config["stdout_log_file"], "a")
 
 
 def check_path_instance(obj: object) -> bool:

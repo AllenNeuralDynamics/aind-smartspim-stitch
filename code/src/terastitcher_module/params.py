@@ -106,6 +106,12 @@ class ImportParameters(DefaultSchema):
         dump_default=2,
     )
 
+    mdata_bin = Str(
+        required=False,
+        metadata={"description": "Location of the metadata files"},
+        dump_default="/scratch",
+    )
+
     additional_params = List(
         Str(), required=False, cli_as_single_argument=True
     )
@@ -255,6 +261,12 @@ class PystripeParams(DefaultSchema):
     """
     Parameters for destriping microscopic images
     """
+
+    execute = Boolean(
+        required=False,
+        matadata={"description": "Executes pystripe"},
+        dump_default=True,
+    )
 
     # input and output are already defined in PipelineParams Class
     sigma1 = List(
@@ -417,6 +429,17 @@ class PipelineParams(ArgSchema):
     )
 
     visualization = Nested(Visualization, required=True)
+
+    info = Boolean(
+        required=False,
+        metadata={
+            "description": """
+            Set True if you want to output the
+            execution commands
+            """
+        },
+        dump_default=False,
+    )
 
 
 def get_default_config(filename: str = "default_config.yaml") -> None:

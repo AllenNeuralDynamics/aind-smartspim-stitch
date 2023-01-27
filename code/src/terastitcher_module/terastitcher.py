@@ -461,6 +461,8 @@ class TeraStitcher:
         volume_input = f"--volin={input_path}"
 
         output_path = self.xmls_path.joinpath(f"xml_import_{channel}.xml")
+        metadata_path = params["mdata_bin"]
+        params["mdata_bin"] = f"{metadata_path}/mdata_{channel}.bin"
 
         # changing output path to fuse path for multichannel fusing
         if fuse_path is not None:
@@ -742,7 +744,7 @@ class TeraStitcher:
 
         return cmd
 
-    def merge_multivolume_cmd(self, params: dict) -> str:
+    def merge_multivolume_all_channels_cmd(self, params: dict) -> str:
         """
         Builds the terastitcher's multivolume merge command based
         on a provided configuration dictionary. It outputs a json
@@ -1305,7 +1307,9 @@ class TeraStitcher:
                 continue
 
             exec_config["command"] = self.import_step_cmd(
-                config["import_data"], channels[idx], fuse_path=fuse_xmls
+                config["import_data"].copy(),
+                channels[idx],
+                fuse_path=fuse_xmls,
             )
             self.logger.info(f"Import step for {channels[idx]} channel...")
 
@@ -1396,7 +1400,12 @@ class TeraStitcher:
             # 'clist':'0'
         }
 
-        exec_config["command"] = self.merge_multivolume_cmd(merge_config)
+        # Merge multiple channels at the same time
+        # Optimal for datasets smaller than ≈700 GBs
+        # Decreasing the # of processes
+        exec_config["command"] = self.merge_multivolume_all_channels_cmd(
+            merge_config
+        )
 
         start_date_time = datetime.now()
         utils.execute_command(exec_config)
@@ -1419,6 +1428,11 @@ class TeraStitcher:
                 notes="Fusing multichannel volume",
             )
         )
+
+        # Ignore reordering channels if info
+        # is tr
+        if exec_config["info"]:
+            return None
 
         # Read channel output order
         new_channel_order = self.__get_multivolume_channel_order(
@@ -1445,7 +1459,7 @@ class TeraStitcher:
 
         # Step 1
         exec_config["command"] = self.import_step_cmd(
-            config["import_data"], channel
+            config["import_data"].copy(), channel
         )
         self.logger.info("Import step...")
 
@@ -1671,6 +1685,7 @@ class TeraStitcher:
             "logger": self.logger,
             # Checking if stdout log file exists
             "exists_stdout": os.path.exists(self.stdout_log_file),
+            "info": config["info"],
         }
 
         if self.preprocessing:
@@ -1696,6 +1711,11 @@ class TeraStitcher:
             self.logger.info(f"Processing single channel {channels[0]}")
 
             self.stitch_single_channels(config, exec_config, channels[0])
+
+        # Ignoring OMEZarr conversion
+        # if info is True
+        if config["info"]:
+            return None
 
         if config["clean_output"]:
             utils.delete_folder(
@@ -1849,15 +1869,21 @@ def execute_terastitcher(
 
     else:
 
-        try:
-            config_teras["preprocessing_steps"]["pystripe"]["input"] = Path(
-                input_data
-            )
-            config_teras["preprocessing_steps"]["pystripe"]["output"] = Path(
-                preprocessed_data
-            ).joinpath("destriped")
-        except KeyError:
+        # Check if we want to execute pystripe
+        if not config_teras["preprocessing_steps"]["pystripe"]["execute"]:
             config_teras["preprocessing_steps"] = None
+
+        else:
+
+            try:
+                config_teras["preprocessing_steps"]["pystripe"][
+                    "input"
+                ] = Path(input_data)
+                config_teras["preprocessing_steps"]["pystripe"][
+                    "output"
+                ] = Path(preprocessed_data).joinpath("destriped")
+            except KeyError:
+                config_teras["preprocessing_steps"] = None
 
         terastitcher_tool = TeraStitcher(
             input_data=input_data,

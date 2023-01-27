@@ -1,13 +1,16 @@
 metadata_version: 1
-name: SmartSPIM Stitcher
-description: A tool for fast automatic 3D-stitching of teravoxel-sized microscopy images using cloud computing resources and TeraStitcher.
+name: SmartSPIM Stitching Capsule
+description: A tool for fast automatic 3D-stitching of teravoxel-sized microscopy
+  images using cloud computing resources and TeraStitcher.
+tags:
+- SmartSPIM
 authors:
+- name: Camilo Laiton
+  affiliations:
+  - name: Allen Institute for Neural Dynamics
 - name: David Feng
   affiliations:
   - name: Allen Institute for Neural Dynamics
 - name: Sharmishtaa Seshamani
-  affiliations:
-  - name: Allen Institute for Neural Dynamics
-- name: Camilo Laiton
   affiliations:
   - name: Allen Institute for Neural Dynamics
