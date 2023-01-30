@@ -39,16 +39,16 @@ merge:
   cpu_params:
     estimate_processes: false
     image_depth: 1000
-    number_processes: 16
+    number_processes: 3
     hostfile: "/home/hostfile"
     additional_params:
     - use-hwthread-cpus
     - allow-run-as-root
   volout_plugin: '"TiledXY|2Dseries"'
   slice_extent:
-  - 20000
-  - 20000
-  - 1
+  - 250
+  - 250
+  - 250
 ome_zarr_params:
   codec: zstd
   clevel: 3

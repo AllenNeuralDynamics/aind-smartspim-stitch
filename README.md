@@ -1,8 +1,11 @@
 # TeraStitcher Module
+---
 
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
+[![Programming Languages](https://img.shields.io/github/languages/count/AllenNeuralDynamics/terastitcher-module)](https://github.com/AllenNeuralDynamics/terastitcher-module)
+![Code Style](https://img.shields.io/badge/code%20style-black-black)
 
-Striping and stitching module for 3D teravoxel-sized microscopy images using  [TeraStitcher](https://github.com/abria/TeraStitcher). This module currently supports Windows and Linux based OS as well as VM in GCloud using GSCFUSE.
+Destriping, stitching and OMEZarr conversion module for lightsheet microscopic images using  [Pystripe](https://github.com/chunglabmit/pystripe), [TeraStitcher](https://github.com/abria/TeraStitcher) and [Aicsimageio](https://github.com/AllenCellModeling/aicsimageio). This module currently supports Windows and Linux OS, it can also be configured to work in a VM in GCloud using GSCFUSE but it's mainly intended to work with Code Ocean and AWS.
 
 ## Installation on GCP VertexAI
 You need to create a User-Managed Notebook with `Python 3`. If you want to add GPU processing, please select `Python 3 (CUDA Toolkit 11.0)` or with a superior available Toolkit. We recommend a GPU P100 device or Titan V(olta) if available.
@@ -57,14 +60,22 @@ $ cd terastitcher-module
 $ pip install -e .
 ```
 
+You can also use the **Dockerfile** placed inside the `environment` folder for installation purposes.
+
 Afterwards, set --pyscripts_path parameter to the directory where Parastitcher and paraconverter python scripts are. You can do this in the command line or directly in the code. It should be located in `YOUR_DIRECTORY/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts`. (place both scripts there).
 
-Additionally, there are some known bugs related to the input parameters in terastitcher's python scripts. Some of them were solved in **https://github.com/camilolaiton/TeraStitcher/tree/fix/data_paths**. You might want to update **parastitcher.py** and **paraconverter.py** files with the ones provided here.
+Additionally, there are some known bugs related to the input parameters in terastitcher's python scripts. Some of them were solved in **https://github.com/camilolaiton/TeraStitcher/tree/fix/data_paths**. You might want to update **parastitcher.py** and **paraconverter.py** files with the ones provided there. It is important to mention that you might want to fix python format problems before using these scripts. You can do that by using the following command:
+```
+$ pip install --upgrade autopep8
+$ autopep8 -i YOUR_DIRECTORY/TeraStitcher-portable-1.11.10-with-BF-Linux/pyscripts/*.py
+```
 
 ## Parameters
 This module uses the following principal parameters:
 - --input_data: Path where the data is located. If it's located in a GCS bucket, please refer to it such as: `gs://bucket-name/dataset_name/image_folder`.
+- --preprocessed_data: Path where the intermediate files will be stored. This folder is deleted if the **--clean_output** flag is set to True. If it's located in a GCS bucket, please refer to it such as: `gs://bucket-name/dataset_name/intermediate_folder_name`.
 - --output_data: Output path. If it's located in a GCS bucket, please refer to it such as: `gs://bucket-name/output_path`.
+- --pyscripts_path: Path where the python parallel scripts are stored (Parastitcher.py and paraconverter.py).
 
 By default, this modules loads the parameters used in the stitching process based on the GUI software developed in lab 440. To check the default values, please execute:
 ```
@@ -120,11 +131,29 @@ The align and merge steps are computationally expensive. Therefore, we added cpu
 }
 ```
 
+You can set the new parameters by the command line or modifying the `default_config.yaml` placed in `code/src/terastitcher_module`. It is worth mentioning that these parameters work well with our SmartSPIM datasets and our machine configuration (**Ubuntu 20.04, 16 cores and 128 GB RAM**).
+
 ### Execution example
+In a local machine:
 ```
 $ cd ~
-$ python terastitcher-module/code/src/terastitcher.py --input_data gs://bucket-name/dataset/images --output_data gs://bucket-name/dataset_stitched
+$ python terastitcher-module/code/src/terastitcher.py --input_data path/to/dataset --preprocessed_data path/to/intermediate/data --output_data path/to/output/zarr
 ```
+
+In a code ocean capsule:
+```
+$ cd ~
+$ python main.py --input_data path/to/dataset --preprocessed_data path/to/intermediate/data --output_data path/to/output/zarr
+```
+
+In VertexAI:
+```
+$ cd ~
+$ python main.py --input_data gs://bucket-name/dataset/images --preprocessed_data gs://bucket-name/path/to/intermediate/data --output_data gs://bucket-name/dataset_stitched
+```
+
+## Documentation
+You can access the documentation for this module [here]().
 
 ## TeraStitcher Documentation
 You can download TeraStitcher documentation from [here](https://unicampus365-my.sharepoint.com/:b:/g/personal/g_iannello_unicampus_it/EYT9KbapjBdGvTAD2_MdbKgB5gY_h9rlvHzqp6mUNqVhIw?e=s8GrFC)

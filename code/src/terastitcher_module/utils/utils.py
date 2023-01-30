@@ -9,11 +9,8 @@ from datetime import date, datetime, time
 from pathlib import Path
 from typing import Any, List, Optional, Union
 
-from aind_data_schema import (
-    DerivedDataDescription,
-    Processing,
-    RawDataDescription,
-)
+from aind_data_schema import (DerivedDataDescription, Processing,
+                              RawDataDescription)
 
 # IO types
 PathLike = Union[str, Path]
@@ -133,15 +130,19 @@ def execute_command(config: dict) -> None:
         if the command could not be executed (Returned non-zero status).
 
     """
+    # Command is not executed when info
+    # is True
+    if config["info"]:
+        config["logger"].info(config["command"])
+    else:
+        for out in execute_command_helper(
+            config["command"], config["verbose"], config["stdout_log_file"]
+        ):
+            if len(out):
+                config["logger"].info(out)
 
-    for out in execute_command_helper(
-        config["command"], config["verbose"], config["stdout_log_file"]
-    ):
-        if len(out):
-            config["logger"].info(out)
-
-        if config["exists_stdout"]:
-            save_string_to_txt(out, config["stdout_log_file"], "a")
+            if config["exists_stdout"]:
+                save_string_to_txt(out, config["stdout_log_file"], "a")
 
 
 def check_path_instance(obj: object) -> bool:
@@ -433,7 +434,9 @@ def generate_data_description(
 
 
 def generate_processing(
-    data_processes: List[dict], dest_processing: PathLike
+    data_processes: List[dict],
+    dest_processing: PathLike,
+    pipeline_version: str,
 ) -> None:
     """
     Generates data description for the output folder.
@@ -446,12 +449,15 @@ def generate_processing(
     dest_processing: PathLike
         Path where the processing file will be placed.
 
+    pipeline_version: str
+        Terastitcher pipeline version
+
     """
 
     # flake8: noqa: E501
     processing = Processing(
         pipeline_url="https://github.com/AllenNeuralDynamics/terastitcher-module",
-        pipeline_version="0.0.1",
+        pipeline_version=pipeline_version,
         data_processes=data_processes,
     )
 

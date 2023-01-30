@@ -8,18 +8,11 @@ from pathlib import Path
 
 import yaml
 from argschema import ArgSchema, ArgSchemaParser
-from argschema.fields import (
-    Boolean,
-    Float,
-    InputDir,
-    InputFile,
-    Int,
-    List,
-    Nested,
-    Str,
-)
+from argschema.fields import (Boolean, Float, InputDir, InputFile, Int, List,
+                              Nested, Str)
 from argschema.schemas import DefaultSchema
 from marshmallow import validate
+
 from .zarr_converter.zarr_converter_params import OmeZarrParams
 
 
@@ -111,6 +104,12 @@ class ImportParameters(DefaultSchema):
         required=False,
         matadata={"description": "Voxel size along third axis in microns"},
         dump_default=2,
+    )
+
+    mdata_bin = Str(
+        required=False,
+        metadata={"description": "Location of the metadata files"},
+        dump_default="/scratch",
     )
 
     additional_params = List(
@@ -235,7 +234,7 @@ class MergeParameters(DefaultSchema):
             """
         },
         cli_as_single_argument=True,
-        dump_default=[20000, 20000, 0],
+        dump_default=[250, 250, 250],
     )
 
     volout_plugin = Str(
@@ -262,6 +261,12 @@ class PystripeParams(DefaultSchema):
     """
     Parameters for destriping microscopic images
     """
+
+    execute = Boolean(
+        required=False,
+        matadata={"description": "Executes pystripe"},
+        dump_default=True,
+    )
 
     # input and output are already defined in PipelineParams Class
     sigma1 = List(
@@ -295,7 +300,7 @@ class PystripeParams(DefaultSchema):
         metadata={
             "description": "number of cpu workers to use in batch processing"
         },
-        dump_default=8,
+        dump_default=16,
     )
 
     output_format = Str(
@@ -321,8 +326,9 @@ class Visualization(DefaultSchema):
     """
 
     ng_base_url = Str(
-        required=True,
+        required=False,
         metadata={"description": "Base url for neuroglancer web app"},
+        dump_default="https://neuroglancer-demo.appspot.com",
     )
 
     mount_service = Str(
@@ -423,6 +429,17 @@ class PipelineParams(ArgSchema):
     )
 
     visualization = Nested(Visualization, required=True)
+
+    info = Boolean(
+        required=False,
+        metadata={
+            "description": """
+            Set True if you want to output the
+            execution commands
+            """
+        },
+        dump_default=False,
+    )
 
 
 def get_default_config(filename: str = "default_config.yaml") -> None:

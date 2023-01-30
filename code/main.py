@@ -29,7 +29,7 @@ def main() -> None:
     logger.setLevel(logging.INFO)
 
     logger.info(f"Bucket path: {bucket_path} - Output path: {output_folder}")
-    exit()
+
     # Copying output to bucket
     dataset_name = output_folder.replace("/scratch/", "")
     s3_path = f"s3://{bucket_path}/{dataset_name}"
