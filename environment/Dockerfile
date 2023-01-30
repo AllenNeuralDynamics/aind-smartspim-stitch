@@ -16,7 +16,18 @@ RUN apt-get update \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-ENV PATH "$PATH:/data/TeraStitcher-portable-1.11.10-with-BF-Linux"
+RUN cd /home && git clone --single-branch --branch fix/data_paths https://github.com/camilolaiton/TeraStitcher.git && \
+    mkdir build-terastitcher && \
+    cd build-terastitcher && \
+    cmake -DWITH_UTILITY_MODULE_teraconverter=ON -DWITH_UTILITY_MODULE_mdatagenerator=ON -DWITH_UTILITY_MODULE_volumeconverter=ON -DWITH_UTILITY_MODULE_mergedisplacements=ON ../TeraStitcher/src && \
+    make -j `nproc` && \
+    # need ownership of /usr/local to install without sudo
+    # chown -R ${USER}:${USER} /usr/local/ && \
+    make install && \
+    pip install --upgrade autopep8 && \
+    autopep8 -i ../TeraStitcher/src/utils/pyscripts/*.py
+
+# ENV PATH "$PATH:/data/TeraStitcher-portable-1.11.10-with-BF-Linux"
 ENV LD_LIBRARY_PATH "$LD_LIBRARY_PATH:/opt/java/openjdk/lib/server"
 
 # Java setup

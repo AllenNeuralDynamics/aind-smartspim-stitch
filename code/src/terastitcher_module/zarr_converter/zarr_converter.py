@@ -126,11 +126,11 @@ def read_image_directory_structure(folder_dir: PathLike) -> dict:
     directory_structure = {}
     folder_dir = Path(folder_dir)
 
-    channel_paths = [
+    channel_paths = natsorted([
         folder_dir.joinpath(folder)
         for folder in os.listdir(folder_dir)
         if os.path.isdir(folder_dir.joinpath(folder))
-    ]
+    ])
 
     for channel_idx in range(len(channel_paths)):
         directory_structure[channel_paths[channel_idx]] = {}
@@ -1026,9 +1026,9 @@ class ZarrConverter:
                 "distributed.scheduler.bandwidth": 100000000,
                 # "managed_in_memory",#
                 "distributed.worker.memory.rebalance.measure": "optimistic",
-                "distributed.worker.memory.target": 0.80,  # False,#
-                "distributed.worker.memory.spill": 0.85,  # False,#
-                "distributed.worker.memory.pause": 0.90,  # False,#
+                "distributed.worker.memory.target": False,  # 0.85,
+                "distributed.worker.memory.spill": 0.92,  # False,#
+                "distributed.worker.memory.pause": 0.95,  # False,#
                 "distributed.worker.memory.terminate": 0.98,  # False, #
                 # 'distributed.scheduler.unknown-task-duration': '15m',
                 # 'distributed.scheduler.default-task-durations': '2h',
@@ -1078,10 +1078,13 @@ class ZarrConverter:
                 channel_colors = (
                     [self.channel_colors[idx]] if self.channel_colors else None
                 )
-
+                
+                print(pyramid_data[0].chunksize)
+                
                 dask_jobs = self.writer.write_multiscale(
                     pyramid=pyramid_data,
                     image_name=image_name,
+                    chunks=pyramid_data[0].chunksize,
                     physical_pixel_sizes=self.physical_pixels,
                     channel_names=channel_names,
                     channel_colors=channel_colors,
@@ -1124,7 +1127,7 @@ def main():
             "codec": args["writer"]["codec"],
             "clevel": args["writer"]["clevel"],
         },
-        channels=["CH_1", "CH_2"],
+        channels=["CH_0", "CH_1"],
         physical_pixels=[2.0, 1.8, 1.8],
     )
 
