@@ -39,7 +39,7 @@ merge:
   cpu_params:
     estimate_processes: false
     image_depth: 1000
-    number_processes: 3
+    number_processes: 16
     hostfile: "/home/hostfile"
     additional_params:
     - use-hwthread-cpus
