@@ -1035,16 +1035,27 @@ class ZarrConverter:
             }
         )
 
-        cluster = LocalCluster()
+        n_workers = multiprocessing.cpu_count()
+        threads_per_worker = 1
+        # Using 1 thread since is in single machine.
+        # Avoiding the use of multithreaded due to GIL
+
+        cluster = LocalCluster(
+            n_workers=n_workers,
+            threads_per_worker=threads_per_worker,
+            processes=True,
+            memory_limit='auto'
+        )
         client = Client(cluster)
 
         n_channels = image.shape[1]
 
         # Getting scale axis
         scale_axis = tuple(list(writer_config["scale_factor"]))
-
+        dask_report_file = f"{self.output_data}/dask_report.html"
+        
         # Writing multiscale image
-        with performance_report(filename="dask-report.html"):
+        with performance_report(filename=dask_report_file):
             for idx in range(n_channels):
                 channel_img = image[0][idx]
 

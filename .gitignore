@@ -143,3 +143,4 @@ environment/TeraStitcher-portable-1.11.10-with-BF-Linux.tar.gz
 dask-report.html
 environment/environment.yml
 /data/*.json
+*.ipynb
