@@ -481,7 +481,7 @@ def generate_processing(
 
     # flake8: noqa: E501
     processing = Processing(
-        pipeline_url="https://github.com/AllenNeuralDynamics/terastitcher-module",
+        pipeline_url="https://github.com/AllenNeuralDynamics/aind-smartspim-stitch",
         pipeline_version=pipeline_version,
         data_processes=data_processes,
     )

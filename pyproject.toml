@@ -51,9 +51,9 @@ dev = [
 ]
 
 [project.urls]
-homepage = "https://github.com/AllenNeuralDynamics/terastitcher-module"
-documentation = "https://github.com/AllenNeuralDynamics/terastitcher-module"
-repository = "https://github.com/AllenNeuralDynamics/terastitcher-module"
+homepage = "https://github.com/AllenNeuralDynamics/aind-smartspim-stitch"
+documentation = "https://github.com/AllenNeuralDynamics/aind-smartspim-stitch"
+repository = "https://github.com/AllenNeuralDynamics/aind-smartspim-stitch"
 
 [tool.setuptools.packages.find]
 where = ["code"]

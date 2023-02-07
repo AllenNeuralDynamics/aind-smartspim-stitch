@@ -210,9 +210,9 @@ class TeraStitcher:
         # flake8: noqa: E501
         self.data_processes = {
             "tools": {
-                "terastitcher-module": {
+                "aind-smartspim-stitch": {
                     "version": __version__,
-                    "codeURL": "https://github.com/AllenNeuralDynamics/terastitcher-module",
+                    "codeURL": "https://github.com/AllenNeuralDynamics/aind-smartspim-stitch",
                 },
                 "terastitcher": {
                     "version": "1.11.10",
