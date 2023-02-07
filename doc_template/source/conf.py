@@ -10,7 +10,7 @@ import sys
 
 from pygit2 import Repository
 
-sys.path.insert(0, os.path.abspath("../../src"))
+sys.path.insert(0, os.path.abspath("../../code"))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 head = Repository(pathlib.Path.cwd())
@@ -26,8 +26,8 @@ release = "0.1"
 extensions = [
     "sphinx.ext.duration",
     "sphinx.ext.doctest",
-    "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
+    "sphinx.ext.autodoc",
 ]
 templates_path = ["_templates"]
 exclude_patterns = []
@@ -36,9 +36,14 @@ exclude_patterns = []
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "alabaster"
+html_theme = "furo"
 html_static_path = ["_static"]
-
+html_title = "aind-smartspim-stitching"
+html_favicon = "_static/favicon.ico"
+html_theme_options = {
+    "light_logo": "light-logo.svg",
+    "dark_logo": "dark-logo.svg",
+}
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
 html_show_sphinx = False

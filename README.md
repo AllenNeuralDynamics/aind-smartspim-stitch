@@ -1,4 +1,4 @@
-# TeraStitcher Module
+# aind-smartspim-stitch
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
@@ -131,7 +131,7 @@ The align and merge steps are computationally expensive. Therefore, we added cpu
 }
 ```
 
-You can set the new parameters by the command line or modifying the `default_config.yaml` placed in `code/src/terastitcher_module`. It is worth mentioning that these parameters work well with our SmartSPIM datasets and our machine configuration (**Ubuntu 20.04, 16 cores and 128 GB RAM**).
+You can set the new parameters by the command line or modifying the `default_config.yaml` placed in `code/src/aind_smartspim_stitch`. It is worth mentioning that these parameters work well with our SmartSPIM datasets and our machine configuration (**Ubuntu 20.04, 16 cores and 128 GB RAM**).
 
 ### Execution example
 In a local machine:

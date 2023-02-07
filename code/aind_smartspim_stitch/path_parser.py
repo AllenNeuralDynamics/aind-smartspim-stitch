@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from typing import List, Union
 
-from utils import utils
+from .utils import utils
 
 PathLike = Union[str, Path]
 

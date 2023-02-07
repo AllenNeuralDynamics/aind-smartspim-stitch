@@ -4,8 +4,7 @@ Main function to execute dataset processing
 import logging
 import sys
 
-from src.terastitcher_module import terastitcher
-from src.terastitcher_module.utils import utils
+from aind_smartspim_stitch import terastitcher, utils
 
 
 def main() -> None:

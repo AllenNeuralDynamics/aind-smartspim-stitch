@@ -3,7 +3,7 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "terastitcher_module"
+name = "aind_smartspim_stitch"
 description = "Striping and stitching module for 3D teravoxel-sized microscopy images"
 license = {text = "MIT"}
 requires-python = ">=3.8"
@@ -31,9 +31,10 @@ dependencies = [
     'pystripe@git+https://github.com/AllenNeuralDynamics/pystripe.git@feature/output_format',
     'ome-zarr@git+https://github.com/AllenNeuralDynamics/ome-zarr-py.git@feature/delayed-dask-poc',
     'aicsimageio@git+https://github.com/camilolaiton/aicsimageio.git@feature/zarrwriter-multiscales-daskjobs',
-    'aind-data-schema',
+    'aind-data-schema==0.9.5',
     'xmltodict==0.13.0',
-    'natsort==8.2.0'
+    'natsort==8.2.0',
+    'pims==0.6.1'
 ]
 
 [project.optional-dependencies]
@@ -45,7 +46,8 @@ dev = [
     'isort',
     'Sphinx',
     'pygit2',
-    'parameterized'
+    'parameterized',
+    'furo'
 ]
 
 [project.urls]
@@ -54,10 +56,10 @@ documentation = "https://github.com/AllenNeuralDynamics/terastitcher-module"
 repository = "https://github.com/AllenNeuralDynamics/terastitcher-module"
 
 [tool.setuptools.packages.find]
-where = ["code/src"]
+where = ["code"]
 
 [tool.setuptools.dynamic]
-version = {attr = "terastitcher_module.__version__"}
+version = {attr = "aind_smartspim_stitch.__version__"}
 readme = {file = ["README.md"]}
 
 [tool.black]
@@ -83,7 +85,7 @@ exclude = '''
 
 [tool.coverage.run]
 omit = ["*__init__*"]
-source = ["terastitcher_module", "ng_link", "utils", "zarr_converter", "tests"]
+source = ["aind_smartspim_stitch", "utils", "zarr_converter", "tests"]
 
 [tool.coverage.report]
 exclude_lines = ["if __name__ == .__main__.:"]

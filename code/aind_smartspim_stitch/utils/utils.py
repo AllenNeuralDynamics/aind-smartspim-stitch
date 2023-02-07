@@ -22,13 +22,16 @@ def create_folder(dest_dir: PathLike, verbose: Optional[bool] = False) -> None:
 
     Parameters
     ------------------------
+
     dest_dir: PathLike
         Path where the folder will be created if it does not exist.
+
     verbose: Optional[bool]
         If we want to show information about the folder status. Default False.
 
     Raises
     ------------------------
+
     OSError:
         if the folder exists.
 
@@ -47,21 +50,21 @@ def create_folder(dest_dir: PathLike, verbose: Optional[bool] = False) -> None:
 def delete_folder(dest_dir: PathLike, verbose: Optional[bool] = False) -> None:
     """
     Delete a folder path.
+
     Parameters
     ------------------------
+
     dest_dir: PathLike
         Path that will be removed.
+
     verbose: Optional[bool]
         If we want to show information about the folder status. Default False.
 
     Raises
     ------------------------
+
     shutil.Error:
         If the folder could not be removed.
-
-    Returns
-    ------------------------
-        None
 
     """
     if os.path.exists(dest_dir):
@@ -78,12 +81,12 @@ def execute_command_helper(
     print_command: bool = False,
     stdout_log_file: Optional[PathLike] = None,
 ) -> None:
-
     """
     Execute a shell command.
 
     Parameters
     ------------------------
+
     command: str
         Command that we want to execute.
     print_command: bool
@@ -91,6 +94,7 @@ def execute_command_helper(
 
     Raises
     ------------------------
+
     CalledProcessError:
         if the command could not be executed (Returned non-zero status).
 
@@ -119,13 +123,16 @@ def execute_command(config: dict) -> None:
 
     Parameters
     ------------------------
+
     command: str
         Command that we want to execute.
+
     print_command: bool
         Bool that dictates if we print the command in the console.
 
     Raises
     ------------------------
+
     CalledProcessError:
         if the command could not be executed (Returned non-zero status).
 
@@ -151,11 +158,13 @@ def check_path_instance(obj: object) -> bool:
 
     Parameters
     ------------------------
+
     obj: object
         Object that wants to be validated.
 
     Returns
     ------------------------
+
     bool:
         True if the object is an instance of Path subclass, False otherwise.
     """
@@ -175,10 +184,13 @@ def save_dict_as_json(
 
     Parameters
     ------------------------
+
     filename: str
         Name of the json file.
+
     dictionary: dict
         Dictionary that will be saved as json.
+
     verbose: Optional[bool]
         True if you want to print the path where the file was saved.
 
@@ -202,17 +214,18 @@ def save_dict_as_json(
 
 
 def read_json_as_dict(filepath: str) -> dict:
-
     """
     Reads a json as dictionary.
 
     Parameters
     ------------------------
+
     filepath: PathLike
         Path where the json is located.
 
     Returns
     ------------------------
+
     dict:
         Dictionary with the data the json has.
 
@@ -235,12 +248,16 @@ def helper_build_param_value_command(
 
     Parameters
     ------------------------
+
     params: dict
         Dictionary with key:value pairs used for building the command.
+
     equal_con: Optional[bool]
         Indicates if the parameter is followed by '='. Default True.
+
     Returns
     ------------------------
+
     str:
         String with the parameters.
 
@@ -250,7 +267,7 @@ def helper_build_param_value_command(
         equal = "="
 
     parameters = ""
-    for (param, value) in params.items():
+    for param, value in params.items():
         if type(value) in [str, float, int] or check_path_instance(value):
             parameters += f"--{param}{equal}{str(value)} "
 
@@ -263,11 +280,13 @@ def helper_additional_params_command(params: List[str]) -> str:
 
     Parameters
     ------------------------
+
     params: list
         List with additional command values used.
 
     Returns
     ------------------------
+
     str:
         String with the parameters.
 
@@ -285,6 +304,7 @@ def gscfuse_mount(bucket_name: PathLike, params: dict) -> None:
 
     Parameters
     ------------------------
+
     bucket_name: str
         Name of the bucket.
 
@@ -311,6 +331,7 @@ def gscfuse_unmount(mount_dir: PathLike) -> None:
 
     Parameters
     ------------------------
+
     bucket_name: str
         Name of the bucket.
 
@@ -328,6 +349,7 @@ def save_string_to_txt(txt: str, filepath: PathLike, mode="w") -> None:
 
     Parameters
     ------------------------
+
     txt: str
         String to be saved.
 
@@ -351,6 +373,7 @@ def get_deepest_dirpath(
 
     Parameters
     ------------------------
+
     folder: PathLike
         Path where the search will be carried out.
 
@@ -359,6 +382,7 @@ def get_deepest_dirpath(
 
     Returns
     ------------------------
+
     PathLike:
         Path of the deepest directory
     """
@@ -367,7 +391,6 @@ def get_deepest_dirpath(
     deep_val = 0
 
     for root, dirs, files in os.walk(folder, topdown=False):
-
         if any(ignore_folder in root for ignore_folder in ignore_folders):
             continue
 
@@ -392,6 +415,7 @@ def generate_data_description(
 
     Parameters
     ------------------------
+
     raw_data_description_path: PathLike
         Path where the data description file is located.
 
@@ -443,6 +467,7 @@ def generate_processing(
 
     Parameters
     ------------------------
+
     data_processes: List[dict]
         List with the processes aplied in the pipeline.
 
@@ -471,6 +496,7 @@ def check_type_helper(value: Any, val_type: type) -> bool:
 
     Parameters
     ------------------------
+
     value: Any
         variable data.
 
@@ -479,6 +505,7 @@ def check_type_helper(value: Any, val_type: type) -> bool:
 
     Returns
     ------------------------
+
     bool:
         True if the type is what we expect
         from the variable data, False otherwise.
