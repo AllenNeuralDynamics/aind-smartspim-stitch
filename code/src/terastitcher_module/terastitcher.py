@@ -798,18 +798,19 @@ class TeraStitcher:
             "slicewidth": params["slice_extent"][0],
             "sliceheight": params["slice_extent"][1],
             "slicedepth": params["slice_extent"][2],
+            "ch_dir": params["ch_dir"],
             "volout_plugin": params["volout_plugin"],
             "cpu_params": params["cpu_params"],
         }
 
         if self.__parallel:
             parallel_command = self.__build_parallel_command(
-                params, "merge", self.__parastitcher_path
+                params, "merge", self.__paraconverter_path
             )
 
         else:
             # Sequential execution or gpu execution if USECUDA_X_NCC flag is 1
-            parallel_command = "terastitcher"
+            parallel_command = "teraconverter"
 
         parameters = utils.helper_build_param_value_command(params)
 
@@ -1856,8 +1857,25 @@ class TeraStitcher:
 
         # Step 6
         self.logger.info("Merging step...")
-        exec_config["command"] = self.merge_step_cmd(config["merge"], channel)
+        merge_config = {
+            "s": self.xmls_path.joinpath(f"xml_merging_{channel}.xml"),
+            "d": self.__stitched_folder,
+            "sfmt": '"TIFF (unstitched, 3D)"',
+            "dfmt": '"TIFF (tiled, 4D)"',
+            "cpu_params": config["merge"]["cpu_params"],
+            "width": config["merge"]["slice_extent"][0],
+            "height": config["merge"]["slice_extent"][1],
+            "depth": config["merge"]["slice_extent"][2],
+            "additional_params": ["fixed_tiling"],
+            "ch_dir": channel,
+            # 'clist':'0'
+        }
 
+        exec_config["command"] = self.merge_multivolume_separated_channels_cmd(
+            merge_config,
+            channel
+        )
+        
         start_date_time = datetime.now()
         utils.execute_command(exec_config)
         end_date_time = datetime.now()
