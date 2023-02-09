@@ -14,8 +14,10 @@ build:
 
 # Explicitly set the version of Python and its requirements
 python:
+  version: 3.8
   install:
-    - path: .
+    - method: pip
+      path: .
     - requirements: doc_template/requirements.txt
 
 # Build from the docs/ directory with Sphinx

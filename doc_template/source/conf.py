@@ -31,6 +31,10 @@ extensions = [
 ]
 templates_path = ["_templates"]
 exclude_patterns = []
+autodoc_mock_imports = [
+    'pandas', 
+    'tensorflow_probability'
+]
 
 
 # -- Options for HTML output -------------------------------------------------
