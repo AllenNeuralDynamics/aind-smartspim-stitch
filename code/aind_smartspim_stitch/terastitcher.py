@@ -38,11 +38,12 @@ logging.disable("DEBUG")
 
 PathLike = Union[str, Path]
 
+
 def generate_new_channel_displ_xml(
     informative_channel_xml,
-    channel_name:str,
-    regex_expr:str,
-    encoding:str="utf-8"
+    channel_name: str,
+    regex_expr: str,
+    encoding: str = "utf-8",
 ) -> str:
     """
     Generates an XML with the displacements
@@ -51,6 +52,7 @@ def generate_new_channel_displ_xml(
 
     Parameters
     -----------------
+
     informative_channel_xml: PathLike
         Path where the informative channel xml
         is located
@@ -68,6 +70,7 @@ def generate_new_channel_displ_xml(
 
     Returns
     -----------------
+
     str
         Path where the xml is stored
     """
@@ -78,27 +81,26 @@ def generate_new_channel_displ_xml(
         # Getting the channel name
         informative_channel_name = informative_channel_name.group()
 
-        with open(informative_channel_xml, "r", encoding=encoding) as xml_reader:
+        with open(
+            informative_channel_xml, "r", encoding=encoding
+        ) as xml_reader:
             xml_file = xml_reader.read()
 
         xml_dict = xmltodict.parse(xml_file)
 
-        new_stacks_folder = xml_dict['TeraStitcher']['stacks_dir']['@value'].replace(
-            informative_channel_name,
-            channel_name
-        )
+        new_stacks_folder = xml_dict["TeraStitcher"]["stacks_dir"][
+            "@value"
+        ].replace(informative_channel_name, channel_name)
 
-        new_bin_folder = xml_dict['TeraStitcher']['mdata_bin']['@value'].replace(
-            informative_channel_name,
-            channel_name
-        )
+        new_bin_folder = xml_dict["TeraStitcher"]["mdata_bin"][
+            "@value"
+        ].replace(informative_channel_name, channel_name)
 
-        xml_dict['TeraStitcher']['stacks_dir']['@value'] = new_stacks_folder
-        xml_dict['TeraStitcher']['mdata_bin']['@value'] = new_bin_folder
+        xml_dict["TeraStitcher"]["stacks_dir"]["@value"] = new_stacks_folder
+        xml_dict["TeraStitcher"]["mdata_bin"]["@value"] = new_bin_folder
 
         modified_mergexml_path = str(informative_channel_xml).replace(
-            informative_channel_name,
-            channel_name
+            informative_channel_name, channel_name
         )
 
         data_to_write = xmltodict.unparse(xml_dict, pretty=True)
@@ -107,15 +109,24 @@ def generate_new_channel_displ_xml(
         len_end_xml_header = len(end_xml_header)
         xml_end_header = data_to_write.find(end_xml_header)
 
-        new_data_to_write = data_to_write[:xml_end_header+len_end_xml_header]
+        new_data_to_write = data_to_write[
+            : xml_end_header + len_end_xml_header
+        ]
         # Adding terastitcher doctype
-        new_data_to_write += '\n<!DOCTYPE TeraStitcher SYSTEM "TeraStitcher.DTD">'
-        new_data_to_write += data_to_write[xml_end_header+len_end_xml_header:]
+        new_data_to_write += (
+            '\n<!DOCTYPE TeraStitcher SYSTEM "TeraStitcher.DTD">'
+        )
+        new_data_to_write += data_to_write[
+            xml_end_header + len_end_xml_header :
+        ]
 
-        with open(modified_mergexml_path, "w", encoding=encoding) as xml_writer:
+        with open(
+            modified_mergexml_path, "w", encoding=encoding
+        ) as xml_writer:
             xml_writer.write(new_data_to_write)
-    
+
     return modified_mergexml_path
+
 
 class TeraStitcher:
     """
@@ -135,12 +146,12 @@ class TeraStitcher:
         verbose: Optional[bool] = False,
         preprocessing_folder: Optional[PathLike] = None,
     ) -> None:
-
         """
         Class constructor
 
         Parameters
         ------------------------
+
         input_data: PathLike
             Path where the data is stored.
         output_folder: PathLike
@@ -165,6 +176,7 @@ class TeraStitcher:
 
         Raises
         ------------------------
+
         FileNotFoundError:
             If terastitcher, Parastitcher or paraconverter
             (if provided) were not found in the system.
@@ -198,9 +210,9 @@ class TeraStitcher:
         # flake8: noqa: E501
         self.data_processes = {
             "tools": {
-                "terastitcher-module": {
+                "aind-smartspim-stitch": {
                     "version": __version__,
-                    "codeURL": "https://github.com/AllenNeuralDynamics/terastitcher-module",
+                    "codeURL": "https://github.com/AllenNeuralDynamics/aind-smartspim-stitch",
                 },
                 "terastitcher": {
                     "version": "1.11.10",
@@ -291,12 +303,14 @@ class TeraStitcher:
 
         Parameters
         ------------------------
+
         tool_name: str
             command name to check the installation.
             Default: 'terastitcher'
 
         Returns
         ------------------------
+
         bool:
             True if the command was correctly executed,
             False otherwise.
@@ -316,18 +330,10 @@ class TeraStitcher:
         """
         Checks python3 installation in the system.
 
-        Parameters
-        ------------------------
-        None
-
         Raises
         ------------------------
         FileNotFoundError:
             If python was not found in the system.
-
-        Returns
-        ------------------------
-        None
 
         """
 
@@ -337,11 +343,13 @@ class TeraStitcher:
 
             Parameters
             ------------------------
+
             cmd: List[str]
                 command splitted in list mode.
 
             Returns
             ------------------------
+
             int:
                 Process exit status.
             """
@@ -360,7 +368,6 @@ class TeraStitcher:
 
         found = True
         if sys.version_info.major == 3:
-
             if not helper_status_cmd(["python", "-V"]):
                 self.__python_terminal = "python"
 
@@ -390,6 +397,7 @@ class TeraStitcher:
 
         Raises
         ------------------------
+
         FileNotFoundError:
             If parastitcher or paraconverter were
             not found in the system.
@@ -421,6 +429,7 @@ class TeraStitcher:
 
         Parameters
         ------------------------
+
         params: dict
             Configuration dictionary used to build
             the mpi command depending on the platform.
@@ -434,6 +443,7 @@ class TeraStitcher:
 
         Returns
         ------------------------
+
         str:
             Command that will be executed for terastitcher.
 
@@ -514,6 +524,7 @@ class TeraStitcher:
 
         Parameters
         ------------------------
+
         params: dict
             Configuration dictionary used to build the
             terastitcher's import command.
@@ -526,6 +537,7 @@ class TeraStitcher:
 
         Returns
         ------------------------
+
         str:
             Command that will be executed for terastitcher.
 
@@ -574,12 +586,14 @@ class TeraStitcher:
 
         Parameters
         ------------------------
+
         params: dict
             Configuration dictionary used to build
             the terastitcher's import command.
 
         Returns
         ------------------------
+
         str:
             Command that will be executed for terastitcher.
 
@@ -615,17 +629,14 @@ class TeraStitcher:
         processes. There is another option with -oversubscribe.
 
         Parameters:
-        -----------------
+        ------------------------
+
         config_params: dict
             Parameters that will be used in the align step.
-            i.e. {
-                'image_depth': 4200,
-                'subvoldim': 100,
-                'number_processes': 10
-            }
 
         Returns:
-        -----------------
+        ------------------------
+
         int:
             Number of processes to be used in the align step.
             If it is not possible to perform the estimation,
@@ -660,22 +671,24 @@ class TeraStitcher:
     def align_step_cmd(self, params: dict, channel: str) -> str:
         """
         Builds the terastitcher's align command based on
-        a provided configuration dictionary. It outputs a
-        json file in the xmls folder of the output directory
-        with all the parameters used in this step.
+            a provided configuration dictionary. It outputs a
+            json file in the xmls folder of the output directory
+            with all the parameters used in this step.
 
         Parameters
         ------------------------
-        params: dict
-            Configuration dictionary used to
-            build the terastitcher's align command.
-        channel:str
-            Name of the dataset channel that will be aligned
+
+            params: dict
+                Configuration dictionary used to
+                build the terastitcher's align command.
+            channel:str
+                Name of the dataset channel that will be aligned
 
         Returns
         ------------------------
-        str:
-            Command that will be executed for terastitcher.
+
+            str:
+                Command that will be executed for terastitcher.
 
         """
         input_path = self.xmls_path.joinpath(f"xml_import_{channel}.xml")
@@ -713,7 +726,6 @@ class TeraStitcher:
         channel: str,
         params: Optional[dict] = None,
     ) -> str:
-
         """
         Builds the terastitcher's input-output commands
         based on a provided configuration dictionary.
@@ -725,20 +737,25 @@ class TeraStitcher:
 
         Parameters
         ------------------------
+
         step_name: str
             Name of the step that will be executed.
             The names should be: 'displproj' for projection,
             'displthres' for threshold and 'placetiles'
             for placing tiles step.
+
         input_xml: str
             The xml filename outputed from the previous command.
+
         output_xml: str
             The xml filename that will be used as output for this step.
+
         params: dict
             Configuration dictionary used to build the terastitcher's command.
 
         Returns
         ------------------------
+
         str:
             Command that will be executed for terastitcher.
 
@@ -775,14 +792,17 @@ class TeraStitcher:
 
         Parameters
         ------------------------
+
         params: dict
             Configuration dictionary used to build
             the terastitcher's merge command.
+
         channel:str
             Name of the dataset channel that will be merged
 
         Returns
         ------------------------
+
         str:
             Command that will be executed for terastitcher.
 
@@ -834,12 +854,14 @@ class TeraStitcher:
 
         Parameters
         ------------------------
+
         params: dict
             Configuration dictionary used to build the
             terastitcher's multivolume merge command.
 
         Returns
         ------------------------
+
         str:
             Command that will be executed for terastitcher.
 
@@ -871,11 +893,9 @@ class TeraStitcher:
         utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
 
         return cmd
-    
+
     def merge_multivolume_separated_channels_cmd(
-        self,
-        params: dict,
-        channel: str
+        self, params: dict, channel: str
     ) -> List[str]:
         """
         Builds the terastitcher's multivolume merge command based
@@ -886,23 +906,25 @@ class TeraStitcher:
 
         Parameters
         ------------------------
+
         params: dict
             Configuration dictionary used to build the
             terastitcher's multivolume merge command.
-            
+
         channel: str
             string with the channel to generate the
             command
 
         Returns
         ------------------------
+
         str:
             Command that will be executed for terastitcher.
 
         """
-        
+
         cmds = []
-            
+
         parallel_command = ""
 
         if self.__parallel:
@@ -922,11 +944,13 @@ class TeraStitcher:
                 params["additional_params"]
             )
 
-        cmd = f"{parallel_command} {parameters} {additional_params}"# > {self.xmls_path}/step6par_{channel}.txt"
+        cmd = f"{parallel_command} {parameters} {additional_params}"  # > {self.xmls_path}/step6par_{channel}.txt"
         cmd = cmd.replace("--s=", "-s=")
         cmd = cmd.replace("--d=", "-d=")
 
-        output_json = self.metadata_path.joinpath(f"merge_volume_params_{channel}.json")
+        output_json = self.metadata_path.joinpath(
+            f"merge_volume_params_{channel}.json"
+        )
         utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
 
         return cmd
@@ -937,6 +961,7 @@ class TeraStitcher:
 
         Parameters
         ------------------------
+
         config: dict
             Configuration dictionary used to instanciate
             the OMEZarr Writer.
@@ -972,6 +997,7 @@ class TeraStitcher:
 
         Parameters
         -------------
+
         config: dict
             Image configuration necessary to build the
             neuroglancer link
@@ -1053,12 +1079,12 @@ class TeraStitcher:
     def __preprocessing_tool_cmd(
         self, tool_name: str, params: dict, equal_con: bool
     ) -> str:
-
         """
         Builds the execution command for the given tool.
 
         Parameters
         ------------------------
+
         params: dict
             Configuration dictionary used to build the command.
 
@@ -1070,6 +1096,7 @@ class TeraStitcher:
 
         Returns
         ------------------------
+
         str:
             Command that will be executed for pystripe.
 
@@ -1110,8 +1137,10 @@ class TeraStitcher:
 
         Parameters
         ------------------------
+
         exec_config: dict
             Configuration for command line execution. Mostly for logger.
+
         channels:List[str]
             List with channel names that will be processed
             by pystripe. Sigma1 and sigma2 values in the
@@ -1174,18 +1203,23 @@ class TeraStitcher:
 
         Parameters
         ------------------------
+
         params: dict
             Configuration dictionary used to build the command.
+
         exec_config: dict
             Configuration for command line execution. Mostly for logger.
+
         informative_channel:str
             Name of the dataset's informative channel
             that will be used for stitching.
+
         fuse_xmls:PathLike
             Path where the multivolume xmls will be saved.
 
         Returns
         ------------------------
+
         PathLike
             Path where the xml with the displacements
             for the informative channel is stored
@@ -1344,7 +1378,9 @@ class TeraStitcher:
             )
         )
 
-        merge_xml_informative = f"{fuse_xmls}/xml_merging_{informative_channel}.xml"
+        merge_xml_informative = (
+            f"{fuse_xmls}/xml_merging_{informative_channel}.xml"
+        )
         # Step 5
         self.logger.info("Placing tiles step...")
         exec_config["command"] = self.input_output_step_cmd(
@@ -1391,6 +1427,7 @@ class TeraStitcher:
 
         Parameters
         --------------
+
         multivolume_xml: PathLike
             Path where the multivolume xml is stored
 
@@ -1399,6 +1436,7 @@ class TeraStitcher:
 
         Returns
         --------------
+
         List[str]
             List with the new order of the channels
         """
@@ -1428,17 +1466,22 @@ class TeraStitcher:
 
         Parameters
         ------------------------
+
         config: dict
             Configuration dictionary used to process the channels.
+
         exec_config: dict
             Configuration for command line execution. Mostly for logger.
+
         channels:List[str]
             List with channel names that will be processed by pystripe.
             Sigma1 and sigma2 values in the lists belong to
             each of the channels respectively.
+
         pos_informative_channel:int
             Position of the channels list where the informative
             channel is located.
+
         """
 
         # Creating fuse folder
@@ -1448,7 +1491,6 @@ class TeraStitcher:
 
         # Importing non-informative channels
         for idx in range(len(channels)):
-
             if idx == pos_informative_channel:
                 # Ignore import informative channel
                 # since we have already calculated projections
@@ -1496,7 +1538,7 @@ class TeraStitcher:
         )
 
         new_channel_order = None
-        
+
         independent_stitch = True
 
         if independent_stitch:
@@ -1505,29 +1547,29 @@ class TeraStitcher:
             # the images and the stacks folder
             new_channel_order = channels.copy()
             merge_xmls = {informative_channel: str(merge_xml_informative)}
-            
-            for idx in range(len(channels)):
 
+            for idx in range(len(channels)):
                 if idx == pos_informative_channel:
                     # Ignore import informative channel
                     # since we have already calculated projections
                     continue
-                
+
                 channel_merge_xml = generate_new_channel_displ_xml(
                     informative_channel_xml=merge_xml_informative,
                     channel_name=channels[idx],
-                    regex_expr=self.__channel_regex
+                    regex_expr=self.__channel_regex,
                 )
 
                 merge_xmls[channels[idx]] = channel_merge_xml
 
-                self.logger.info(f"Generating merge XML for {channels[idx]} based on {merge_xml_informative}")
+                self.logger.info(
+                    f"Generating merge XML for {channels[idx]} based on {merge_xml_informative}"
+                )
 
             # Executing two loops to have the XMLs in case
             # the stitching fails
 
             for channel_name, merge_xml in merge_xmls.items():
-                
                 self.logger.info(f"Stitching channel {channel_name}")
                 merge_config = {
                     "s": merge_xml,
@@ -1543,9 +1585,10 @@ class TeraStitcher:
                     # 'clist':'0'
                 }
 
-                exec_config["command"] = self.merge_multivolume_separated_channels_cmd(
-                    merge_config,
-                    channel_name
+                exec_config[
+                    "command"
+                ] = self.merge_multivolume_separated_channels_cmd(
+                    merge_config, channel_name
                 )
 
                 start_date_time = datetime.now()
@@ -1571,7 +1614,6 @@ class TeraStitcher:
                 )
 
         else:
-
             # Importing multivolume dataset
             params_multivolume = config["import_data"].copy()
             params_multivolume["volin"] = fuse_xmls
@@ -1628,7 +1670,7 @@ class TeraStitcher:
             # Merge multiple channels at the same time
             # Optimal for datasets smaller than ≈700 GBs
             # Decreasing the # of processes
-            
+
             exec_config["command"] = self.merge_multivolume_all_channels_cmd(
                 merge_config
             )
@@ -1654,7 +1696,7 @@ class TeraStitcher:
                     notes="Fusing multichannel volume",
                 )
             )
-            
+
             # Ignore reordering channels if info
             # is true
             if exec_config["info"]:
@@ -1910,15 +1952,18 @@ class TeraStitcher:
 
         Parameters
         ------------------------
+
         config: dict
             Configuration dictionary for the stitching pipeline.
             It should include the configuration
             for each of the steps in the pipeline.
             i.e. {'import': {...}, 'align': {...}, ...}
+
         channels:List[str]
             List with channel names that will be processed
             by pystripe. Sigma1 and sigma2 values in the lists
             belong to each of the channels respectively.
+
         """
 
         exec_config = {
@@ -2015,17 +2060,22 @@ def find_channels(
 
     Parameters
     ------------------------
+
     path:PathLike
         Dataset path
+
     channel_regex:str
         Regular expression for filtering folders in dataset path.
 
+
     Returns
     ------------------------
+
     List[str]:
         List with the image channels. Empty list if
         it does not find any channels with the
         given regular expression.
+
     """
     return [
         path for path in os.listdir(path) if re.search(channel_regex, path)
@@ -2038,7 +2088,6 @@ def execute_terastitcher(
     preprocessed_data: PathLike,
     config_teras: PathLike,
 ) -> None:
-
     """
     Executes terastitcher with in-command parameters.
     It could be on-premise or in the cloud.
@@ -2048,6 +2097,7 @@ def execute_terastitcher(
 
     Parameters
     ------------------------
+
     input_data: PathLike
         Path where the data is located.
 
@@ -2111,13 +2161,11 @@ def execute_terastitcher(
         )
 
     else:
-
         # Check if we want to execute pystripe
         if not config_teras["preprocessing_steps"]["pystripe"]["execute"]:
             config_teras["preprocessing_steps"] = None
 
         else:
-
             try:
                 config_teras["preprocessing_steps"]["pystripe"][
                     "input"

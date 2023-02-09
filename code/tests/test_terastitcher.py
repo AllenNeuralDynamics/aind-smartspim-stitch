@@ -9,9 +9,9 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import tifffile
-from terastitcher_module import terastitcher
-from terastitcher_module.params import get_default_config
-from utils import utils
+from aind_smartspim_stitch import terastitcher
+from aind_smartspim_stitch.params import get_default_config
+from aind_smartspim_stitch.utils import utils
 
 # IO types
 PathLike = Union[str, Path]

@@ -13,10 +13,10 @@ import dask
 import numpy as np
 import tifffile
 import zarr
+from aind_smartspim_stitch.utils import utils
+from aind_smartspim_stitch.zarr_converter.zarr_converter import ZarrConverter
 from parameterized import parameterized
 from tests import params
-from utils import utils
-from zarr_converter import ZarrConverter
 
 PathLike = Union[str, Path]
 

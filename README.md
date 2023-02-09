@@ -1,8 +1,8 @@
-# TeraStitcher Module
+# aind-smartspim-stitch
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
-[![Programming Languages](https://img.shields.io/github/languages/count/AllenNeuralDynamics/terastitcher-module)](https://github.com/AllenNeuralDynamics/terastitcher-module)
+[![Programming Languages](https://img.shields.io/github/languages/count/AllenNeuralDynamics/aind-smartspim-stitch)](https://github.com/AllenNeuralDynamics/aind-smartspim-stitch)
 ![Code Style](https://img.shields.io/badge/code%20style-black-black)
 
 Destriping, stitching and OMEZarr conversion module for lightsheet microscopic images using  [Pystripe](https://github.com/chunglabmit/pystripe), [TeraStitcher](https://github.com/abria/TeraStitcher) and [Aicsimageio](https://github.com/AllenCellModeling/aicsimageio). This module currently supports Windows and Linux OS, it can also be configured to work in a VM in GCloud using GSCFUSE but it's mainly intended to work with Code Ocean and AWS.
@@ -20,10 +20,10 @@ $ conda activate stitching
 $ conda install -y ipykernel
 ```
 
-Then, open a terminal and clone this repository in the virtual machine and place the dowloaded `.tar.gz` file in the following path: `terastitcher-module/environment/GCloud/`. Now, execute the installer (this will take a couple of minutes):
+Then, open a terminal and clone this repository in the virtual machine and place the dowloaded `.tar.gz` file in the following path: `aind-smartspim-stitch/environment/GCloud/`. Now, execute the installer (this will take a couple of minutes):
 
 ```
-$ cd terastitcher-module/environment/GCloud/
+$ cd aind-smartspim-stitch/environment/GCloud/
 $ chmod +x terastitcher_installer.sh
 $ ./terastitcher_installer.sh
 ```
@@ -55,8 +55,8 @@ $ conda activate stitch
 Then, clone the repository and install the packages using pyproject.toml file.
 
 ```
-$ git clone https://github.com/AllenNeuralDynamics/terastitcher-module
-$ cd terastitcher-module
+$ git clone https://github.com/AllenNeuralDynamics/aind-smartspim-stitch
+$ cd aind-smartspim-stitch
 $ pip install -e .
 ```
 
@@ -89,7 +89,7 @@ This will be helpful if you want to overwrite them.
 If you run this pipeline in GCP, this module will automatically load the bucket(s) using GCSFUSE. As today, there are some performance limitations when using GCSFUSE with MPI if your dataset contains many small images. The performance will improve if you have larger files containing these small images (e.g. 3D stacks of images).
 
 ### Configuration file
-Since TeraStitcher has multiple steps, we created a configuration dictionary with the parameters for each step. You can add more parameters based on terastitcher documentation. You can check the default parameters in `terastitcher-module/code/src/params.py`. For example:
+Since TeraStitcher has multiple steps, we created a configuration dictionary with the parameters for each step. You can add more parameters based on terastitcher documentation. You can check the default parameters in `aind-smartspim-stitch/code/params.py`. For example:
 
 ```
 "import_data" : {
@@ -119,7 +119,7 @@ The align and merge steps are computationally expensive. Therefore, we added cpu
         "image_depth": 4200,
         "number_processes": 16, //16 cores
         // Hostfile for mpirun, it is not considered on Windows OS
-        "hostfile": "/home/jupyter/terastitcher-module/environment/GCloud/hostfile",
+        "hostfile": "/home/jupyter/aind-smartspim-stitch/environment/GCloud/hostfile",
         // Additional mpi params, these work only on Linux based distributions 
         "additional_params": [
             "use-hwthread-cpus",
@@ -131,13 +131,13 @@ The align and merge steps are computationally expensive. Therefore, we added cpu
 }
 ```
 
-You can set the new parameters by the command line or modifying the `default_config.yaml` placed in `code/src/terastitcher_module`. It is worth mentioning that these parameters work well with our SmartSPIM datasets and our machine configuration (**Ubuntu 20.04, 16 cores and 128 GB RAM**).
+You can set the new parameters by the command line or modifying the `default_config.yaml` placed in `code/aind_smartspim_stitch`. It is worth mentioning that these parameters work well with our SmartSPIM datasets and our machine configuration (**Ubuntu 20.04, 16 cores and 128 GB RAM**).
 
 ### Execution example
 In a local machine:
 ```
 $ cd ~
-$ python terastitcher-module/code/src/terastitcher.py --input_data path/to/dataset --preprocessed_data path/to/intermediate/data --output_data path/to/output/zarr
+$ python aind-smartspim-stitch/code/terastitcher.py --input_data path/to/dataset --preprocessed_data path/to/intermediate/data --output_data path/to/output/zarr
 ```
 
 In a code ocean capsule:

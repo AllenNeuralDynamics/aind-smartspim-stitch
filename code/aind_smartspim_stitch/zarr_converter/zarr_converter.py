@@ -1,6 +1,7 @@
 """
 Module to convert stitched images to the OME-Zarr format
 """
+
 import logging
 import multiprocessing
 import os
@@ -17,7 +18,6 @@ from aicsimageio.writers import OmeZarrWriter
 from argschema import ArgSchemaParser
 from dask.array import concatenate, pad
 from dask.array.core import Array
-from dask.array.image import imread
 from dask.base import tokenize
 from dask.distributed import Client, LocalCluster, performance_report
 from distributed import wait
@@ -37,14 +37,17 @@ def add_leading_dim(data: ArrayLike) -> ArrayLike:
     Adds a leading dimension
 
     Parameters
-    --------------
+    ------------------------
+
     data: ArrayLike
         Input array that will have the
         leading dimension
 
     Returns
-    --------------
-    Array with the new dimension in front.
+    ------------------------
+
+    ArrayLike:
+        Array with the new dimension in front.
     """
     return data[None, ...]
 
@@ -55,10 +58,12 @@ def pad_array_n_d(arr: ArrayLike, dim: int = 5) -> ArrayLike:
 
     Parameters
     ------------------------
+
     arr: ArrayLike
         Dask/numpy array that contains image data.
     dim: int
         Number of dimensions that the array will be padded
+
     Returns
     ------------------------
     ArrayLike:
@@ -86,51 +91,19 @@ def read_image_directory_structure(folder_dir: PathLike) -> dict:
     ------------------------
     dict:
         Dictionary with the image representation where:
-        {
-            channel_1: {
-                col_1: {
-                    row_1: [image_1, image_2, ..., image_n]
-                    ...
-                    row_n: [image_1, image_2, ..., image_n]
-                }
-                .
-                .
-                .
-                col_n: {
-                    row_1: [image_1, image_2, ..., image_n]
-                    ...
-                    row_n: [image_1, image_2, ..., image_n]
-                }
-            }
-            .
-            .
-            .
-            channel_n: {
-                col_1: {
-                    row_1: [image_1, image_2, ..., image_n]
-                    ...
-                    row_n: [image_1, image_2, ..., image_n]
-                }
-                .
-                .
-                .
-                col_n: {
-                    row_1: [image_1, image_2, ..., image_n]
-                    ...
-                    row_n: [image_1, image_2, ..., image_n]
-                }
-            }
-        }
+        {channel_1: ... {channel_n: {col_1: ... col_n: {row_1: ... row_n: [image_0, ..., image_n]} } } }
     """
 
     directory_structure = {}
     folder_dir = Path(folder_dir)
 
-    channel_paths = natsorted([
-        folder_dir.joinpath(folder)
-        for folder in os.listdir(folder_dir)
-        if os.path.isdir(folder_dir.joinpath(folder))
-    ])
+    channel_paths = natsorted(
+        [
+            folder_dir.joinpath(folder)
+            for folder in os.listdir(folder_dir)
+            if os.path.isdir(folder_dir.joinpath(folder))
+        ]
+    )
 
     for channel_idx in range(len(channel_paths)):
         directory_structure[channel_paths[channel_idx]] = {}
@@ -158,22 +131,19 @@ def read_image_directory_structure(folder_dir: PathLike) -> dict:
     return directory_structure
 
 
-def lazy_tiff_reader(filename: PathLike):  # , chunksize:tuple, dtype):
+def lazy_tiff_reader(filename: PathLike):
     """
     Creates a dask array to read an image located in a specific path.
 
     Parameters
     ------------------------
 
-    filename:PathLike
+    filename: PathLike
         Path to the image
-    chunksize:
-        Image chunksize
-    dtype:
-        Image dtype
 
     Returns
     ------------------------
+
     dask.array.core.Array
         Array representing the image data
     """
@@ -200,6 +170,7 @@ def fix_image_diff_dims(
 
     Parameters
     ------------------------
+
     new_arr: ArrayLike
         Array to be fixed
 
@@ -218,6 +189,7 @@ def fix_image_diff_dims(
 
     Returns
     ------------------------
+
     ArrayLike
         Array with the new dimensions
     """
@@ -238,7 +210,6 @@ def fix_image_diff_dims(
     if c > 1:
         raise ValueError("Block has two different dimensions")
     else:
-
         if (diff_dim - len_chunks) == work_axis:
             return new_arr
 
@@ -259,6 +230,7 @@ def concatenate_dask_arrays(
 
     Parameters
     ------------------------
+
     arr_1: ArrayLike
         Array 1 that will be concatenated
 
@@ -270,6 +242,7 @@ def concatenate_dask_arrays(
 
     Returns
     ------------------------
+
     ArrayLike
         Concatenated array that contains
         arr_1 and arr_2
@@ -279,12 +252,10 @@ def concatenate_dask_arrays(
     shape_arr_2 = arr_2.shape
 
     if shape_arr_1 != shape_arr_2:
-
         slices = []
         dims = len(shape_arr_1)
 
         for shape_dim_idx in range(dims):
-
             if shape_arr_1[shape_dim_idx] > shape_arr_2[shape_dim_idx] and (
                 shape_dim_idx - dims != axis
             ):
@@ -334,41 +305,7 @@ def read_chunked_stitched_image_per_channel(
 
     directory_structure:dict
         dictionary to store paths of images with the following structure:
-        {
-            channel_1: {
-                col_1: {
-                    row_1: [image_1, image_2, ..., image_n]
-                    ...
-                    row_n: [image_1, image_2, ..., image_n]
-                }
-                .
-                .
-                .
-                col_n: {
-                    row_1: [image_1, image_2, ..., image_n]
-                    ...
-                    row_n: [image_1, image_2, ..., image_n]
-                }
-            }
-            .
-            .
-            .
-            channel_n: {
-                col_1: {
-                    row_1: [image_1, image_2, ..., image_n]
-                    ...
-                    row_n: [image_1, image_2, ..., image_n]
-                }
-                .
-                .
-                .
-                col_n: {
-                    row_1: [image_1, image_2, ..., image_n]
-                    ...
-                    row_n: [image_1, image_2, ..., image_n]
-                }
-            }
-        }
+        {channel_1: ... {channel_n: {col_1: ... col_n: {row_1: ... row_n: [image_0, ..., image_n]} } } }
 
     channel_name : str
         Channel name to reconstruct the image volume
@@ -385,6 +322,7 @@ def read_chunked_stitched_image_per_channel(
 
     Returns
     ------------------------
+
     ArrayLike
         Array with the image volume
     """
@@ -481,41 +419,7 @@ def channel_parallel_reading(
 
     directory_structure: dict
         dictionary to store paths of images with the following structure:
-        {
-            channel_1: {
-                col_1: {
-                    row_1: [image_1, image_2, ..., image_n]
-                    ...
-                    row_n: [image_1, image_2, ..., image_n]
-                }
-                .
-                .
-                .
-                col_n: {
-                    row_1: [image_1, image_2, ..., image_n]
-                    ...
-                    row_n: [image_1, image_2, ..., image_n]
-                }
-            }
-            .
-            .
-            .
-            channel_n: {
-                col_1: {
-                    row_1: [image_1, image_2, ..., image_n]
-                    ...
-                    row_n: [image_1, image_2, ..., image_n]
-                }
-                .
-                .
-                .
-                col_n: {
-                    row_1: [image_1, image_2, ..., image_n]
-                    ...
-                    row_n: [image_1, image_2, ..., image_n]
-                }
-            }
-        }
+        {channel_1: ... {channel_n: {col_1: ... col_n: {row_1: ... row_n: [image_0, ..., image_n]} } } }
 
     channel_name : str
         Channel name to reconstruct the image volume
@@ -538,6 +442,7 @@ def channel_parallel_reading(
 
     Returns
     ------------------------
+
     ArrayLike
         Array with the image channel volume
     """
@@ -636,41 +541,7 @@ def parallel_read_chunked_stitched_multichannel_image(
 
     directory_structure: dict
         dictionary to store paths of images with the following structure:
-        {
-            channel_1: {
-                col_1: {
-                    row_1: [image_1, image_2, ..., image_n]
-                    ...
-                    row_n: [image_1, image_2, ..., image_n]
-                }
-                .
-                .
-                .
-                col_n: {
-                    row_1: [image_1, image_2, ..., image_n]
-                    ...
-                    row_n: [image_1, image_2, ..., image_n]
-                }
-            }
-            .
-            .
-            .
-            channel_n: {
-                col_1: {
-                    row_1: [image_1, image_2, ..., image_n]
-                    ...
-                    row_n: [image_1, image_2, ..., image_n]
-                }
-                .
-                .
-                .
-                col_n: {
-                    row_1: [image_1, image_2, ..., image_n]
-                    ...
-                    row_n: [image_1, image_2, ..., image_n]
-                }
-            }
-        }
+        {channel_1: ... {channel_n: {col_1: ... col_n: {row_1: ... row_n: [image_0, ..., image_n]} } } }
 
     sample_img: ArrayLike
         Image used as guide for the chunksize
@@ -687,6 +558,7 @@ def parallel_read_chunked_stitched_multichannel_image(
 
     Returns
     ------------------------
+
     ArrayLike
         Array with the image channel volume
     """
@@ -730,20 +602,20 @@ def get_sample_img(directory_structure: dict) -> ArrayLike:
 
     Parameters
     ---------------
+
     directory_structure: dict
         Whole brain volume directory structure
 
     Returns
     ---------------
+
     ArrayLike
         Array with the sample image
     """
     sample_img = None
     for channel_dir, val in directory_structure.items():
         for col_name, rows in val.items():
-
             for row_name, images in rows.items():
-
                 sample_path = (
                     channel_dir.joinpath(col_name)
                     .joinpath(row_name)
@@ -751,7 +623,6 @@ def get_sample_img(directory_structure: dict) -> ArrayLike:
                 )
 
                 if not isinstance(sample_img, dask.array.core.Array):
-
                     sample_img = lazy_tiff_reader(str(sample_path))
                 else:
                     sample_img_2 = lazy_tiff_reader(str(sample_path))
@@ -775,13 +646,13 @@ class ZarrConverter:
         blosc_config: dict,
         channels: List[str] = None,
         physical_pixels: List[float] = None,
-        file_format: List[str] = "tif",
     ) -> None:
         """
         Class constructor
 
         Parameters
         ------------
+
         input_data: PathLike
             Path where the stitched images are stored
 
@@ -797,9 +668,6 @@ class ZarrConverter:
         physical_pixels: List[float]
             Physical pixel sizes per dimension
 
-        file_format: str
-            Image file extension
-
         """
         self.input_data = input_data
         self.output_data = output_data
@@ -810,8 +678,6 @@ class ZarrConverter:
             self.physical_pixels = PhysicalPixelSizes(
                 physical_pixels[0], physical_pixels[1], physical_pixels[2]
             )
-
-        self.file_format = file_format
 
         self.writer = OmeZarrWriter(output_data)
 
@@ -837,65 +703,6 @@ class ZarrConverter:
 
         # get_blosc_codec(writer_config['codec'], writer_config['clevel'])
 
-    def read_multichannel_image(
-        self, channel_paths: List[PathLike]
-    ) -> dask.array.core.Array:
-        """
-        Reads image files and stores them in a dask array.
-
-        channel_paths:List[PathLike]
-            Paths where the images are located in multiple channels
-
-        Returns
-        ------------------------
-        dask.array.core.Array:
-            Dask array with the images.
-            Returns None if it was not possible to read the images.
-        """
-
-        image_channel = []
-
-        if len(channel_paths) <= 1:
-            return None
-
-        for channel_path in channel_paths:
-            print("- Reading channel: ", Path(channel_path).stem)
-            image_channel.append(self.read_channel_image(channel_path))
-
-        # try:
-        #     image_channel = stack(image_channel, axis=0)
-        # except ValueError as err:
-        #     return None
-
-        return image_channel
-
-    def read_channel_image(self, path: PathLike) -> dask.array.core.Array:
-
-        """
-        Reads image files and stores them in a dask array.
-
-        path:PathLike
-            Path where the images are located
-
-        Returns
-        ------------------------
-        dask.array.core.Array:
-            Dask array with the images.
-            Returns None if it was not possible to read the images.
-        """
-
-        images = None
-
-        try:
-            # Path comes with '/' then just adding the file name and format
-            filename_pattern = f"{path}*.{self.file_format}*"
-            images = imread(filename_pattern)
-
-        except ValueError:
-            raise ValueError("- No images found in ", path)
-
-        return images
-
     def compute_pyramid(
         self,
         data: dask.array.core.Array,
@@ -903,12 +710,12 @@ class ZarrConverter:
         scale_axis: Tuple[int],
         chunks: Union[str, Sequence[int], Dict[Hashable, int]] = "auto",
     ) -> List[dask.array.core.Array]:
-
         """
         Computes the pyramid levels given an input full resolution image data
 
         Parameters
         ------------------------
+
         data: dask.array.core.Array
             Dask array of the image data
 
@@ -925,6 +732,7 @@ class ZarrConverter:
 
         Returns
         ------------------------
+
         List[dask.array.core.Array]:
             List with the downsampled image(s)
         """
@@ -945,6 +753,7 @@ class ZarrConverter:
 
         Returns
         ------------------------
+
         dict:
             Dictionary with the downscaling OMEZarr metadata
         """
@@ -963,12 +772,8 @@ class ZarrConverter:
         }
 
     def convert(
-        self,
-        writer_config: dict,
-        image_name: str = "zarr_multiscale.zarr",
-        # chunks:List[int]=[1, 736, 560]
+        self, writer_config: dict, image_name: str = "zarr_multiscale.zarr"
     ) -> None:
-
         """
         Executes the OME-Zarr conversion
 
@@ -979,7 +784,7 @@ class ZarrConverter:
             OME-Zarr writer configuration
 
         image_name: str
-        Name of the image
+            Name of the image
 
         """
         directory_structure = read_image_directory_structure(self.input_data)
@@ -1044,7 +849,7 @@ class ZarrConverter:
             n_workers=n_workers,
             threads_per_worker=threads_per_worker,
             processes=True,
-            memory_limit='auto'
+            memory_limit="auto",
         )
         client = Client(cluster)
 
@@ -1053,7 +858,7 @@ class ZarrConverter:
         # Getting scale axis
         scale_axis = tuple(list(writer_config["scale_factor"]))
         dask_report_file = f"{self.output_data}/dask_report.html"
-        
+
         # Writing multiscale image
         with performance_report(filename=dask_report_file):
             for idx in range(n_channels):
@@ -1089,9 +894,9 @@ class ZarrConverter:
                 channel_colors = (
                     [self.channel_colors[idx]] if self.channel_colors else None
                 )
-                
+
                 print(pyramid_data[0].chunksize)
-                
+
                 dask_jobs = self.writer.write_multiscale(
                     pyramid=pyramid_data,
                     image_name=image_name,

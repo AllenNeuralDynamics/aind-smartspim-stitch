@@ -7,9 +7,9 @@ import unittest
 from pathlib import Path
 from typing import Optional, Union
 
+from aind_smartspim_stitch.utils import utils
 from parameterized import parameterized
 from tests import params
-from utils import utils
 
 # IO types
 PathLike = Union[str, Path]
