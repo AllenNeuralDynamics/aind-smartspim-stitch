@@ -18,7 +18,7 @@ classifiers = [
 dynamic = ["version", "readme"]
 
 dependencies = [
-    'logging=3.8.16',
+    'logging==3.8.16',
     'pandas',
     'sphinx',
     'tifffile < 2022.4.22',
