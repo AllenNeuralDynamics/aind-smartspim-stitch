@@ -1,8 +1,23 @@
 version: 2
 
+# Set the version of Python and other tools you might need
+build:
+  os: ubuntu-20.04
+  tools:
+    python: "3.8"
+
+# Install mpi (for vcstools)
+build:
+  apt_packages:
+    - python3-mpi4py
+    - libopenmpi-dev
+
+# Explicitly set the version of Python and its requirements
 python:
-  version: 3.8
   install:
-    - method: pip
-      path: .
+    - path: .
     - requirements: doc_template/requirements.txt
+
+# Build from the docs/ directory with Sphinx
+sphinx:
+  configuration: doc_template/source/conf.py
