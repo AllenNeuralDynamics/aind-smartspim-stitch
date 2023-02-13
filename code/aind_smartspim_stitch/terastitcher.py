@@ -1366,107 +1366,37 @@ class TeraStitcher:
 
         new_channel_order = None
 
-        independent_stitch = True
+        # Copy displacements to other channels
+        # Changing the binary with the path to
+        # the images and the stacks folder
+        new_channel_order = channels.copy()
+        merge_xmls = {informative_channel: str(merge_xml_informative)}
 
-        if independent_stitch:
-            # Copy displacements to other channels
-            # Changing the binary with the path to
-            # the images and the stacks folder
-            new_channel_order = channels.copy()
-            merge_xmls = {informative_channel: str(merge_xml_informative)}
+        for idx in range(len(channels)):
+            if idx == pos_informative_channel:
+                # Ignore import informative channel
+                # since we have already calculated projections
+                continue
 
-            for idx in range(len(channels)):
-                if idx == pos_informative_channel:
-                    # Ignore import informative channel
-                    # since we have already calculated projections
-                    continue
-
-                channel_merge_xml = generate_new_channel_displ_xml(
-                    informative_channel_xml=merge_xml_informative,
-                    channel_name=channels[idx],
-                    regex_expr=self.__channel_regex,
-                )
-
-                merge_xmls[channels[idx]] = channel_merge_xml
-
-                self.logger.info(
-                    f"Generating merge XML for {channels[idx]} based on {merge_xml_informative}"
-                )
-
-            # Executing two loops to have the XMLs in case
-            # the stitching fails
-
-            for channel_name, merge_xml in merge_xmls.items():
-                self.logger.info(f"Stitching channel {channel_name}")
-                merge_config = {
-                    "s": merge_xml,
-                    "d": self.__stitched_folder,
-                    "sfmt": '"TIFF (unstitched, 3D)"',
-                    "dfmt": '"TIFF (tiled, 4D)"',
-                    "cpu_params": config["merge"]["cpu_params"],
-                    "width": config["merge"]["slice_extent"][0],
-                    "height": config["merge"]["slice_extent"][1],
-                    "depth": config["merge"]["slice_extent"][2],
-                    "additional_params": ["fixed_tiling"],
-                    "ch_dir": channel_name,
-                    # 'clist':'0'
-                }
-
-                exec_config["command"] = self.merge_multivolume_separated_channels_cmd(
-                    merge_config, channel_name
-                )
-
-                start_date_time = datetime.now()
-                utils.execute_command(exec_config)
-                end_date_time = datetime.now()
-
-                self.data_processes["steps"].append(
-                    DataProcess(
-                        name="Image tile fusing",
-                        version=self.data_processes["tools"]["terastitcher"]["version"],
-                        start_date_time=start_date_time,
-                        end_date_time=end_date_time,
-                        input_location=str(merge_xml),
-                        output_location=str(self.__stitched_folder),
-                        code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
-                        parameters=merge_config,
-                        notes=f"Fusing multichannel volume - Channel {channel_name}",
-                    )
-                )
-
-        else:
-            # Importing multivolume dataset
-            params_multivolume = config["import_data"].copy()
-            params_multivolume["volin"] = fuse_xmls
-            params_multivolume["projout"] = fuse_xmls.joinpath("import_multivolume.xml")
-            params_multivolume["volin_plugin"] = "MultiVolume"
-            params_multivolume["imin_channel"] = pos_informative_channel
-
-            exec_config["command"] = self.import_multivolume_cmd(params_multivolume)
-            self.logger.info(f"Import multivolume using {channels[pos_informative_channel]} channel...")
-
-            start_date_time = datetime.now()
-            utils.execute_command(exec_config)
-            end_date_time = datetime.now()
-
-            self.data_processes["steps"].append(
-                DataProcess(
-                    name="Image importing",
-                    version=self.data_processes["tools"]["terastitcher"]["version"],
-                    start_date_time=start_date_time,
-                    end_date_time=end_date_time,
-                    input_location=str(params_multivolume["volin"]),
-                    output_location=str(params_multivolume["projout"]),
-                    code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
-                    parameters=params_multivolume,
-                    notes="Importing multivolume data from all channels",
-                )
+            channel_merge_xml = generate_new_channel_displ_xml(
+                informative_channel_xml=merge_xml_informative,
+                channel_name=channels[idx],
+                regex_expr=self.__channel_regex,
             )
 
-            # Merge channels
-            self.logger.info("Merging channels step...")
+            merge_xmls[channels[idx]] = channel_merge_xml
+
+            self.logger.info(
+                f"Generating merge XML for {channels[idx]} based on {merge_xml_informative}"
+            )
+
+        # Executing two loops to have the XMLs in case
+        # the stitching fails
+
+        for channel_name, merge_xml in merge_xmls.items():
+            self.logger.info(f"Stitching channel {channel_name}")
             merge_config = {
-                "s": params_multivolume["projout"],
+                "s": merge_xml,
                 "d": self.__stitched_folder,
                 "sfmt": '"TIFF (unstitched, 3D)"',
                 "dfmt": '"TIFF (tiled, 4D)"',
@@ -1474,15 +1404,14 @@ class TeraStitcher:
                 "width": config["merge"]["slice_extent"][0],
                 "height": config["merge"]["slice_extent"][1],
                 "depth": config["merge"]["slice_extent"][2],
-                "additional_params": ["fixed_tiling"]
+                "additional_params": ["fixed_tiling"],
+                "ch_dir": channel_name,
                 # 'clist':'0'
             }
 
-            # Merge multiple channels at the same time
-            # Optimal for datasets smaller than ≈700 GBs
-            # Decreasing the # of processes
-
-            exec_config["command"] = self.merge_multivolume_all_channels_cmd(merge_config)
+            exec_config["command"] = self.merge_multivolume_separated_channels_cmd(
+                merge_config, channel_name
+            )
 
             start_date_time = datetime.now()
             utils.execute_command(exec_config)
@@ -1494,21 +1423,13 @@ class TeraStitcher:
                     version=self.data_processes["tools"]["terastitcher"]["version"],
                     start_date_time=start_date_time,
                     end_date_time=end_date_time,
-                    input_location=str(params_multivolume["projout"]),
+                    input_location=str(merge_xml),
                     output_location=str(self.__stitched_folder),
                     code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
                     parameters=merge_config,
-                    notes="Fusing multichannel volume",
+                    notes=f"Fusing multichannel volume - Channel {channel_name}",
                 )
             )
-
-            # Ignore reordering channels if info
-            # is true
-            if exec_config["info"]:
-                return None
-
-            # Read channel output order
-            new_channel_order = self.__get_multivolume_channel_order(params_multivolume["projout"])
 
         return new_channel_order
 
