@@ -4,7 +4,8 @@ Main function to execute dataset processing
 import logging
 import sys
 
-from aind_smartspim_stitch import terastitcher, utils
+from aind_smartspim_stitch import terastitcher
+from aind_smartspim_stitch.utils import utils
 
 
 def main() -> None:
@@ -32,9 +33,7 @@ def main() -> None:
     # Copying output to bucket
     dataset_name = output_folder.replace("/scratch/", "")
     s3_path = f"s3://{bucket_path}/{dataset_name}"
-    for out in utils.execute_command_helper(
-        f"aws s3 mv --recursive {output_folder} {s3_path}"
-    ):
+    for out in utils.execute_command_helper(f"aws s3 mv --recursive {output_folder} {s3_path}"):
         logger.info(out)
 
     utils.save_string_to_txt(

@@ -8,8 +8,7 @@ from pathlib import Path
 
 import yaml
 from argschema import ArgSchema, ArgSchemaParser
-from argschema.fields import (Boolean, Float, InputDir, InputFile, Int, List,
-                              Nested, Str)
+from argschema.fields import Boolean, Float, InputDir, InputFile, Int, List, Nested, Str
 from argschema.schemas import DefaultSchema
 from marshmallow import validate
 
@@ -76,9 +75,7 @@ class ImportParameters(DefaultSchema):
 
     ref2 = Str(
         required=False,
-        metadata={
-            "description": "Second axis of the dataset reference system"
-        },
+        metadata={"description": "Second axis of the dataset reference system"},
         dump_default="Y",
     )
 
@@ -112,9 +109,7 @@ class ImportParameters(DefaultSchema):
         dump_default="/scratch",
     )
 
-    additional_params = List(
-        Str(), required=False, cli_as_single_argument=True
-    )
+    additional_params = List(Str(), required=False, cli_as_single_argument=True)
 
 
 class CPUParams(DefaultSchema):
@@ -124,9 +119,7 @@ class CPUParams(DefaultSchema):
 
     estimate_processes = Boolean(
         required=False,
-        matadata={
-            "description": "Estimate processes option for align or merge steps"
-        },
+        matadata={"description": "Estimate processes option for align or merge steps"},
         dump_default=False,
     )
 
@@ -173,25 +166,19 @@ class AlignParameters(DefaultSchema):
 
     sV = Int(
         required=False,
-        metadata={
-            "description": "Radius of search (pixels) for displacements in Y"
-        },
+        metadata={"description": "Radius of search (pixels) for displacements in Y"},
         dump_default=25,
     )
 
     sH = Int(
         required=False,
-        metadata={
-            "description": "Radius of search (pixels) for displacements in X"
-        },
+        metadata={"description": "Radius of search (pixels) for displacements in X"},
         dump_default=25,
     )
 
     sD = Int(
         required=False,
-        metadata={
-            "description": "Radius of search (pixels) for displacements in Z"
-        },
+        metadata={"description": "Radius of search (pixels) for displacements in Z"},
         dump_default=25,
     )
 
@@ -212,9 +199,7 @@ class ThresholdParameters(DefaultSchema):
             """
         },
         dump_default=0.7,
-        validate=validate.Range(
-            min=0, min_inclusive=False, max=1, max_inclusive=True
-        ),
+        validate=validate.Range(min=0, min_inclusive=False, max=1, max_inclusive=True),
     )
 
 
@@ -297,17 +282,13 @@ class PystripeParams(DefaultSchema):
 
     workers = Int(
         required=False,
-        metadata={
-            "description": "number of cpu workers to use in batch processing"
-        },
+        metadata={"description": "number of cpu workers to use in batch processing"},
         dump_default=16,
     )
 
     output_format = Str(
         required=False,
-        metadata={
-            "description": "Output format for the images in pystripe step"
-        },
+        metadata={"description": "Output format for the images in pystripe step"},
         dump_default=".tiff",
     )
 
@@ -375,13 +356,9 @@ class PipelineParams(ArgSchema):
 
     stitch_channel = Int(
         required=True,
-        metadata={
-            "description": "Position of the informative channel for stitching"
-        },
+        metadata={"description": "Position of the informative channel for stitching"},
         dump_default=0,
-        validate=validate.Range(
-            min=0, min_inclusive=True, max=3, max_inclusive=True
-        ),
+        validate=validate.Range(min=0, min_inclusive=True, max=3, max_inclusive=True),
     )
 
     regex_channels = Str(

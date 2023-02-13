@@ -119,14 +119,12 @@ def read_image_directory_structure(folder_dir: PathLike) -> dict:
                 rows = natsorted(os.listdir(possible_col))
 
                 for row in rows:
-                    possible_row = (
-                        channel_paths[channel_idx].joinpath(col).joinpath(row)
-                    )
+                    possible_row = channel_paths[channel_idx].joinpath(col).joinpath(row)
 
                     if os.path.isdir(possible_row):
-                        directory_structure[channel_paths[channel_idx]][col][
-                            row
-                        ] = natsorted(os.listdir(possible_row))
+                        directory_structure[channel_paths[channel_idx]][col][row] = natsorted(
+                            os.listdir(possible_row)
+                        )
 
     return directory_structure
 
@@ -214,16 +212,12 @@ def fix_image_diff_dims(
             return new_arr
 
         n_pad = tuple(tuple((0, dim)) for dim in zeros_dim)
-        new_arr = pad(
-            new_arr, pad_width=n_pad, mode="constant", constant_values=0
-        ).rechunk(chunksize)
+        new_arr = pad(new_arr, pad_width=n_pad, mode="constant", constant_values=0).rechunk(chunksize)
 
     return new_arr
 
 
-def concatenate_dask_arrays(
-    arr_1: ArrayLike, arr_2: ArrayLike, axis: int
-) -> ArrayLike:
+def concatenate_dask_arrays(arr_1: ArrayLike, arr_2: ArrayLike, axis: int) -> ArrayLike:
     """
     Concatenates two arrays in a given
     dimension
@@ -348,14 +342,10 @@ def read_chunked_stitched_image_per_channel(
                 valid_image = True
 
                 try:
-                    slice_name = directory_structure[channel_name][
-                        column_name
-                    ][row_name][slice_pos]
+                    slice_name = directory_structure[channel_name][column_name][row_name][slice_pos]
 
                     filepath = str(
-                        channel_name.joinpath(column_name)
-                        .joinpath(row_name)
-                        .joinpath(slice_name)
+                        channel_name.joinpath(column_name).joinpath(row_name).joinpath(slice_name)
                     )
 
                     new_arr = lazy_tiff_reader(filepath)
@@ -516,9 +506,7 @@ def channel_parallel_reading(
             if not res_idx:
                 dask_array = res[res_idx][0]
             else:
-                dask_array = concatenate(
-                    [dask_array, res[res_idx][0]], axis=-3
-                )
+                dask_array = concatenate([dask_array, res[res_idx][0]], axis=-3)
 
             print(f"Slides: {res[res_idx][1]}")
 
@@ -616,11 +604,7 @@ def get_sample_img(directory_structure: dict) -> ArrayLike:
     for channel_dir, val in directory_structure.items():
         for col_name, rows in val.items():
             for row_name, images in rows.items():
-                sample_path = (
-                    channel_dir.joinpath(col_name)
-                    .joinpath(row_name)
-                    .joinpath(images[0])
-                )
+                sample_path = channel_dir.joinpath(col_name).joinpath(row_name).joinpath(images[0])
 
                 if not isinstance(sample_img, dask.array.core.Array):
                     sample_img = lazy_tiff_reader(str(sample_path))
@@ -771,9 +755,7 @@ class ZarrConverter:
             }
         }
 
-    def convert(
-        self, writer_config: dict, image_name: str = "zarr_multiscale.zarr"
-    ) -> None:
+    def convert(self, writer_config: dict, image_name: str = "zarr_multiscale.zarr") -> None:
         """
         Executes the OME-Zarr conversion
 
@@ -872,9 +854,7 @@ class ZarrConverter:
                 )
 
                 # Getting 5D
-                pyramid_data = [
-                    pad_array_n_d(pyramid) for pyramid in pyramid_data
-                ]
+                pyramid_data = [pad_array_n_d(pyramid) for pyramid in pyramid_data]
                 print(f"Pyramid {self.channels[idx]}: ", pyramid_data)
 
                 for pyramid in pyramid_data:
@@ -885,15 +865,9 @@ class ZarrConverter:
                         """
                     )
 
-                image_name = (
-                    self.channels[idx] + ".zarr"
-                    if self.channels
-                    else image_name
-                )
+                image_name = self.channels[idx] + ".zarr" if self.channels else image_name
                 channel_names = [self.channels[idx]] if self.channels else None
-                channel_colors = (
-                    [self.channel_colors[idx]] if self.channel_colors else None
-                )
+                channel_colors = [self.channel_colors[idx]] if self.channel_colors else None
 
                 print(pyramid_data[0].chunksize)
 
@@ -924,15 +898,11 @@ def main():
     """
     default_config = get_default_config()
 
-    mod = ArgSchemaParser(
-        input_data=default_config, schema_type=ZarrConvertParams
-    )
+    mod = ArgSchemaParser(input_data=default_config, schema_type=ZarrConvertParams)
 
     args = mod.args
 
-    logging.basicConfig(
-        format="%(asctime)s %(message)s", datefmt="%Y-%m-%d %H:%M"
-    )
+    logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%Y-%m-%d %H:%M")
     LOGGER = logging.getLogger(__name__)
     LOGGER.setLevel(logging.INFO)
 

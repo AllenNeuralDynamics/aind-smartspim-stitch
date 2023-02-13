@@ -16,9 +16,7 @@ class PathParser:
     """
 
     @staticmethod
-    def parse_path_gcs(
-        input_path: PathLike, output_path: PathLike
-    ) -> List[str]:
+    def parse_path_gcs(input_path: PathLike, output_path: PathLike) -> List[str]:
         """
         GCloud parser to know how many buckets we need to mount with gcsfuse.
 
@@ -77,20 +75,14 @@ class PathParser:
             # Same parent, mount only one bucket
 
             utils.create_folder(bucket_name_input)
-            utils.gscfuse_mount(
-                bucket_name=bucket_name_input, params=bucket_input_config
-            )
+            utils.gscfuse_mount(bucket_name=bucket_name_input, params=bucket_input_config)
 
         else:
             # Mounting buckets in new folders
             utils.create_folder(bucket_name_input)
-            utils.gscfuse_mount(
-                bucket_name=bucket_name_input, params=bucket_input_config
-            )
+            utils.gscfuse_mount(bucket_name=bucket_name_input, params=bucket_input_config)
 
             utils.create_folder(bucket_name_output)
-            utils.gscfuse_mount(
-                bucket_name=bucket_name_output, params=bucket_output_config
-            )
+            utils.gscfuse_mount(bucket_name=bucket_name_output, params=bucket_output_config)
 
         return [bucket_name_input, bucket_name_output]

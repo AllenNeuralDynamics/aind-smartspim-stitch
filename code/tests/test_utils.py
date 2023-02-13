@@ -49,9 +49,7 @@ class TestUtils(unittest.TestCase):
         self.assertTrue(os.path.isfile(path))
 
     @parameterized.expand(params.get_read_json_as_dict_params())
-    def test_read_json_as_dict(
-        self, path_to_file: PathLike, expected_dict: dict
-    ):
+    def test_read_json_as_dict(self, path_to_file: PathLike, expected_dict: dict):
         """
         Tests the read json as dictionary method
 
@@ -64,9 +62,7 @@ class TestUtils(unittest.TestCase):
             Expected dictionary that must be returned
             after reading it
         """
-        read_dict_example = utils.read_json_as_dict(
-            Path(self._tmp_dir.name).joinpath(path_to_file)
-        )
+        read_dict_example = utils.read_json_as_dict(Path(self._tmp_dir.name).joinpath(path_to_file))
         self.assertDictEqual(read_dict_example, expected_dict)
 
     @parameterized.expand(params.get_helper_build_param_value_command_params())
@@ -93,16 +89,12 @@ class TestUtils(unittest.TestCase):
             If the command needs a '=' symbol or not.
             Default: True
         """
-        output = utils.helper_build_param_value_command(
-            default_config, equal_con
-        )
+        output = utils.helper_build_param_value_command(default_config, equal_con)
         self.assertEqual(expected_output, output)
         self.assertIsInstance(output, str)
 
     @parameterized.expand(params.get_helper_additional_params_command_params())
-    def test_helper_additional_params_command(
-        self, default_config: dict, expected_output: str
-    ):
+    def test_helper_additional_params_command(self, default_config: dict, expected_output: str):
         """
         Tests the helper function to build parameters
         for the stitching pipeline

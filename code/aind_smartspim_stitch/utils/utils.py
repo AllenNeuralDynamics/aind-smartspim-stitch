@@ -9,8 +9,7 @@ from datetime import date, datetime, time
 from pathlib import Path
 from typing import Any, List, Optional, Union
 
-from aind_data_schema import (DerivedDataDescription, Processing,
-                              RawDataDescription)
+from aind_data_schema import DerivedDataDescription, Processing, RawDataDescription
 
 # IO types
 PathLike = Union[str, Path]
@@ -106,9 +105,7 @@ def execute_command_helper(
     if stdout_log_file and len(str(stdout_log_file)):
         save_string_to_txt("$ " + command, stdout_log_file, "a")
 
-    popen = subprocess.Popen(
-        command, stdout=subprocess.PIPE, universal_newlines=True, shell=True
-    )
+    popen = subprocess.Popen(command, stdout=subprocess.PIPE, universal_newlines=True, shell=True)
     for stdout_line in iter(popen.stdout.readline, ""):
         yield str(stdout_line).strip()
     popen.stdout.close()
@@ -176,9 +173,7 @@ def check_path_instance(obj: object) -> bool:
     return False
 
 
-def save_dict_as_json(
-    filename: str, dictionary: dict, verbose: Optional[bool] = False
-) -> None:
+def save_dict_as_json(filename: str, dictionary: dict, verbose: Optional[bool] = False) -> None:
     """
     Saves a dictionary as a json file.
 
@@ -240,9 +235,7 @@ def read_json_as_dict(filepath: str) -> dict:
     return dictionary
 
 
-def helper_build_param_value_command(
-    params: dict, equal_con: Optional[bool] = True
-) -> str:
+def helper_build_param_value_command(params: dict, equal_con: Optional[bool] = True) -> str:
     """
     Helper function to build a command based on key:value pairs.
 
@@ -314,9 +307,7 @@ def gscfuse_mount(bucket_name: PathLike, params: dict) -> None:
     """
 
     built_params = helper_build_param_value_command(params, equal_con=False)
-    additional_params = helper_additional_params_command(
-        params["additional_params"]
-    )
+    additional_params = helper_additional_params_command(params["additional_params"])
 
     gfuse_cmd = f"""gcsfuse {additional_params}
      {built_params} {bucket_name} {bucket_name}"""
@@ -365,9 +356,7 @@ def save_string_to_txt(txt: str, filepath: PathLike, mode="w") -> None:
         file.write(txt + "\n")
 
 
-def get_deepest_dirpath(
-    folder: PathLike, ignore_folders: List[str] = ["metadata"]
-) -> PathLike:
+def get_deepest_dirpath(folder: PathLike, ignore_folders: List[str] = ["metadata"]) -> PathLike:
     """
     Returns the deepest folder path in the provided folder.
 
@@ -433,12 +422,8 @@ def generate_data_description(
     parsed_date = [int(val) for val in data["creation_date"].split("-")]
     del data["name"]
 
-    data["creation_time"] = time(
-        parsed_time[0], parsed_time[1], parsed_time[2]
-    )
-    data["creation_date"] = date(
-        parsed_date[0], parsed_date[1], parsed_date[2]
-    )
+    data["creation_time"] = time(parsed_time[0], parsed_time[1], parsed_time[2])
+    data["creation_date"] = date(parsed_date[0], parsed_date[1], parsed_date[2])
 
     data = RawDataDescription(**data)
 

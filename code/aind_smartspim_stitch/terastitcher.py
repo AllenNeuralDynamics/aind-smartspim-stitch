@@ -81,20 +81,18 @@ def generate_new_channel_displ_xml(
         # Getting the channel name
         informative_channel_name = informative_channel_name.group()
 
-        with open(
-            informative_channel_xml, "r", encoding=encoding
-        ) as xml_reader:
+        with open(informative_channel_xml, "r", encoding=encoding) as xml_reader:
             xml_file = xml_reader.read()
 
         xml_dict = xmltodict.parse(xml_file)
 
-        new_stacks_folder = xml_dict["TeraStitcher"]["stacks_dir"][
-            "@value"
-        ].replace(informative_channel_name, channel_name)
+        new_stacks_folder = xml_dict["TeraStitcher"]["stacks_dir"]["@value"].replace(
+            informative_channel_name, channel_name
+        )
 
-        new_bin_folder = xml_dict["TeraStitcher"]["mdata_bin"][
-            "@value"
-        ].replace(informative_channel_name, channel_name)
+        new_bin_folder = xml_dict["TeraStitcher"]["mdata_bin"]["@value"].replace(
+            informative_channel_name, channel_name
+        )
 
         xml_dict["TeraStitcher"]["stacks_dir"]["@value"] = new_stacks_folder
         xml_dict["TeraStitcher"]["mdata_bin"]["@value"] = new_bin_folder
@@ -109,20 +107,12 @@ def generate_new_channel_displ_xml(
         len_end_xml_header = len(end_xml_header)
         xml_end_header = data_to_write.find(end_xml_header)
 
-        new_data_to_write = data_to_write[
-            : xml_end_header + len_end_xml_header
-        ]
+        new_data_to_write = data_to_write[: xml_end_header + len_end_xml_header]
         # Adding terastitcher doctype
-        new_data_to_write += (
-            '\n<!DOCTYPE TeraStitcher SYSTEM "TeraStitcher.DTD">'
-        )
-        new_data_to_write += data_to_write[
-            xml_end_header + len_end_xml_header :
-        ]
+        new_data_to_write += '\n<!DOCTYPE TeraStitcher SYSTEM "TeraStitcher.DTD">'
+        new_data_to_write += data_to_write[xml_end_header + len_end_xml_header :]
 
-        with open(
-            modified_mergexml_path, "w", encoding=encoding
-        ) as xml_writer:
+        with open(modified_mergexml_path, "w", encoding=encoding) as xml_writer:
             xml_writer.write(new_data_to_write)
 
     return modified_mergexml_path
@@ -188,18 +178,12 @@ class TeraStitcher:
         self.__channel_regex = channel_regex
         self.__output_jsons_path = Path(output_folder)
         self.__preprocessing_folder = Path(preprocessing_folder)
-        self.__stitched_folder = self.__preprocessing_folder.joinpath(
-            "stitched"
-        )
+        self.__stitched_folder = self.__preprocessing_folder.joinpath("stitched")
         self.__parallel = parallel
         self.__computation = computation
         self.__platform = platform.system()
-        self.__parastitcher_path = Path(pyscripts_path).joinpath(
-            "Parastitcher.py"
-        )
-        self.__paraconverter_path = Path(pyscripts_path).joinpath(
-            "paraconverter.py"
-        )
+        self.__parastitcher_path = Path(pyscripts_path).joinpath("Parastitcher.py")
+        self.__paraconverter_path = Path(pyscripts_path).joinpath("paraconverter.py")
         self.preprocessing = preprocessing
         self.__verbose = verbose
         self.__python_terminal = None
@@ -263,9 +247,7 @@ class TeraStitcher:
                 installation in the system {self.__platform}
                 """
             )
-            raise FileNotFoundError(
-                errno.ENOENT, os.strerror(errno.ENOENT), "terastitcher"
-            )
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "terastitcher")
 
         # If parastitcher or paraconverter paths are not found,
         # we set computation to sequential cpu as default.
@@ -281,14 +263,10 @@ class TeraStitcher:
         # structure depends if preprocessing steps are provided
         self.stdout_log_file = self.metadata_path.joinpath("stdout_log.txt")
 
-        data_description_path = self.__output_jsons_path.joinpath(
-            "data_description.json"
-        )
+        data_description_path = self.__output_jsons_path.joinpath("data_description.json")
 
         utils.generate_data_description(
-            raw_data_description_path=str(
-                self.__input_data.parent.joinpath("data_description.json")
-            ),
+            raw_data_description_path=str(self.__input_data.parent.joinpath("data_description.json")),
             dest_data_description=str(data_description_path),
             process_name="stitched",
         )
@@ -319,9 +297,7 @@ class TeraStitcher:
 
         try:
             devnull = open(os.devnull)
-            subprocess.Popen(
-                [tool_name], stdout=devnull, stderr=devnull
-            ).communicate()
+            subprocess.Popen([tool_name], stdout=devnull, stderr=devnull).communicate()
         except OSError:
             return False
         return True
@@ -356,9 +332,7 @@ class TeraStitcher:
             exit_status = None
 
             try:
-                proc = subprocess.run(
-                    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-                )
+                proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 exit_status = proc.returncode
 
             except FileNotFoundError:
@@ -386,9 +360,7 @@ class TeraStitcher:
                 installation in the system {self.__platform}
                 """
             )
-            raise FileNotFoundError(
-                errno.ENOENT, os.strerror(errno.ENOENT), "python"
-            )
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "python")
 
     def __check_teras_parallel_scripts(self) -> None:
         """
@@ -421,9 +393,7 @@ class TeraStitcher:
         if not parastitcher or not paraconverter:
             self.__parallel = False
 
-    def __build_parallel_command(
-        self, params: dict, step_name: str, tool: PathLike
-    ) -> str:
+    def __build_parallel_command(self, params: dict, step_name: str, tool: PathLike) -> str:
         """
         Builds a mpi command based on a provided configuration dictionary.
 
@@ -455,21 +425,14 @@ class TeraStitcher:
         cpu_params = params["cpu_params"]
 
         # mpiexec for windows, mpirun for linux or macs OS
-        mpi_command = (
-            "mpiexec -n" if self.__platform == "Windows" else "mpirun -np"
-        )
+        mpi_command = "mpiexec -n" if self.__platform == "Windows" else "mpirun -np"
         additional_params = ""
         hostfile = ""
         n_procs = cpu_params["number_processes"]
 
         # Additional params provided in the configuration
-        if (
-            len(cpu_params["additional_params"])
-            and self.__platform != "Windows"
-        ):
-            additional_params = utils.helper_additional_params_command(
-                cpu_params["additional_params"]
-            )
+        if len(cpu_params["additional_params"]) and self.__platform != "Windows":
+            additional_params = utils.helper_additional_params_command(cpu_params["additional_params"])
 
         # Windows does not require a hostfile to work
         if self.__platform != "Windows":
@@ -495,9 +458,7 @@ class TeraStitcher:
                     }
                 )
 
-                self.logger.info(
-                    f"Changing number of processes for align step to {n_procs}"
-                )
+                self.logger.info(f"Changing number of processes for align step to {n_procs}")
 
             elif step_name == "merge":
                 # TODO estimate in merge step
@@ -512,9 +473,7 @@ class TeraStitcher:
         cmd += f"{self.__python_terminal} {tool}"
         return cmd
 
-    def import_step_cmd(
-        self, params: dict, channel: str, fuse_path: PathLike = None
-    ) -> str:
+    def import_step_cmd(self, params: dict, channel: str, fuse_path: PathLike = None) -> str:
         """
         Builds the terastitcher's import command based on
         a provided configuration dictionary. It outputs
@@ -564,15 +523,11 @@ class TeraStitcher:
 
         additional_params = ""
         if len(params["additional_params"]):
-            additional_params = utils.helper_additional_params_command(
-                params["additional_params"]
-            )
+            additional_params = utils.helper_additional_params_command(params["additional_params"])
 
         cmd = f"terastitcher --import {volume_input} {output_folder} {parameters} {additional_params}"
 
-        output_json = self.metadata_path.joinpath(
-            f"import_params_{channel}.json"
-        )
+        output_json = self.metadata_path.joinpath(f"import_params_{channel}.json")
         utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
 
         return cmd
@@ -603,15 +558,11 @@ class TeraStitcher:
 
         additional_params = ""
         if len(params["additional_params"]):
-            additional_params = utils.helper_additional_params_command(
-                params["additional_params"]
-            )
+            additional_params = utils.helper_additional_params_command(params["additional_params"])
 
         cmd = f"terastitcher --import {parameters} {additional_params}"
 
-        output_json = self.metadata_path.joinpath(
-            "import_params_multivolume.json"
-        )
+        output_json = self.metadata_path.joinpath("import_params_multivolume.json")
         utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
 
         return cmd
@@ -656,9 +607,7 @@ class TeraStitcher:
             return 2
 
         # Partitioning depth for the tiles
-        partitioning_depth = math.ceil(
-            config_params["image_depth"] / config_params["subvoldim"]
-        )
+        partitioning_depth = math.ceil(config_params["image_depth"] / config_params["subvoldim"])
 
         for proc in range(config_params["number_processes"], 0, -1):
             tiling_proc = 2 * (proc - 1)
@@ -699,9 +648,7 @@ class TeraStitcher:
         parallel_command = ""
 
         if self.__parallel:
-            parallel_command = self.__build_parallel_command(
-                params, "align", self.__parastitcher_path
-            )
+            parallel_command = self.__build_parallel_command(params, "align", self.__parastitcher_path)
 
         else:
             # Sequential execution or gpu execution if USECUDA_X_NCC flag is 1
@@ -711,9 +658,7 @@ class TeraStitcher:
 
         cmd = f"{parallel_command} --displcompute {input_xml} {output_xml} {parameters} > {self.xmls_path}/step2par.txt"
 
-        output_json = self.metadata_path.joinpath(
-            f"align_params_{channel}.json"
-        )
+        output_json = self.metadata_path.joinpath(f"align_params_{channel}.json")
         utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
 
         return cmd
@@ -772,13 +717,9 @@ class TeraStitcher:
         if params:
             parameters = utils.helper_build_param_value_command(params)
 
-        cmd = (
-            f"terastitcher --{step_name} {input_xml} {output_xml} {parameters}"
-        )
+        cmd = f"terastitcher --{step_name} {input_xml} {output_xml} {parameters}"
 
-        output_json = self.metadata_path.joinpath(
-            f"{step_name}_params_{channel}.json"
-        )
+        output_json = self.metadata_path.joinpath(f"{step_name}_params_{channel}.json")
         utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
 
         return cmd
@@ -824,9 +765,7 @@ class TeraStitcher:
         }
 
         if self.__parallel:
-            parallel_command = self.__build_parallel_command(
-                params, "merge", self.__paraconverter_path
-            )
+            parallel_command = self.__build_parallel_command(params, "merge", self.__paraconverter_path)
 
         else:
             # Sequential execution or gpu execution if USECUDA_X_NCC flag is 1
@@ -836,9 +775,7 @@ class TeraStitcher:
 
         cmd = f"{parallel_command} --merge {input_xml} {output_path} {parameters} > {self.xmls_path}/step6par.txt"
 
-        output_json = self.metadata_path.joinpath(
-            f"merge_params_{channel}.json"
-        )
+        output_json = self.metadata_path.joinpath(f"merge_params_{channel}.json")
         utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
 
         return cmd
@@ -869,9 +806,7 @@ class TeraStitcher:
         parallel_command = ""
 
         if self.__parallel:
-            parallel_command = self.__build_parallel_command(
-                params, "merge", self.__paraconverter_path
-            )
+            parallel_command = self.__build_parallel_command(params, "merge", self.__paraconverter_path)
 
         else:
             # Sequential execution or gpu execution if USECUDA_X_NCC flag is 1
@@ -881,9 +816,7 @@ class TeraStitcher:
 
         additional_params = ""
         if len(params["additional_params"]):
-            additional_params = utils.helper_additional_params_command(
-                params["additional_params"]
-            )
+            additional_params = utils.helper_additional_params_command(params["additional_params"])
 
         cmd = f"{parallel_command} {parameters} {additional_params}"  # > {self.xmls_path}/step6par.txt"
         cmd = cmd.replace("--s=", "-s=")
@@ -894,9 +827,7 @@ class TeraStitcher:
 
         return cmd
 
-    def merge_multivolume_separated_channels_cmd(
-        self, params: dict, channel: str
-    ) -> List[str]:
+    def merge_multivolume_separated_channels_cmd(self, params: dict, channel: str) -> List[str]:
         """
         Builds the terastitcher's multivolume merge command based
         on a provided configuration dictionary. It outputs a json
@@ -928,9 +859,7 @@ class TeraStitcher:
         parallel_command = ""
 
         if self.__parallel:
-            parallel_command = self.__build_parallel_command(
-                params, "merge", self.__paraconverter_path
-            )
+            parallel_command = self.__build_parallel_command(params, "merge", self.__paraconverter_path)
 
         else:
             # Sequential execution or gpu execution if USECUDA_X_NCC flag is 1
@@ -940,17 +869,13 @@ class TeraStitcher:
 
         additional_params = ""
         if len(params["additional_params"]):
-            additional_params = utils.helper_additional_params_command(
-                params["additional_params"]
-            )
+            additional_params = utils.helper_additional_params_command(params["additional_params"])
 
         cmd = f"{parallel_command} {parameters} {additional_params}"  # > {self.xmls_path}/step6par_{channel}.txt"
         cmd = cmd.replace("--s=", "-s=")
         cmd = cmd.replace("--d=", "-d=")
 
-        output_json = self.metadata_path.joinpath(
-            f"merge_volume_params_{channel}.json"
-        )
+        output_json = self.metadata_path.joinpath(f"merge_volume_params_{channel}.json")
         utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
 
         return cmd
@@ -975,11 +900,7 @@ class TeraStitcher:
         output_json = self.metadata_path.joinpath("ome_zarr_params.json")
         utils.save_dict_as_json(output_json, config, self.__verbose)
 
-        path = [
-            folder
-            for folder in os.listdir(self.__stitched_folder)
-            if "RES" in folder
-        ]
+        path = [folder for folder in os.listdir(self.__stitched_folder) if "RES" in folder]
 
         converter = ZarrConverter(
             self.__stitched_folder.joinpath(path[0]),
@@ -1046,9 +967,7 @@ class TeraStitcher:
         for channel_idx in range(len(channels)):
             layers.append(
                 {
-                    "source": str(
-                        root_folder.joinpath(channels[channel_idx] + ".zarr")
-                    ),
+                    "source": str(root_folder.joinpath(channels[channel_idx] + ".zarr")),
                     # use channel idx when source is the same
                     # in zarr to change channel otherwise 0
                     "channel": 0,
@@ -1058,9 +977,7 @@ class TeraStitcher:
                         "emitter": "RGB",
                         "vec": "vec3",
                     },
-                    "shaderControls": {  # Optional
-                        "normalized": {"range": [0, 200]}
-                    },
+                    "shaderControls": {"normalized": {"range": [0, 200]}},  # Optional
                 }
             )
 
@@ -1076,9 +993,7 @@ class TeraStitcher:
         link = neuroglancer_link.get_url_link()
         self.logger.info(f"Visualization link: {link}")
 
-    def __preprocessing_tool_cmd(
-        self, tool_name: str, params: dict, equal_con: bool
-    ) -> str:
+    def __preprocessing_tool_cmd(self, tool_name: str, params: dict, equal_con: bool) -> str:
         """
         Builds the execution command for the given tool.
 
@@ -1101,22 +1016,16 @@ class TeraStitcher:
             Command that will be executed for pystripe.
 
         """
-        parameters = utils.helper_build_param_value_command(
-            params, equal_con=equal_con
-        )
+        parameters = utils.helper_build_param_value_command(params, equal_con=equal_con)
 
-        output_json = self.metadata_path.joinpath(
-            f"{tool_name}_params_{params['input'].stem}.json"
-        )
+        output_json = self.metadata_path.joinpath(f"{tool_name}_params_{params['input'].stem}.json")
         utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
 
         cmd = f"{tool_name} {parameters}"
 
         return cmd
 
-    def __execute_preprocessing_steps(
-        self, exec_config: dict, channels: List[str]
-    ) -> None:
+    def __execute_preprocessing_steps(self, exec_config: dict, channels: List[str]) -> None:
         """
         Executes any preprocessing steps that are required
         for the pipeline. It is necessary to have the
@@ -1151,18 +1060,12 @@ class TeraStitcher:
             for tool_name, params in self.preprocessing.items():
                 params_copy = params.copy()
 
-                params_copy["input"] = params_copy["input"].joinpath(
-                    channels[idx]
-                )
-                params_copy["output"] = params_copy["output"].joinpath(
-                    channels[idx]
-                )
+                params_copy["input"] = params_copy["input"].joinpath(channels[idx])
+                params_copy["output"] = params_copy["output"].joinpath(channels[idx])
                 params_copy["sigma1"] = params_copy["sigma1"][idx]
                 params_copy["sigma2"] = params_copy["sigma2"][idx]
 
-                exec_config["command"] = self.__preprocessing_tool_cmd(
-                    tool_name, params_copy, False
-                )
+                exec_config["command"] = self.__preprocessing_tool_cmd(tool_name, params_copy, False)
 
                 start_date_time = datetime.now()
                 utils.execute_command(exec_config)
@@ -1172,16 +1075,12 @@ class TeraStitcher:
                 self.data_processes["steps"].append(
                     DataProcess(
                         name="Image destriping",
-                        version=self.data_processes["tools"]["pystripe"][
-                            "version"
-                        ],
+                        version=self.data_processes["tools"]["pystripe"]["version"],
                         start_date_time=start_date_time,
                         end_date_time=end_date_time,
                         input_location=params_copy["input"],
                         output_location=params_copy["output"],
-                        code_url=self.data_processes["tools"]["pystripe"][
-                            "codeURL"
-                        ],
+                        code_url=self.data_processes["tools"]["pystripe"]["codeURL"],
                         parameters={
                             "sigma1": params_copy["sigma1"],
                             "sigma2": params_copy["sigma2"],
@@ -1226,9 +1125,7 @@ class TeraStitcher:
         """
 
         # Importing informative channel
-        exec_config["command"] = self.import_step_cmd(
-            config["import_data"], informative_channel
-        )
+        exec_config["command"] = self.import_step_cmd(config["import_data"], informative_channel)
 
         self.logger.info("Import step for informative channel...")
 
@@ -1239,22 +1136,12 @@ class TeraStitcher:
         self.data_processes["steps"].append(
             DataProcess(
                 name="Image importing",
-                version=self.data_processes["tools"]["terastitcher"][
-                    "version"
-                ],
+                version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(
-                    self.__input_data.joinpath(informative_channel)
-                ),
-                output_location=str(
-                    self.xmls_path.joinpath(
-                        f"xml_import_{informative_channel}.xml"
-                    )
-                ),
-                code_url=self.data_processes["tools"]["terastitcher"][
-                    "codeURL"
-                ],
+                input_location=str(self.__input_data.joinpath(informative_channel)),
+                output_location=str(self.xmls_path.joinpath(f"xml_import_{informative_channel}.xml")),
+                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
                 parameters=config["import_data"],
                 notes=f"Importing data from channel {informative_channel}",
             )
@@ -1262,9 +1149,7 @@ class TeraStitcher:
 
         # Compute alignments for most informative channel
         self.logger.info("Align step...")
-        exec_config["command"] = self.align_step_cmd(
-            config["align"], informative_channel
-        )
+        exec_config["command"] = self.align_step_cmd(config["align"], informative_channel)
 
         start_date_time = datetime.now()
         utils.execute_command(exec_config)
@@ -1273,24 +1158,12 @@ class TeraStitcher:
         self.data_processes["steps"].append(
             DataProcess(
                 name="Image tile stitching",
-                version=self.data_processes["tools"]["terastitcher"][
-                    "version"
-                ],
+                version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(
-                    self.xmls_path.joinpath(
-                        f"xml_import_{informative_channel}.xml"
-                    )
-                ),
-                output_location=str(
-                    self.xmls_path.joinpath(
-                        f"xml_displcomp_{informative_channel}.xml"
-                    )
-                ),
-                code_url=self.data_processes["tools"]["terastitcher"][
-                    "codeURL"
-                ],
+                input_location=str(self.xmls_path.joinpath(f"xml_import_{informative_channel}.xml")),
+                output_location=str(self.xmls_path.joinpath(f"xml_displcomp_{informative_channel}.xml")),
+                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
                 parameters=config["align"],
                 notes=f"Aligning pairwise-stacks using NCC algorithm channel {informative_channel}",
             )
@@ -1312,24 +1185,12 @@ class TeraStitcher:
         self.data_processes["steps"].append(
             DataProcess(
                 name="Image tile projection",
-                version=self.data_processes["tools"]["terastitcher"][
-                    "version"
-                ],
+                version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(
-                    self.xmls_path.joinpath(
-                        f"xml_displcomp_{informative_channel}.xml"
-                    )
-                ),
-                output_location=str(
-                    self.xmls_path.joinpath(
-                        f"xml_displproj_{informative_channel}.xml"
-                    )
-                ),
-                code_url=self.data_processes["tools"]["terastitcher"][
-                    "codeURL"
-                ],
+                input_location=str(self.xmls_path.joinpath(f"xml_displcomp_{informative_channel}.xml")),
+                output_location=str(self.xmls_path.joinpath(f"xml_displproj_{informative_channel}.xml")),
+                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
                 parameters={},
                 notes=f"Projection in channel {informative_channel}",
             )
@@ -1337,9 +1198,7 @@ class TeraStitcher:
 
         # Step 4
         self.logger.info("Threshold step...")
-        threshold_cnf = {
-            "threshold": config["threshold"]["reliability_threshold"]
-        }
+        threshold_cnf = {"threshold": config["threshold"]["reliability_threshold"]}
         exec_config["command"] = self.input_output_step_cmd(
             "displthres",
             f"xml_displproj_{informative_channel}.xml",
@@ -1355,32 +1214,20 @@ class TeraStitcher:
         self.data_processes["steps"].append(
             DataProcess(
                 name="Image thresholding",
-                version=self.data_processes["tools"]["terastitcher"][
-                    "version"
-                ],
+                version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(
-                    self.xmls_path.joinpath(
-                        f"xml_displproj_{informative_channel}.xml"
-                    )
-                ),
+                input_location=str(self.xmls_path.joinpath(f"xml_displproj_{informative_channel}.xml")),
                 output_location=str(
-                    self.xmls_path.joinpath(
-                        f"xml_displthres_{informative_channel}.xml"
-                    )
+                    self.xmls_path.joinpath(f"xml_displthres_{informative_channel}.xml")
                 ),
-                code_url=self.data_processes["tools"]["terastitcher"][
-                    "codeURL"
-                ],
+                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
                 parameters=config["threshold"],
                 notes=f"Thresholding in channel {informative_channel}",
             )
         )
 
-        merge_xml_informative = (
-            f"{fuse_xmls}/xml_merging_{informative_channel}.xml"
-        )
+        merge_xml_informative = f"{fuse_xmls}/xml_merging_{informative_channel}.xml"
         # Step 5
         self.logger.info("Placing tiles step...")
         exec_config["command"] = self.input_output_step_cmd(
@@ -1397,20 +1244,12 @@ class TeraStitcher:
         self.data_processes["steps"].append(
             DataProcess(
                 name="Image tile stitching",
-                version=self.data_processes["tools"]["terastitcher"][
-                    "version"
-                ],
+                version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(
-                    self.xmls_path.joinpath(
-                        f"xml_displthres_{informative_channel}.xml"
-                    )
-                ),
+                input_location=str(self.xmls_path.joinpath(f"xml_displthres_{informative_channel}.xml")),
                 output_location=f"{fuse_xmls}/xml_merging_{informative_channel}.xml",
-                code_url=self.data_processes["tools"]["terastitcher"][
-                    "codeURL"
-                ],
+                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
                 parameters={},
                 notes=f"Placing tiles to the most optimal position channel {informative_channel}",
             )
@@ -1445,9 +1284,7 @@ class TeraStitcher:
 
         xml_dict = xmltodict.parse(xml_file)
         channels = []
-        for channel_path in xml_dict["TeraStitcher"]["SUBVOLUMES"][
-            "Subvolume"
-        ]:
+        for channel_path in xml_dict["TeraStitcher"]["SUBVOLUMES"]["Subvolume"]:
             name = Path(channel_path["@xml_fname"]).parts[-1]
             name = re.search(self.__channel_regex, name).group()
             channels.append(name)
@@ -1511,22 +1348,12 @@ class TeraStitcher:
             self.data_processes["steps"].append(
                 DataProcess(
                     name="Image importing",
-                    version=self.data_processes["tools"]["terastitcher"][
-                        "version"
-                    ],
+                    version=self.data_processes["tools"]["terastitcher"]["version"],
                     start_date_time=start_date_time,
                     end_date_time=end_date_time,
-                    input_location=str(
-                        self.__input_data.joinpath(channels[idx])
-                    ),
-                    output_location=str(
-                        self.xmls_path.joinpath(
-                            f"xml_import_{channels[idx]}.xml"
-                        )
-                    ),
-                    code_url=self.data_processes["tools"]["terastitcher"][
-                        "codeURL"
-                    ],
+                    input_location=str(self.__input_data.joinpath(channels[idx])),
+                    output_location=str(self.xmls_path.joinpath(f"xml_import_{channels[idx]}.xml")),
+                    code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
                     parameters=config["import_data"],
                     notes=f"Importing data from channel {channels[idx]}",
                 )
@@ -1585,9 +1412,7 @@ class TeraStitcher:
                     # 'clist':'0'
                 }
 
-                exec_config[
-                    "command"
-                ] = self.merge_multivolume_separated_channels_cmd(
+                exec_config["command"] = self.merge_multivolume_separated_channels_cmd(
                     merge_config, channel_name
                 )
 
@@ -1598,16 +1423,12 @@ class TeraStitcher:
                 self.data_processes["steps"].append(
                     DataProcess(
                         name="Image tile fusing",
-                        version=self.data_processes["tools"]["terastitcher"][
-                            "version"
-                        ],
+                        version=self.data_processes["tools"]["terastitcher"]["version"],
                         start_date_time=start_date_time,
                         end_date_time=end_date_time,
                         input_location=str(merge_xml),
                         output_location=str(self.__stitched_folder),
-                        code_url=self.data_processes["tools"]["terastitcher"][
-                            "codeURL"
-                        ],
+                        code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
                         parameters=merge_config,
                         notes=f"Fusing multichannel volume - Channel {channel_name}",
                     )
@@ -1617,18 +1438,12 @@ class TeraStitcher:
             # Importing multivolume dataset
             params_multivolume = config["import_data"].copy()
             params_multivolume["volin"] = fuse_xmls
-            params_multivolume["projout"] = fuse_xmls.joinpath(
-                "import_multivolume.xml"
-            )
+            params_multivolume["projout"] = fuse_xmls.joinpath("import_multivolume.xml")
             params_multivolume["volin_plugin"] = "MultiVolume"
             params_multivolume["imin_channel"] = pos_informative_channel
 
-            exec_config["command"] = self.import_multivolume_cmd(
-                params_multivolume
-            )
-            self.logger.info(
-                f"Import multivolume using {channels[pos_informative_channel]} channel..."
-            )
+            exec_config["command"] = self.import_multivolume_cmd(params_multivolume)
+            self.logger.info(f"Import multivolume using {channels[pos_informative_channel]} channel...")
 
             start_date_time = datetime.now()
             utils.execute_command(exec_config)
@@ -1637,16 +1452,12 @@ class TeraStitcher:
             self.data_processes["steps"].append(
                 DataProcess(
                     name="Image importing",
-                    version=self.data_processes["tools"]["terastitcher"][
-                        "version"
-                    ],
+                    version=self.data_processes["tools"]["terastitcher"]["version"],
                     start_date_time=start_date_time,
                     end_date_time=end_date_time,
                     input_location=str(params_multivolume["volin"]),
                     output_location=str(params_multivolume["projout"]),
-                    code_url=self.data_processes["tools"]["terastitcher"][
-                        "codeURL"
-                    ],
+                    code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
                     parameters=params_multivolume,
                     notes="Importing multivolume data from all channels",
                 )
@@ -1671,9 +1482,7 @@ class TeraStitcher:
             # Optimal for datasets smaller than ≈700 GBs
             # Decreasing the # of processes
 
-            exec_config["command"] = self.merge_multivolume_all_channels_cmd(
-                merge_config
-            )
+            exec_config["command"] = self.merge_multivolume_all_channels_cmd(merge_config)
 
             start_date_time = datetime.now()
             utils.execute_command(exec_config)
@@ -1682,16 +1491,12 @@ class TeraStitcher:
             self.data_processes["steps"].append(
                 DataProcess(
                     name="Image tile fusing",
-                    version=self.data_processes["tools"]["terastitcher"][
-                        "version"
-                    ],
+                    version=self.data_processes["tools"]["terastitcher"]["version"],
                     start_date_time=start_date_time,
                     end_date_time=end_date_time,
                     input_location=str(params_multivolume["projout"]),
                     output_location=str(self.__stitched_folder),
-                    code_url=self.data_processes["tools"]["terastitcher"][
-                        "codeURL"
-                    ],
+                    code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
                     parameters=merge_config,
                     notes="Fusing multichannel volume",
                 )
@@ -1703,15 +1508,11 @@ class TeraStitcher:
                 return None
 
             # Read channel output order
-            new_channel_order = self.__get_multivolume_channel_order(
-                params_multivolume["projout"]
-            )
+            new_channel_order = self.__get_multivolume_channel_order(params_multivolume["projout"])
 
         return new_channel_order
 
-    def stitch_single_channels(
-        self, config: dict, exec_config: dict, channel: str
-    ) -> None:
+    def stitch_single_channels(self, config: dict, exec_config: dict, channel: str) -> None:
         """
         Stitch a dataset with a single channel.
 
@@ -1726,9 +1527,7 @@ class TeraStitcher:
         """
 
         # Step 1
-        exec_config["command"] = self.import_step_cmd(
-            config["import_data"].copy(), channel
-        )
+        exec_config["command"] = self.import_step_cmd(config["import_data"].copy(), channel)
         self.logger.info("Import step...")
 
         start_date_time = datetime.now()
@@ -1739,18 +1538,12 @@ class TeraStitcher:
         self.data_processes["steps"].append(
             DataProcess(
                 name="Image importing",
-                version=self.data_processes["tools"]["terastitcher"][
-                    "version"
-                ],
+                version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
                 input_location=str(self.__input_data.joinpath(channel)),
-                output_location=str(
-                    self.xmls_path.joinpath(f"xml_import_{channel}.xml")
-                ),
-                code_url=self.data_processes["tools"]["terastitcher"][
-                    "codeURL"
-                ],
+                output_location=str(self.xmls_path.joinpath(f"xml_import_{channel}.xml")),
+                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
                 parameters=config["import_data"],
                 notes=f"Importing data from channel {channel}",
             )
@@ -1768,20 +1561,12 @@ class TeraStitcher:
         self.data_processes["steps"].append(
             DataProcess(
                 name="Image tile stitching",
-                version=self.data_processes["tools"]["terastitcher"][
-                    "version"
-                ],
+                version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(
-                    self.xmls_path.joinpath(f"xml_import_{channel}.xml")
-                ),
-                output_location=str(
-                    self.xmls_path.joinpath(f"xml_displcomp_{channel}.xml")
-                ),
-                code_url=self.data_processes["tools"]["terastitcher"][
-                    "codeURL"
-                ],
+                input_location=str(self.xmls_path.joinpath(f"xml_import_{channel}.xml")),
+                output_location=str(self.xmls_path.joinpath(f"xml_displcomp_{channel}.xml")),
+                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
                 parameters=config["align"],
                 notes=f"Aligning pairwise-stacks using NCC algorithm channel {channel}",
             )
@@ -1804,20 +1589,12 @@ class TeraStitcher:
         self.data_processes["steps"].append(
             DataProcess(
                 name="Image tile projection",
-                version=self.data_processes["tools"]["terastitcher"][
-                    "version"
-                ],
+                version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(
-                    self.xmls_path.joinpath(f"xml_displcomp_{channel}.xml")
-                ),
-                output_location=str(
-                    self.xmls_path.joinpath(f"xml_displproj_{channel}.xml")
-                ),
-                code_url=self.data_processes["tools"]["terastitcher"][
-                    "codeURL"
-                ],
+                input_location=str(self.xmls_path.joinpath(f"xml_displcomp_{channel}.xml")),
+                output_location=str(self.xmls_path.joinpath(f"xml_displproj_{channel}.xml")),
+                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
                 parameters={},
                 notes=f"Projection in channel {channel}",
             )
@@ -1825,9 +1602,7 @@ class TeraStitcher:
 
         # Step 4
         self.logger.info("Threshold step...")
-        threshold_cnf = {
-            "threshold": config["threshold"]["reliability_threshold"]
-        }
+        threshold_cnf = {"threshold": config["threshold"]["reliability_threshold"]}
         exec_config["command"] = self.input_output_step_cmd(
             "displthres",
             f"xml_displproj_{channel}.xml",
@@ -1843,20 +1618,12 @@ class TeraStitcher:
         self.data_processes["steps"].append(
             DataProcess(
                 name="Image tile stitching",
-                version=self.data_processes["tools"]["terastitcher"][
-                    "version"
-                ],
+                version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(
-                    self.xmls_path.joinpath(f"xml_displproj_{channel}.xml")
-                ),
-                output_location=str(
-                    self.xmls_path.joinpath(f"xml_displthres_{channel}.xml")
-                ),
-                code_url=self.data_processes["tools"]["terastitcher"][
-                    "codeURL"
-                ],
+                input_location=str(self.xmls_path.joinpath(f"xml_displproj_{channel}.xml")),
+                output_location=str(self.xmls_path.joinpath(f"xml_displthres_{channel}.xml")),
+                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
                 parameters=config["threshold"],
                 notes=f"Thresholding in channel {channel}",
             )
@@ -1878,20 +1645,12 @@ class TeraStitcher:
         self.data_processes["steps"].append(
             DataProcess(
                 name="Image tile stitching",
-                version=self.data_processes["tools"]["terastitcher"][
-                    "version"
-                ],
+                version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(
-                    self.xmls_path.joinpath(f"xml_displthres_{channel}.xml")
-                ),
-                output_location=str(
-                    self.xmls_path.joinpath(f"xml_merging_{channel}.xml")
-                ),
-                code_url=self.data_processes["tools"]["terastitcher"][
-                    "codeURL"
-                ],
+                input_location=str(self.xmls_path.joinpath(f"xml_displthres_{channel}.xml")),
+                output_location=str(self.xmls_path.joinpath(f"xml_merging_{channel}.xml")),
+                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
                 parameters={},
                 notes=f"Placing tiles to the most optimal position channel {channel}",
             )
@@ -1913,11 +1672,8 @@ class TeraStitcher:
             # 'clist':'0'
         }
 
-        exec_config["command"] = self.merge_multivolume_separated_channels_cmd(
-            merge_config,
-            channel
-        )
-        
+        exec_config["command"] = self.merge_multivolume_separated_channels_cmd(merge_config, channel)
+
         start_date_time = datetime.now()
         utils.execute_command(exec_config)
         end_date_time = datetime.now()
@@ -1925,18 +1681,12 @@ class TeraStitcher:
         self.data_processes["steps"].append(
             DataProcess(
                 name="Image tile fusing",
-                version=self.data_processes["tools"]["terastitcher"][
-                    "version"
-                ],
+                version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(
-                    self.xmls_path.joinpath(f"xml_merging_{channel}.xml")
-                ),
+                input_location=str(self.xmls_path.joinpath(f"xml_merging_{channel}.xml")),
                 output_location=str(self.__stitched_folder),
-                code_url=self.data_processes["tools"]["terastitcher"][
-                    "codeURL"
-                ],
+                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
                 parameters=config["merge"],
                 notes=f"Merging volume with channel {channel}",
             )
@@ -1980,9 +1730,7 @@ class TeraStitcher:
             self.__execute_preprocessing_steps(exec_config, channels)
 
             if "pystripe" in self.preprocessing:
-                self.__input_data = self.__preprocessing_folder.joinpath(
-                    "destriped"
-                )
+                self.__input_data = self.__preprocessing_folder.joinpath("destriped")
 
         if len(channels) > 1:
             self.logger.info(
@@ -2025,9 +1773,7 @@ class TeraStitcher:
                 end_date_time=end_date_time,
                 input_location=str(self.__stitched_folder),
                 output_location=str(self.__output_folder),
-                code_url=self.data_processes["tools"]["aicsimageio"][
-                    "codeURL"
-                ],
+                code_url=self.data_processes["tools"]["aicsimageio"]["codeURL"],
                 parameters=config["ome_zarr_params"],
                 notes="OME Zarr conversion",
             )
@@ -2052,9 +1798,7 @@ class TeraStitcher:
         )
 
 
-def find_channels(
-    path: PathLike, channel_regex: str = r"Ex_([0-9]*)_Em_([0-9]*)$"
-):
+def find_channels(path: PathLike, channel_regex: str = r"Ex_([0-9]*)_Em_([0-9]*)$"):
     """
     Find image channels of a dataset using a regular expression.
 
@@ -2077,9 +1821,7 @@ def find_channels(
         given regular expression.
 
     """
-    return [
-        path for path in os.listdir(path) if re.search(channel_regex, path)
-    ]
+    return [path for path in os.listdir(path) if re.search(channel_regex, path)]
 
 
 def execute_terastitcher(
@@ -2167,12 +1909,10 @@ def execute_terastitcher(
 
         else:
             try:
-                config_teras["preprocessing_steps"]["pystripe"][
-                    "input"
-                ] = Path(input_data)
-                config_teras["preprocessing_steps"]["pystripe"][
-                    "output"
-                ] = Path(preprocessed_data).joinpath("destriped")
+                config_teras["preprocessing_steps"]["pystripe"]["input"] = Path(input_data)
+                config_teras["preprocessing_steps"]["pystripe"]["output"] = Path(
+                    preprocessed_data
+                ).joinpath("destriped")
             except KeyError:
                 config_teras["preprocessing_steps"] = None
 
@@ -2189,10 +1929,10 @@ def execute_terastitcher(
         )
 
         # Saving log command
-        terastitcher_cmd = f"$ python terastitcher.py --input_data {input_data} --output_data {output_folder}\n"
-        utils.save_string_to_txt(
-            terastitcher_cmd, terastitcher_tool.stdout_log_file
+        terastitcher_cmd = (
+            f"$ python terastitcher.py --input_data {input_data} --output_data {output_folder}\n"
         )
+        utils.save_string_to_txt(terastitcher_cmd, terastitcher_tool.stdout_log_file)
 
         terastitcher_tool.execute_pipeline(config_teras, channels)
 
@@ -2207,9 +1947,7 @@ def process_multiple_datasets() -> None:
     default_config = get_default_config()
     # print(default_config)
 
-    mod = ArgSchemaParser(
-        input_data=default_config, schema_type=PipelineParams
-    )
+    mod = ArgSchemaParser(input_data=default_config, schema_type=PipelineParams)
 
     args = mod.args
 
@@ -2262,9 +2000,7 @@ def main() -> str:
     """
     default_config = get_default_config()
 
-    mod = ArgSchemaParser(
-        input_data=default_config, schema_type=PipelineParams
-    )
+    mod = ArgSchemaParser(input_data=default_config, schema_type=PipelineParams)
 
     args = mod.args
 

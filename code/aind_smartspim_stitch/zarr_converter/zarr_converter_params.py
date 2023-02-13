@@ -35,18 +35,14 @@ class OmeZarrParams(DefaultSchema):
     physical_pixels = List(
         Float(),
         required=True,
-        metadata={
-            "description": "Physical pixel sizes in microns in ZYX order"
-        },
+        metadata={"description": "Physical pixel sizes in microns in ZYX order"},
         cli_as_single_argument=True,
         dump_default=[2.0, 1.8, 1.8],
     )
 
     pyramid_levels = Int(
         required=False,
-        metadata={
-            "description": "number of pyramid levels for ome-zarr multiscale"
-        },
+        metadata={"description": "number of pyramid levels for ome-zarr multiscale"},
         dump_default=5,
     )
 
