@@ -174,7 +174,7 @@ class TeraStitcher:
         """
 
         self.__input_data = Path(input_data)
-        self.__output_folder = Path(output_folder).joinpath("processed")
+        self.__output_folder = Path(output_folder).joinpath("processed/stitching")
         self.__channel_regex = channel_regex
         self.__output_jsons_path = Path(output_folder)
         self.__preprocessing_folder = Path(preprocessing_folder)
