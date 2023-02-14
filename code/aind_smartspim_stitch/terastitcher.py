@@ -1714,7 +1714,7 @@ class TeraStitcher:
         # Saving metadata process
         utils.generate_processing(
             self.data_processes["steps"],
-            str(self.__output_jsons_path.joinpath("processing.json")),
+            str(self.__output_folder.joinpath('metadata/processing.json')),
             __version__,
         )
 
