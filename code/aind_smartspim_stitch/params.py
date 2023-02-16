@@ -123,14 +123,10 @@ class CPUParams(DefaultSchema):
         dump_default=False,
     )
 
-    image_depth = Int(
-        required=False,
-        metadata={"description": "Layer thickness along Z axis"},
-    )
+    image_depth = Int(required=False, metadata={"description": "Layer thickness along Z axis"},)
 
     number_processes = Int(
-        required=False,
-        metadata={"description": "Degree of parallelization in gpu or cpu"},
+        required=False, metadata={"description": "Degree of parallelization in gpu or cpu"},
     )
 
     hostfile = InputFileBasedLinux(
@@ -153,15 +149,11 @@ class AlignParameters(DefaultSchema):
     """
 
     subvoldim = Int(
-        required=False,
-        metadata={"description": "Layer thickness along Z axis"},
-        dump_default=100,
+        required=False, metadata={"description": "Layer thickness along Z axis"}, dump_default=100,
     )
 
     algorithm = Str(
-        required=False,
-        metadata={"description": "Algorithm used for stitching"},
-        dump_default="MIPNCC",
+        required=False, metadata={"description": "Algorithm used for stitching"}, dump_default="MIPNCC",
     )
 
     sV = Int(
@@ -234,9 +226,7 @@ class MergeParameters(DefaultSchema):
     )
 
     algorithm = Str(
-        required=False,
-        metadata={"description": "Algorithm used for blending"},
-        dump_default="SINBLEND",
+        required=False, metadata={"description": "Algorithm used for blending"}, dump_default="SINBLEND",
     )
 
     cpu_params = Nested(CPUParams)
@@ -247,11 +237,7 @@ class PystripeParams(DefaultSchema):
     Parameters for destriping microscopic images
     """
 
-    execute = Boolean(
-        required=False,
-        matadata={"description": "Executes pystripe"},
-        dump_default=True,
-    )
+    execute = Boolean(required=False, matadata={"description": "Executes pystripe"}, dump_default=True,)
 
     # input and output are already defined in PipelineParams Class
     sigma1 = List(
@@ -323,10 +309,7 @@ class Visualization(DefaultSchema):
         dump_default="s3",
     )
 
-    bucket_path = Str(
-        required=True,
-        metadata={"description": "Amazon Bucket or Google Bucket name"},
-    )
+    bucket_path = Str(required=True, metadata={"description": "Amazon Bucket or Google Bucket name"},)
 
 
 class PipelineParams(ArgSchema):
@@ -335,14 +318,10 @@ class PipelineParams(ArgSchema):
     """
 
     input_data = InputDirGCloud(
-        required=True,
-        metadata={"description": "Path where the data is located"},
+        required=True, metadata={"description": "Path where the data is located"},
     )
 
-    output_data = Str(
-        required=True,
-        metadata={"description": "Path where the data will be saved"},
-    )
+    output_data = Str(required=True, metadata={"description": "Path where the data will be saved"},)
 
     preprocessed_data = Str(
         required=True,
@@ -384,9 +363,7 @@ class PipelineParams(ArgSchema):
     threshold = Nested(ThresholdParameters, required=False)
     merge = Nested(MergeParameters, required=False)
     verbose = Boolean(
-        required=False,
-        matadata={"description": "Set verbose for stitching."},
-        dump_default=True,
+        required=False, matadata={"description": "Set verbose for stitching."}, dump_default=True,
     )
 
     # Conversion params

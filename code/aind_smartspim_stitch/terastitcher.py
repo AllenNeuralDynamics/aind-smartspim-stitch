@@ -40,10 +40,7 @@ PathLike = Union[str, Path]
 
 
 def generate_new_channel_displ_xml(
-    informative_channel_xml,
-    channel_name: str,
-    regex_expr: str,
-    encoding: str = "utf-8",
+    informative_channel_xml, channel_name: str, regex_expr: str, encoding: str = "utf-8",
 ) -> str:
     """
     Generates an XML with the displacements
@@ -928,18 +925,9 @@ class TeraStitcher:
         """
 
         dimensions = {
-            "z": {
-                "voxel_size": config["physical_pixels"][0],
-                "unit": "microns",
-            },
-            "y": {
-                "voxel_size": config["physical_pixels"][1],
-                "unit": "microns",
-            },
-            "x": {
-                "voxel_size": config["physical_pixels"][2],
-                "unit": "microns",
-            },
+            "z": {"voxel_size": config["physical_pixels"][0], "unit": "microns",},
+            "y": {"voxel_size": config["physical_pixels"][1], "unit": "microns",},
+            "x": {"voxel_size": config["physical_pixels"][2], "unit": "microns",},
             "t": {"voxel_size": 0.001, "unit": "seconds"},
         }
 
@@ -972,11 +960,7 @@ class TeraStitcher:
                     # in zarr to change channel otherwise 0
                     "channel": 0,
                     "name": str(channels[channel_idx]),
-                    "shader": {
-                        "color": colors[channel_idx],
-                        "emitter": "RGB",
-                        "vec": "vec3",
-                    },
+                    "shader": {"color": colors[channel_idx], "emitter": "RGB", "vec": "vec3",},
                     "shaderControls": {"normalized": {"range": [0, 200]}},  # Optional
                 }
             )
@@ -1081,20 +1065,13 @@ class TeraStitcher:
                         input_location=params_copy["input"],
                         output_location=params_copy["output"],
                         code_url=self.data_processes["tools"]["pystripe"]["codeURL"],
-                        parameters={
-                            "sigma1": params_copy["sigma1"],
-                            "sigma2": params_copy["sigma2"],
-                        },
+                        parameters={"sigma1": params_copy["sigma1"], "sigma2": params_copy["sigma2"],},
                         notes=f"Destriping channel {channels[idx]}",
                     )
                 )
 
     def __compute_informative_channel(
-        self,
-        config: dict,
-        exec_config: dict,
-        informative_channel: str,
-        fuse_xmls: PathLike,
+        self, config: dict, exec_config: dict, informative_channel: str, fuse_xmls: PathLike,
     ) -> PathLike:
         """
         Computes 1-5 terastitcher steps for the informative
@@ -1292,11 +1269,7 @@ class TeraStitcher:
         return channels
 
     def stitch_multiple_channels(
-        self,
-        config: dict,
-        exec_config: dict,
-        channels: List[str],
-        pos_informative_channel: int = 0,
+        self, config: dict, exec_config: dict, channels: List[str], pos_informative_channel: int = 0,
     ) -> None:
         """
         Stitch a dataset using multiple channels.
@@ -1334,9 +1307,7 @@ class TeraStitcher:
                 continue
 
             exec_config["command"] = self.import_step_cmd(
-                config["import_data"].copy(),
-                channels[idx],
-                fuse_path=fuse_xmls,
+                config["import_data"].copy(), channels[idx], fuse_path=fuse_xmls,
             )
             self.logger.info(f"Import step for {channels[idx]} channel...")
 
@@ -1496,10 +1467,7 @@ class TeraStitcher:
         # Step 3
         self.logger.info("Projection step...")
         exec_config["command"] = self.input_output_step_cmd(
-            "displproj",
-            f"xml_displcomp_{channel}.xml",
-            f"xml_displproj_{channel}.xml",
-            channel,
+            "displproj", f"xml_displcomp_{channel}.xml", f"xml_displproj_{channel}.xml", channel,
         )
 
         start_date_time = datetime.now()
@@ -1553,10 +1521,7 @@ class TeraStitcher:
         # Step 5
         self.logger.info("Placing tiles step...")
         exec_config["command"] = self.input_output_step_cmd(
-            "placetiles",
-            f"xml_displthres_{channel}.xml",
-            f"xml_merging_{channel}.xml",
-            channel,
+            "placetiles", f"xml_displthres_{channel}.xml", f"xml_merging_{channel}.xml", channel,
         )
 
         start_date_time = datetime.now()
@@ -1676,8 +1641,7 @@ class TeraStitcher:
 
         if config["clean_output"]:
             utils.delete_folder(
-                self.__preprocessing_folder.joinpath("destriped"),
-                self.__verbose,
+                self.__preprocessing_folder.joinpath("destriped"), self.__verbose,
             )
 
         self.logger.info("Converting to OME-Zarr...")
@@ -1714,7 +1678,7 @@ class TeraStitcher:
         # Saving metadata process
         utils.generate_processing(
             self.data_processes["steps"],
-            str(self.__output_folder.joinpath('metadata/processing.json')),
+            str(self.__output_folder.joinpath("metadata/processing.json")),
             __version__,
         )
 
@@ -1746,10 +1710,7 @@ def find_channels(path: PathLike, channel_regex: str = r"Ex_([0-9]*)_Em_([0-9]*)
 
 
 def execute_terastitcher(
-    input_data: PathLike,
-    output_folder: PathLike,
-    preprocessed_data: PathLike,
-    config_teras: PathLike,
+    input_data: PathLike, output_folder: PathLike, preprocessed_data: PathLike, config_teras: PathLike,
 ) -> None:
     """
     Executes terastitcher with in-command parameters.
@@ -1909,9 +1870,7 @@ def process_multiple_datasets() -> None:
         print(f"Processing {dataset['input_data']} dataset")
 
         execute_terastitcher(
-            input_data=dataset["input_data"],
-            output_folder=dataset["output_data"],
-            config_teras=args,
+            input_data=dataset["input_data"], output_folder=dataset["output_data"], config_teras=args,
         )
 
 

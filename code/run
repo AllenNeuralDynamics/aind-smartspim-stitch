@@ -10,4 +10,4 @@ conda activate smart_stitcher
 # Split parameters for argschema
 # provide preprocessed_data path. The module adds timestamp and suffix '_preprocessed'
 # provide output_data path. The module adds timestamp and suffix '_stitched'
-python -u main.py --input_data /data/"$1"/SmartSPIM --preprocessed_data /scratch/"$1" --output_data /scratch/"$1" --pyscripts_path /home/TeraStitcher/src/utils/pyscripts --align.sD 15 --visualization.ng_base_url https://aind-neuroglancer-sauujisjxq-uw.a.run.app --visualization.mount_service s3 --visualization.bucket_path "$2"
+python -u main.py --input_data /data/"$1"/SmartSPIM --preprocessed_data /"$3"/"$1" --output_data /"$3"/"$1" --pyscripts_path /home/TeraStitcher/src/utils/pyscripts --align.sD 15 --visualization.ng_base_url https://aind-neuroglancer-sauujisjxq-uw.a.run.app --visualization.mount_service s3 --visualization.bucket_path "$2"

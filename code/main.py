@@ -37,8 +37,7 @@ def main() -> None:
         logger.info(out)
 
     utils.save_string_to_txt(
-        f"Stitched dataset saved in: {s3_path}",
-        "/root/capsule/results/output_stitching.txt",
+        f"Stitched dataset saved in: {s3_path}", "/root/capsule/results/output_stitching.txt",
     )
 
 

@@ -76,9 +76,7 @@ def delete_folder(dest_dir: PathLike, verbose: Optional[bool] = False) -> None:
 
 
 def execute_command_helper(
-    command: str,
-    print_command: bool = False,
-    stdout_log_file: Optional[PathLike] = None,
+    command: str, print_command: bool = False, stdout_log_file: Optional[PathLike] = None,
 ) -> None:
     """
     Execute a shell command.
@@ -395,9 +393,7 @@ def get_deepest_dirpath(folder: PathLike, ignore_folders: List[str] = ["metadata
 
 
 def generate_data_description(
-    raw_data_description_path: PathLike,
-    dest_data_description: PathLike,
-    process_name: str = "stitched",
+    raw_data_description_path: PathLike, dest_data_description: PathLike, process_name: str = "stitched",
 ) -> None:
     """
     Generates data description for the output folder.
@@ -443,9 +439,7 @@ def generate_data_description(
 
 
 def generate_processing(
-    data_processes: List[dict],
-    dest_processing: PathLike,
-    pipeline_version: str,
+    data_processes: List[dict], dest_processing: PathLike, pipeline_version: str,
 ) -> None:
     """
     Generates data description for the output folder.
