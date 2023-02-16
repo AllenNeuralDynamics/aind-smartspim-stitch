@@ -62,7 +62,7 @@ RUN pip install -U --no-cache-dir \
     bokeh==2.4.2 \
     zarr==2.13.3 \
     pint==0.20.1 \
-    aind-data-schema==0.9.5 \
+    aind-data-schema==0.12.5 \
     xmltodict==0.13.0 \
     natsort==8.2.0 \
     pims==0.6.1 \
