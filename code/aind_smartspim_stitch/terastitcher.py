@@ -956,6 +956,7 @@ class TeraStitcher:
             layers.append(
                 {
                     "source": str(root_folder.joinpath(channels[channel_idx] + ".zarr")),
+                    "type": "image",
                     # use channel idx when source is the same
                     # in zarr to change channel otherwise 0
                     "channel": 0,
@@ -1134,7 +1135,7 @@ class TeraStitcher:
 
         self.data_processes["steps"].append(
             DataProcess(
-                name="Image tile stitching",
+                name="Image tile alignment",
                 version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
@@ -1220,7 +1221,7 @@ class TeraStitcher:
 
         self.data_processes["steps"].append(
             DataProcess(
-                name="Image tile stitching",
+                name="Image tile alignment",
                 version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
@@ -1452,7 +1453,7 @@ class TeraStitcher:
         # Adding pipeline metadata
         self.data_processes["steps"].append(
             DataProcess(
-                name="Image tile stitching",
+                name="Image tile alignment",
                 version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
@@ -1506,7 +1507,7 @@ class TeraStitcher:
 
         self.data_processes["steps"].append(
             DataProcess(
-                name="Image tile stitching",
+                name="Image thresholding",
                 version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
@@ -1530,7 +1531,7 @@ class TeraStitcher:
 
         self.data_processes["steps"].append(
             DataProcess(
-                name="Image tile stitching",
+                name="Image tile alignment",
                 version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,

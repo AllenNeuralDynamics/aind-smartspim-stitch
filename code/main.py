@@ -29,9 +29,10 @@ def main() -> None:
     logger.setLevel(logging.INFO)
 
     logger.info(f"Bucket path: {bucket_path} - Output path: {output_folder}")
-
+    co_folder = output_folder.split('/')[1]
+    
     # Copying output to bucket
-    dataset_name = output_folder.replace("/scratch/", "")
+    dataset_name = output_folder.replace(f"/{co_folder}/", "")
     s3_path = f"s3://{bucket_path}/{dataset_name}"
     for out in utils.execute_command_helper(f"aws s3 mv --recursive {output_folder} {s3_path}"):
         logger.info(out)
