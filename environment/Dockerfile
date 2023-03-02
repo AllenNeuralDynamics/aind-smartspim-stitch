@@ -47,6 +47,13 @@ ENV PATH "/home/zulu8.62.0.19-ca-jdk8.0.332-linux_x64/bin:$PATH"
 
 RUN echo "localhost slots=70" > /home/hostfile
 
+# exiftool to validate image metadata
+RUN cd /home && \
+    wget https://exiftool.org/Image-ExifTool-12.57.tar.gz --no-check-certificate && \
+    gzip -dc Image-ExifTool-12.57.tar.gz | tar -xf -
+
+ENV PATH "/home/Image-ExifTool-12.57:$PATH" 
+
 # Creating a new conda environment for argschema python bug
 RUN conda create -n smart_stitcher python=3.8
 
@@ -67,6 +74,8 @@ RUN pip install -U --no-cache-dir \
     natsort==8.2.0 \
     pims==0.6.1 \
     dask[distributed]==2022.11.1 \
+    PyExifTool==0.5.5 \
+    tqdm==4.64.1 \
     git+https://github.com/AllenNeuralDynamics/aind-ng-link.git \
     git+https://github.com/AllenNeuralDynamics/pystripe.git@feature/output_format \
     git+https://github.com/AllenNeuralDynamics/ome-zarr-py.git@feature/delayed-dask-poc \

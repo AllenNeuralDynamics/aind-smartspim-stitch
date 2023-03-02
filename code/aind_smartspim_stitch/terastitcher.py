@@ -24,6 +24,7 @@ from .__init__ import __version__
 from .params import PipelineParams, get_default_config
 from .utils import utils
 from .zarr_converter.zarr_converter import ZarrConverter
+from .validate_datasets import validate_dataset
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -1885,12 +1886,19 @@ def main() -> str:
 
     args = mod.args
 
-    output_folder = execute_terastitcher(
-        input_data=args["input_data"],
-        output_folder=args["output_data"],
-        preprocessed_data=args["preprocessed_data"],
-        config_teras=args,
-    )
+    output_folder = None
+    
+    if validate_dataset(dataset_path=args["input_data"], validate_mdata=False):
+
+        output_folder = execute_terastitcher(
+            input_data=args["input_data"],
+            output_folder=args["output_data"],
+            preprocessed_data=args["preprocessed_data"],
+            config_teras=args,
+        )
+    
+    else:
+        raise ValueError("Tiles for this dataset have issues")
 
     return output_folder
 
