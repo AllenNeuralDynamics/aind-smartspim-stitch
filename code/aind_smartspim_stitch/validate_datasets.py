@@ -198,7 +198,23 @@ def get_images_channel(channel_dict: dict) -> int:
     return n_images
 
 
-def get_image_metadata(image_paths: PathLike) -> List[dict]:
+def get_image_metadata(image_paths: Union[PathLike, List[PathLike]]) -> List[dict]:
+    """
+    Function to get image metadata using
+    exiftool
+
+    Parameters
+    -----------
+    image_paths: Union[PathLike, List[PathLike]]
+        Path(s) pointing to the images that
+        we want to get the metadata from
+
+    Returns
+    -----------
+    List[dict]
+        List with dictionaries with the
+        obtained metadata
+    """
 
     with exiftool.ExifToolHelper() as et:
         metadata = et.get_metadata(image_paths)
@@ -257,6 +273,33 @@ def _validate_rows(args_dict: dict) -> bool:
 def validate_metadata_parallel(
     channel_path: str, channel_dict: dict, file_format: str, bit_depth: int
 ) -> bool:
+    """
+    Validates image metadata of tiles per channel
+    in parallel
+
+    Parameters
+    -----------
+    channel_path: str
+        Path where the channel is stored
+
+    channel_dict: dict
+        Directory structure of the channel
+
+    file_format: str
+        File format that the images have to match
+        e.g., "PNG", "TIFF"
+
+    bit_depth: int
+        Bit depth that the images have to match
+        e.g. 16
+
+    Returns
+    -----------
+    Bool
+        Boolean that indicates if the dataset
+        is ready to be processed (True), or
+        not (False)
+    """
     workers = multiprocessing.cpu_count()
     logger.info(f"N CPUs {workers}")
     rows_per_worker = 1
@@ -322,9 +365,36 @@ def validate_metadata_parallel(
 
 
 def validate_metadata(channel_path: str, channel_dict: dict, file_format: str, bit_depth: int) -> bool:
+    """
+    Validates image metadata of tiles per channel
+    in parallel
+
+    Parameters
+    -----------
+    channel_path: str
+        Path where the channel is stored
+
+    channel_dict: dict
+        Directory structure of the channel
+
+    file_format: str
+        File format that the images have to match
+        e.g., "PNG", "TIFF"
+
+    bit_depth: int
+        Bit depth that the images have to match
+        e.g. 16
+
+    Returns
+    -----------
+    Bool
+        Boolean that indicates if the dataset
+        is ready to be processed (True), or
+        not (False)
+    """
+
     workers = multiprocessing.cpu_count()
     logger.info(f"N CPU cores: {workers}")
-    rows_per_worker = 1
 
     for col_name, rows in channel_dict.items():
 

@@ -11,5 +11,14 @@ conda activate smart_stitcher
 # provide preprocessed_data path. The module adds timestamp and suffix '_preprocessed'
 # provide output_data path. The module adds timestamp and suffix '_stitched'
 
-# Add 4 parameters in the CO panel -> input_data, bucket_path, informative_channel and co_folder (in that order)
-python -u main.py --input_data /data/"$1"/SmartSPIM --preprocessed_data /"$4"/"$1" --output_data /"$4"/"$1" --pyscripts_path /home/TeraStitcher/src/utils/pyscripts --align.sD 15 --visualization.ng_base_url https://aind-neuroglancer-sauujisjxq-uw.a.run.app --visualization.mount_service s3 --stitch_channel "$3" --visualization.bucket_path "$2"
+# Add 6 parameters in the CO panel -> input_data, preprocessed_data, output_data, informative_channel, cpus and bucket_path (in that order)
+
+# Example
+# --input_data          ../data/SMARTSPIM_FOLDER_NAME/SmartSPIM -> Points to where the channels are
+# --preprocessed_data   /scratch/SMARTSPIM_FOLDER_NAME
+# --output_data   /scratch/SMARTSPIM_FOLDER_NAME
+# --informative_channel 0 -> idx for the channel
+# --cpus 16 -> number of CPUS we want to use
+# --bucket_path -> output bucket where we want to store results
+
+python -u main.py --input_data "$1" --preprocessed_data $2 --output_data $3 --pyscripts_path /home/TeraStitcher/src/utils/pyscripts --align.sD 5 --visualization.ng_base_url https://aind-neuroglancer-sauujisjxq-uw.a.run.app --visualization.mount_service s3 --stitch_channel "$4" --preprocessing_steps.pystripe.workers "$4" --align.cpu_params.number_processes "$5" --merge.cpu_params.number_processes "$5" --visualization.bucket_path "$6"
