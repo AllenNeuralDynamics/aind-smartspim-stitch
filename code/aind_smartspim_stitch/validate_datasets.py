@@ -45,8 +45,12 @@ class SmartSPIMReader:
         capture_mouse_id = r"(_(\d+|[a-zA-Z]*\d+)$)"
 
         # Regular expression for smartspim datasets
-        smartspim_regex = r"SmartSPIM_(\d+|[a-zA-Z]*\d+)_(20\d{2}-(\d\d{1})-(\d\d{1}))_((\d{2})-(\d{2})-(\d{2}))"
-        smartspim_old_regex = r"(20\d{2}(\d\d{1})(\d\d{1}))_((\d{2}))_((\d{2}))_((\d{2}))_(\d+|[a-zA-Z]*\d+)"
+        smartspim_regex = (
+            r"SmartSPIM_(\d+|[a-zA-Z]*\d+)_(20\d{2}-(\d\d{1})-(\d\d{1}))_((\d{2})-(\d{2})-(\d{2}))"
+        )
+        smartspim_old_regex = (
+            r"(20\d{2}(\d\d{1})(\d\d{1}))_((\d{2}))_((\d{2}))_((\d{2}))_(\d+|[a-zA-Z]*\d+)"
+        )
 
         # Regex expressions for inner folders inside root
         regex_channels = r"Ex_(\d{3})_Em_(\d{3})$"
@@ -141,9 +145,7 @@ def read_image_directory_structure(folder_dir) -> dict:
         folder_dir.joinpath(folder)
         for folder in os.listdir(folder_dir)
         if os.path.isdir(folder_dir.joinpath(folder))
-        and re.match(
-            SmartSPIMReader.RegexPatterns.regex_channels.value, folder
-        )
+        and re.match(SmartSPIMReader.RegexPatterns.regex_channels.value, folder)
     ]
 
     for channel_idx in range(len(channel_paths)):
@@ -159,15 +161,11 @@ def read_image_directory_structure(folder_dir) -> dict:
                 rows = os.listdir(possible_col)
 
                 for row in rows:
-                    possible_row = (
-                        channel_paths[channel_idx].joinpath(col).joinpath(row)
-                    )
+                    possible_row = channel_paths[channel_idx].joinpath(col).joinpath(row)
 
                     if os.path.isdir(possible_row):
                         col_row_images = os.listdir(possible_row)
-                        directory_structure[channel_paths[channel_idx]][col][
-                            row
-                        ] = col_row_images
+                        directory_structure[channel_paths[channel_idx]][col][row] = col_row_images
 
     return directory_structure
 
@@ -193,9 +191,7 @@ def get_images_channel(channel_dict: dict) -> int:
             len_images = len(images)
 
             if images == len_images:
-                raise ValueError(
-                    f"Possible error in pos {col_name}/{row_name}"
-                )
+                raise ValueError(f"Possible error in pos {col_name}/{row_name}")
 
             n_images += len_images
 
@@ -229,11 +225,7 @@ def validate_rows(
     for n_image in range(n_images):
         print(f"Validating: {col_name}/{row_names[n_image]}")
         image_paths = [
-            str(
-                Path(channel_path).joinpath(
-                    f"{col_name}/{row_names[n_image]}/{image_path}"
-                )
-            )
+            str(Path(channel_path).joinpath(f"{col_name}/{row_names[n_image]}/{image_path}"))
             for image_path in row_images[n_image]
         ]
 
@@ -311,7 +303,11 @@ def validate_metadata_parallel(
         res = []
 
         with multiprocessing.Pool(workers) as pool:
-            results = pool.imap(_validate_rows, args, chunksize=1,)
+            results = pool.imap(
+                _validate_rows,
+                args,
+                chunksize=1,
+            )
 
             for pos in results:
                 res.append(pos)
@@ -319,17 +315,13 @@ def validate_metadata_parallel(
         for res_idx in range(len(res)):
 
             if not res[res_idx]:
-                logger.error(
-                    f"Dataset with format or bit depth issues found by worker {res_idx}"
-                )
+                logger.error(f"Dataset with format or bit depth issues found by worker {res_idx}")
                 return False
 
     return True
 
 
-def validate_metadata(
-    channel_path: str, channel_dict: dict, file_format: str, bit_depth: int
-) -> bool:
+def validate_metadata(channel_path: str, channel_dict: dict, file_format: str, bit_depth: int) -> bool:
     workers = multiprocessing.cpu_count()
     logger.info(f"N CPU cores: {workers}")
     rows_per_worker = 1
@@ -340,11 +332,7 @@ def validate_metadata(
             print(f"Validating: {col_name}/{row_name}")
             start_date = datetime.now()
             image_paths = [
-                str(
-                    Path(channel_path).joinpath(
-                        f"{col_name}/{row_name}/{image_path}"
-                    )
-                )
+                str(Path(channel_path).joinpath(f"{col_name}/{row_name}/{image_path}"))
                 for image_path in images
             ]
 
@@ -365,12 +353,10 @@ def validate_metadata(
     return True
 
 
-def validate_dataset(
-    dataset_path: PathLike, validate_mdata: bool = False
-) -> bool:
+def validate_dataset(dataset_path: PathLike, validate_mdata: bool = False) -> bool:
     """
     Validates a dataset
-    
+
     Parameters
     ------------
     dataset_path: PathLike
@@ -459,14 +445,10 @@ def main():
         logger.info(f"Validating dataset: {dataset_path}")
 
         try:
-            tile_status = validate_dataset(
-                val_path, validate_metadata=validate_mdata
-            )
+            tile_status = validate_dataset(val_path, validate_metadata=validate_mdata)
 
         except FileNotFoundError as e:
-            logger.error(
-                f"[!!] Check path {val_path}. This folder MUST have the channels!"
-            )
+            logger.error(f"[!!] Check path {val_path}. This folder MUST have the channels!")
             check_paths.append(str(val_path))
 
         if not tile_status:
