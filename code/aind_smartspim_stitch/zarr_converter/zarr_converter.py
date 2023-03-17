@@ -25,7 +25,7 @@ from natsort import natsorted
 from numcodecs import blosc
 from skimage.io import imread as sk_imread
 
-import utils
+from ..utils import utils
 from .zarr_converter_params import ZarrConvertParams, get_default_config
 
 PathLike = Union[str, Path]
