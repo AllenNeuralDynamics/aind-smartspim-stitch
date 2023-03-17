@@ -25,12 +25,12 @@ from natsort import natsorted
 from numcodecs import blosc
 from skimage.io import imread as sk_imread
 
+from ..utils import utils
 from .zarr_converter_params import ZarrConvertParams, get_default_config
 
 PathLike = Union[str, Path]
 ArrayLike = Union[dask.array.core.Array, np.ndarray]
 blosc.use_threads = False
-
 
 def add_leading_dim(data: ArrayLike) -> ArrayLike:
     """
@@ -610,7 +610,6 @@ def get_sample_img(directory_structure: dict) -> ArrayLike:
 
     return sample_img
 
-
 class ZarrConverter:
     """
     Class to convert smartspim datasets to the zarr format
@@ -664,17 +663,13 @@ class ZarrConverter:
             )
         }
 
-        self.channels = channels
-        self.channel_colors = None
+        self.channels: list[str] = channels
+        self.channel_colors: list[int] = []
 
-        if channels is not None:
-            colors = [
-                0xFF0000,  # Red
-                0x00FF00,  # green
-                0xFF00FF,  # Purple
-                0xFFFF00,  # Yellow
-            ]
-            self.channel_colors = colors[: len(self.channels)]
+        for channel_str in self.channels:
+            em_wav: int = int(channel_str.split('_')[-1])
+            em_hex: int = utils.wavelength_to_hex(em_wav)
+            self.channel_colors.append(em_hex)
 
         # get_blosc_codec(writer_config['codec'], writer_config['clevel'])
 

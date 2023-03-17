@@ -944,7 +944,11 @@ class TeraStitcher:
             "t": {"voxel_size": 0.001, "unit": "seconds"},
         }
 
-        colors = ["red", "green", "purple", "yellow"]
+        colors = []
+        for channel_str in channels:
+            em_wav: int = int(channel_str.split('_')[-1])
+            em_hex: int = utils.wavelength_to_hex(em_wav)
+            colors.append(em_hex)
 
         # Finding the smartspim folder to avoid
         # having the /results or /scratch in path
