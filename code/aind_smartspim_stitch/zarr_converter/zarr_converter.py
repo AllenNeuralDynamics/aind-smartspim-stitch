@@ -32,6 +32,7 @@ PathLike = Union[str, Path]
 ArrayLike = Union[dask.array.core.Array, np.ndarray]
 blosc.use_threads = False
 
+
 def add_leading_dim(data: ArrayLike) -> ArrayLike:
     """
     Adds a leading dimension
@@ -285,7 +286,10 @@ def concatenate_dask_arrays(arr_1: ArrayLike, arr_2: ArrayLike, axis: int) -> Ar
 
 
 def read_chunked_stitched_image_per_channel(
-    directory_structure: dict, channel_name: str, start_slice: int, end_slice: int,
+    directory_structure: dict,
+    channel_name: str,
+    start_slice: int,
+    end_slice: int,
 ) -> ArrayLike:
     """
     Creates a dask array of the whole image volume
@@ -490,7 +494,11 @@ def channel_parallel_reading(
 
         res = []
         with multiprocessing.Pool(workers) as pool:
-            results = pool.imap(_read_chunked_stitched_image_per_channel, args, chunksize=chunks,)
+            results = pool.imap(
+                _read_chunked_stitched_image_per_channel,
+                args,
+                chunksize=chunks,
+            )
 
             for pos in results:
                 res.append(pos)
@@ -610,6 +618,7 @@ def get_sample_img(directory_structure: dict) -> ArrayLike:
 
     return sample_img
 
+
 class ZarrConverter:
     """
     Class to convert smartspim datasets to the zarr format
@@ -659,7 +668,9 @@ class ZarrConverter:
 
         self.opts = {
             "compressor": blosc.Blosc(
-                cname=blosc_config["codec"], clevel=blosc_config["clevel"], shuffle=blosc.SHUFFLE,
+                cname=blosc_config["codec"],
+                clevel=blosc_config["clevel"],
+                shuffle=blosc.SHUFFLE,
             )
         }
 
@@ -667,7 +678,7 @@ class ZarrConverter:
         self.channel_colors: list[int] = []
 
         for channel_str in self.channels:
-            em_wav: int = int(channel_str.split('_')[-1])
+            em_wav: int = int(channel_str.split("_")[-1])
             em_hex: int = utils.wavelength_to_hex(em_wav)
             self.channel_colors.append(em_hex)
 
@@ -792,7 +803,10 @@ class ZarrConverter:
                 "local_directory": self.dask_folder,
                 "tcp-timeout": "300s",
                 "array.chunk-size": "384MiB",
-                "distributed.comm.timeouts": {"connect": "300s", "tcp": "300s",},
+                "distributed.comm.timeouts": {
+                    "connect": "300s",
+                    "tcp": "300s",
+                },
                 "distributed.scheduler.bandwidth": 100000000,
                 # "managed_in_memory",#
                 "distributed.worker.memory.rebalance.measure": "optimistic",
@@ -892,7 +906,10 @@ def main():
     zarr_converter = ZarrConverter(
         input_data=args["input_data"],
         output_data=args["output_data"],
-        blosc_config={"codec": args["writer"]["codec"], "clevel": args["writer"]["clevel"],},
+        blosc_config={
+            "codec": args["writer"]["codec"],
+            "clevel": args["writer"]["clevel"],
+        },
         channels=["CH_0", "CH_1"],
         physical_pixels=[2.0, 1.8, 1.8],
     )
