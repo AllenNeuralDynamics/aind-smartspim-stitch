@@ -1693,6 +1693,20 @@ class TeraStitcher:
         self.logger.info("Converting to OME-Zarr...")
 
         start_date_time = datetime.now()
+
+        # setting physical pixels from import parameters
+        voxel_sizes = list(config["import_data"].values())
+        axis = list(config["import_data"].keys())
+
+        physical_pixels = [
+            voxel_sizes[axis.index("vxl3")],  # voxel size in Z axis
+            voxel_sizes[axis.index("vxl2")],  # voxel size in Y axis
+            voxel_sizes[axis.index("vxl1")],  # voxel size in X axis
+        ]
+
+        print(physical_pixels)
+        config["ome_zarr_params"]["physical_pixels"] = physical_pixels
+
         self.convert_to_ome_zarr(config["ome_zarr_params"], channels)
         end_date_time = datetime.now()
 
