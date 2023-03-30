@@ -9,7 +9,8 @@ from datetime import date, datetime, time
 from pathlib import Path
 from typing import Any, List, Optional, Union
 
-from aind_data_schema import DerivedDataDescription, Processing, RawDataDescription
+from aind_data_schema import DerivedDataDescription, Processing
+from aind_data_schema.data_description import Funding, Institution, Modality, RawDataDescription
 
 # IO types
 PathLike = Union[str, Path]
@@ -418,24 +419,27 @@ def generate_data_description(
 
     f = open(raw_data_description_path, "r")
     data = json.load(f)
-    parsed_time = [int(val) for val in data["creation_time"].split(":")]
-    parsed_date = [int(val) for val in data["creation_date"].split("-")]
     del data["name"]
 
-    data["creation_time"] = time(parsed_time[0], parsed_time[1], parsed_time[2])
-    data["creation_date"] = date(parsed_date[0], parsed_date[1], parsed_date[2])
-
-    data = RawDataDescription(**data)
+    print(data)
 
     dt = datetime.now()
+    data["schema_version"] = "0.4.0"
+    data["modality"] = [Modality.SPIM]
+    data["experiment_type"] = "SmartSPIM"
+    data["institution"] = Institution[data["institution"]]
+    data = RawDataDescription(**data)
 
-    derived = DerivedDataDescription.from_data_description(
-        input_data=data,
+    derived = DerivedDataDescription(
+        input_data_name=data.name,
         process_name=process_name,
         creation_date=dt.date(),
         creation_time=dt.time(),
         institution=data.institution,
-        funding_source=[],
+        funding_source=data.funding_source,
+        modality=data.modality,
+        experiment_type=data.experiment_type,
+        subject_id=data.subject_id,
     )
 
     with open(dest_data_description, "w") as f:
