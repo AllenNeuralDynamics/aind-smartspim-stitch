@@ -425,7 +425,12 @@ def generate_data_description(
     data["schema_version"] = "0.4.0"
     data["modality"] = [Modality.SPIM]
     data["experiment_type"] = "SmartSPIM"
-    data["institution"] = Institution[data["institution"]]
+
+    institution = data["institution"]
+    if isinstance(data["institution"], dict) and "abbreviation" in data["institution"]:
+        institution = data["institution"]["abbreviation"]
+
+    data["institution"] = Institution[institution]
     data = RawDataDescription(**data)
 
     derived = DerivedDataDescription(
