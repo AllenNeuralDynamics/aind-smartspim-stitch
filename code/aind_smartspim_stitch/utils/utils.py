@@ -421,8 +421,6 @@ def generate_data_description(
     data = json.load(f)
     del data["name"]
 
-    print(data)
-
     dt = datetime.now()
     data["schema_version"] = "0.4.0"
     data["modality"] = [Modality.SPIM]
