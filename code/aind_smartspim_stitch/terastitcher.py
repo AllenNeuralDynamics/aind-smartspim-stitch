@@ -946,9 +946,11 @@ class TeraStitcher:
 
         colors = []
         for channel_str in channels:
-            em_wav: int = int(channel_str.split('_')[-1])
-            em_hex: int = utils.wavelength_to_hex(em_wav)
-            colors.append(em_hex)
+            channel: int = int(channel_str.split('_')[-1])
+            hex_val: int = utils.wavelength_to_hex(channel)
+            hex_str = f'#{str(hex(hex_val))[2:]}'
+
+            colors.append(hex_str)
 
         # Finding the smartspim folder to avoid
         # having the /results or /scratch in path
