@@ -18,6 +18,7 @@ from typing import List, Optional, Union
 import xmltodict
 from aind_data_schema.processing import DataProcess
 from argschema import ArgSchemaParser
+from natsort import natsorted
 from ng_link import NgState
 
 from .__init__ import __version__
@@ -1655,6 +1656,11 @@ class TeraStitcher:
             "info": config["info"],
         }
 
+        # Validating that informative channel is in channels
+        channels = natsorted(channels)
+        # If stitch_channel name is not in founded channels, ValueError is thrown
+        index_channel = channels.index(config["stitch_channel"])
+
         if self.preprocessing:
             self.__execute_preprocessing_steps(exec_config, channels)
 
@@ -1663,12 +1669,10 @@ class TeraStitcher:
 
         if len(channels) > 1:
             self.logger.info(
-                f"Processing {channels} channels with informative channel {channels[config['stitch_channel']]}"
+                f"Processing {channels} channels with informative channel {channels[index_channel]}"
             )
 
-            channels = self.stitch_multiple_channels(
-                config, exec_config, channels, config["stitch_channel"]
-            )
+            channels = self.stitch_multiple_channels(config, exec_config, channels, index_channel)
 
             self.logger.info(f"New channel order: {channels}")
 
@@ -1691,6 +1695,20 @@ class TeraStitcher:
         self.logger.info("Converting to OME-Zarr...")
 
         start_date_time = datetime.now()
+
+        # setting physical pixels from import parameters
+        voxel_sizes = list(config["import_data"].values())
+        axis = list(config["import_data"].keys())
+
+        physical_pixels = [
+            voxel_sizes[axis.index("vxl3")],  # voxel size in Z axis
+            voxel_sizes[axis.index("vxl2")],  # voxel size in Y axis
+            voxel_sizes[axis.index("vxl1")],  # voxel size in X axis
+        ]
+
+        print(physical_pixels)
+        config["ome_zarr_params"]["physical_pixels"] = physical_pixels
+
         self.convert_to_ome_zarr(config["ome_zarr_params"], channels)
         end_date_time = datetime.now()
 
@@ -1822,7 +1840,7 @@ def execute_terastitcher(
     stitch_channel = config_teras["stitch_channel"]
     len_channels = len(channels)
 
-    if not len_channels or config_teras["stitch_channel"] > len_channels:
+    if not len_channels:
         raise ValueError(
             f"""
             Please, check the regular expression for
@@ -1936,7 +1954,6 @@ def main() -> str:
     output_folder = None
 
     if validate_dataset(dataset_path=args["input_data"], validate_mdata=False):
-
         output_folder = execute_terastitcher(
             input_data=args["input_data"],
             output_folder=args["output_data"],

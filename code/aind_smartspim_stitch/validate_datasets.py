@@ -79,7 +79,6 @@ class SmartSPIMReader:
             datasets = os.listdir(path)
 
             for dataset in datasets:
-
                 dataconvention_match = re.match(
                     SmartSPIMReader.RegexPatterns.smartspim_regex.value,
                     dataset,
@@ -305,7 +304,6 @@ def validate_metadata_parallel(
     rows_per_worker = 1
 
     for col_name, rows in channel_dict.items():
-
         n_rows = len(rows)
 
         if n_rows < workers:
@@ -356,7 +354,6 @@ def validate_metadata_parallel(
                 res.append(pos)
 
         for res_idx in range(len(res)):
-
             if not res[res_idx]:
                 logger.error(f"Dataset with format or bit depth issues found by worker {res_idx}")
                 return False
@@ -397,7 +394,6 @@ def validate_metadata(channel_path: str, channel_dict: dict, file_format: str, b
     logger.info(f"N CPU cores: {workers}")
 
     for col_name, rows in channel_dict.items():
-
         for row_name, images in rows.items():
             print(f"Validating: {col_name}/{row_name}")
             start_date = datetime.now()
@@ -443,7 +439,6 @@ def validate_dataset(dataset_path: PathLike, validate_mdata: bool = False) -> bo
     images_per_channel = []
 
     for channel_name, image_paths in dataset_structure.items():
-
         n_images = get_images_channel(image_paths)
         images_per_channel.append(n_images)
         logger.info(f"Channel {channel_name} has {n_images} images")

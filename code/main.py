@@ -29,8 +29,8 @@ def main() -> None:
     logger.setLevel(logging.INFO)
 
     logger.info(f"Bucket path: {bucket_path} - Output path: {output_folder}")
-    co_folder = output_folder.split('/')[1]
-    
+    co_folder = output_folder.split("/")[1]
+
     # Copying output to bucket
     dataset_name = output_folder.replace(f"/{co_folder}/", "")
     s3_path = f"s3://{bucket_path}/{dataset_name}"
@@ -38,7 +38,8 @@ def main() -> None:
         logger.info(out)
 
     utils.save_string_to_txt(
-        f"Stitched dataset saved in: {s3_path}", "/root/capsule/results/output_stitching.txt",
+        f"Stitched dataset saved in: {s3_path}",
+        "/root/capsule/results/output_stitching.txt",
     )
 
 
