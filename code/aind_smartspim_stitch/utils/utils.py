@@ -422,7 +422,7 @@ def generate_data_description(
     del data["name"]
 
     dt = datetime.now()
-    data["schema_version"] = "0.4.0"
+    data["schema_version"] = "0.6.0"
     data["modality"] = [Modality.SPIM]
     data["experiment_type"] = "SmartSPIM"
 
@@ -431,6 +431,7 @@ def generate_data_description(
         institution = data["institution"]["abbreviation"]
 
     data["institution"] = Institution[institution]
+    data["investigators"] = []
     data = RawDataDescription(**data)
 
     derived = DerivedDataDescription(
@@ -443,6 +444,7 @@ def generate_data_description(
         modality=data.modality,
         experiment_type=data.experiment_type,
         subject_id=data.subject_id,
+        investigators=data.investigators,
     )
 
     with open(dest_data_description, "w") as f:

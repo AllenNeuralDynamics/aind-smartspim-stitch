@@ -417,6 +417,12 @@ class PipelineParams(ArgSchema):
         dump_default=False,
     )
 
+    generate_metadata = Boolean(
+        required=False,
+        matadata={"description": "Generates AIND metadata for the processed dataset"},
+        dump_default=True,
+    )
+
 
 def get_default_config(filename: str = "default_config.yaml") -> None:
     """

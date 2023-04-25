@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import List, Optional, Union
 
 import xmltodict
-from aind_data_schema.processing import DataProcess
+from aind_data_schema.processing import DataProcess, ProcessName
 from argschema import ArgSchemaParser
 from natsort import natsorted
 from ng_link import NgState
@@ -137,6 +137,7 @@ class TeraStitcher:
         preprocessing: Optional[dict] = None,
         verbose: Optional[bool] = False,
         preprocessing_folder: Optional[PathLike] = None,
+        generate_metadata: Optional[bool] = True,
     ) -> None:
         """
         Class constructor
@@ -165,6 +166,9 @@ class TeraStitcher:
         verbose: Optional[bool]
             True if you want to print outputs of
             all executed commands.
+        generate_metadata: Optional[bool]
+            True if you want to generate metadata based on
+            aind-data-schema
 
         Raises
         ------------------------
@@ -188,6 +192,7 @@ class TeraStitcher:
         self.__paraconverter_path = Path(pyscripts_path).joinpath("paraconverter.py")
         self.preprocessing = preprocessing
         self.__verbose = verbose
+        self.__generate_metadata = generate_metadata
         self.__python_terminal = None
         self.metadata_path = self.__output_folder.joinpath("metadata/params")
         self.xmls_path = self.__output_folder.joinpath("metadata/xmls")
@@ -265,13 +270,18 @@ class TeraStitcher:
         # structure depends if preprocessing steps are provided
         self.stdout_log_file = self.metadata_path.joinpath("stdout_log.txt")
 
-        data_description_path = self.__output_jsons_path.joinpath("data_description.json")
+        if self.__generate_metadata:
+            # Generates data description json for the derived dataset
+            data_description_path = self.__output_jsons_path.joinpath("data_description.json")
 
-        utils.generate_data_description(
-            raw_data_description_path=str(self.__input_data.parent.joinpath("data_description.json")),
-            dest_data_description=str(data_description_path),
-            process_name="stitched",
-        )
+            utils.generate_data_description(
+                raw_data_description_path=str(
+                    self.__input_data.parent.joinpath("data_description.json")
+                ),
+                dest_data_description=str(data_description_path),
+                process_name="stitched",
+            )
+
         # Setting logger
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
@@ -914,7 +924,7 @@ class TeraStitcher:
 
         converter.convert(config)
 
-    def create_ng_link(self, config: dict, channels: List[str]) -> None:
+    def create_ng_link(self, config: dict, channels: List[str]) -> str:
         """
         Creates the neuroglancer link for the processed dataset
 
@@ -927,6 +937,12 @@ class TeraStitcher:
 
         channels: List[str]
             Channel names in the datasets
+
+        Returns
+        -------------
+
+        str:
+            Neuroglancer link
         """
 
         dimensions = {
@@ -947,9 +963,9 @@ class TeraStitcher:
 
         colors = []
         for channel_str in channels:
-            channel: int = int(channel_str.split('_')[-1])
+            channel: int = int(channel_str.split("_")[-1])
             hex_val: int = utils.wavelength_to_hex(channel)
-            hex_str = f'#{str(hex(hex_val))[2:]}'
+            hex_str = f"#{str(hex(hex_val))[2:]}"
 
             colors.append(hex_str)
 
@@ -996,11 +1012,14 @@ class TeraStitcher:
             bucket_path=config["bucket_path"],
             output_json=self.__output_jsons_path,
             base_url=config["ng_base_url"],
+            json_name="neuroglancer_config.json",
         )
 
         neuroglancer_link.save_state_as_json()
         link = neuroglancer_link.get_url_link()
         self.logger.info(f"Visualization link: {link}")
+
+        return link
 
     def __preprocessing_tool_cmd(self, tool_name: str, params: dict, equal_con: bool) -> str:
         """
@@ -1083,7 +1102,7 @@ class TeraStitcher:
                 # Adding pipeline metadata
                 self.data_processes["steps"].append(
                     DataProcess(
-                        name="Image destriping",
+                        name=ProcessName.IMAGE_DESTRIPING,  # "Image destriping"
                         version=self.data_processes["tools"]["pystripe"]["version"],
                         start_date_time=start_date_time,
                         end_date_time=end_date_time,
@@ -1144,7 +1163,7 @@ class TeraStitcher:
 
         self.data_processes["steps"].append(
             DataProcess(
-                name="Image importing",
+                name=ProcessName.IMAGE_IMPORTING,  # "Image importing"
                 version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
@@ -1166,7 +1185,7 @@ class TeraStitcher:
 
         self.data_processes["steps"].append(
             DataProcess(
-                name="Image tile alignment",
+                name=ProcessName.IMAGE_ATLAS_ALIGNMENT,  # "Image tile alignment"
                 version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
@@ -1193,7 +1212,7 @@ class TeraStitcher:
 
         self.data_processes["steps"].append(
             DataProcess(
-                name="Image tile projection",
+                name=ProcessName.IMAGE_TILE_PROJECTION,  # "Image tile projection"
                 version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
@@ -1222,7 +1241,7 @@ class TeraStitcher:
 
         self.data_processes["steps"].append(
             DataProcess(
-                name="Image thresholding",
+                name=ProcessName.IMAGE_THRESHOLDING,  # "Image thresholding"
                 version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
@@ -1252,7 +1271,7 @@ class TeraStitcher:
 
         self.data_processes["steps"].append(
             DataProcess(
-                name="Image tile alignment",
+                name=ProcessName.IMAGE_TILE_ALIGNMENT,  # "Image tile alignment"
                 version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
@@ -1356,7 +1375,7 @@ class TeraStitcher:
             # Adding import step as data process metadata
             self.data_processes["steps"].append(
                 DataProcess(
-                    name="Image importing",
+                    name=ProcessName.IMAGE_IMPORTING,  # "Image importing"
                     version=self.data_processes["tools"]["terastitcher"]["version"],
                     start_date_time=start_date_time,
                     end_date_time=end_date_time,
@@ -1428,7 +1447,7 @@ class TeraStitcher:
 
             self.data_processes["steps"].append(
                 DataProcess(
-                    name="Image tile fusing",
+                    name=ProcessName.IMAGE_TILE_FUSING,  # "Image tile fusing"
                     version=self.data_processes["tools"]["terastitcher"]["version"],
                     start_date_time=start_date_time,
                     end_date_time=end_date_time,
@@ -1467,7 +1486,7 @@ class TeraStitcher:
         # Adding pipeline metadata
         self.data_processes["steps"].append(
             DataProcess(
-                name="Image importing",
+                name=ProcessName.IMAGE_IMPORTING,  # "Image importing"
                 version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
@@ -1490,7 +1509,7 @@ class TeraStitcher:
         # Adding pipeline metadata
         self.data_processes["steps"].append(
             DataProcess(
-                name="Image tile alignment",
+                name=ProcessName.IMAGE_TILE_ALIGNMENT,  # "Image tile alignment"
                 version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
@@ -1518,7 +1537,7 @@ class TeraStitcher:
         # Adding pipeline metadata
         self.data_processes["steps"].append(
             DataProcess(
-                name="Image tile projection",
+                name=ProcessName.IMAGE_TILE_PROJECTION,  # "Image tile projection",
                 version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
@@ -1547,7 +1566,7 @@ class TeraStitcher:
 
         self.data_processes["steps"].append(
             DataProcess(
-                name="Image thresholding",
+                name=ProcessName.IMAGE_THRESHOLDING,  # "Image thresholding",
                 version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
@@ -1574,7 +1593,7 @@ class TeraStitcher:
 
         self.data_processes["steps"].append(
             DataProcess(
-                name="Image tile alignment",
+                name=ProcessName.IMAGE_TILE_ALIGNMENT,  # "Image tile alignment"
                 version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
@@ -1610,7 +1629,7 @@ class TeraStitcher:
 
         self.data_processes["steps"].append(
             DataProcess(
-                name="Image tile fusing",
+                name=ProcessName.IMAGE_TILE_FUSING,  # "Image tile fusing"
                 version=self.data_processes["tools"]["terastitcher"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
@@ -1712,9 +1731,17 @@ class TeraStitcher:
         self.convert_to_ome_zarr(config["ome_zarr_params"], channels)
         end_date_time = datetime.now()
 
+        ng_config = config["ome_zarr_params"].copy()
+
+        ng_config["ng_base_url"] = config["visualization"]["ng_base_url"]
+        ng_config["mount_service"] = config["visualization"]["mount_service"]
+        ng_config["bucket_path"] = config["visualization"]["bucket_path"]
+
+        ng_link = self.create_ng_link(ng_config, channels)
+
         self.data_processes["steps"].append(
             DataProcess(
-                name="File format conversion",
+                name=ProcessName.FILE_CONVERSION,  # "File format conversion",
                 version=self.data_processes["tools"]["aicsimageio"]["version"],
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
@@ -1723,26 +1750,20 @@ class TeraStitcher:
                 code_url=self.data_processes["tools"]["aicsimageio"]["codeURL"],
                 parameters=config["ome_zarr_params"],
                 notes="OME Zarr conversion",
+                outputs={"ng_link": ng_link},
             )
         )
-
-        ng_config = config["ome_zarr_params"].copy()
-
-        ng_config["ng_base_url"] = config["visualization"]["ng_base_url"]
-        ng_config["mount_service"] = config["visualization"]["mount_service"]
-        ng_config["bucket_path"] = config["visualization"]["bucket_path"]
-
-        self.create_ng_link(ng_config, channels)
 
         if config["clean_output"]:
             utils.delete_folder(self.__preprocessing_folder, self.__verbose)
 
-        # Saving metadata process
-        utils.generate_processing(
-            self.data_processes["steps"],
-            str(self.__output_folder.joinpath("metadata/processing.json")),
-            __version__,
-        )
+        if self.__generate_metadata:
+            # Saving metadata process
+            utils.generate_processing(
+                self.data_processes["steps"],
+                str(self.__output_folder.joinpath("metadata/processing.json")),
+                __version__,
+            )
 
 
 def find_channels(path: PathLike, channel_regex: str = r"Ex_([0-9]*)_Em_([0-9]*)$"):
@@ -1873,6 +1894,7 @@ def execute_terastitcher(
             pyscripts_path=config_teras["pyscripts_path"],
             verbose=config_teras["verbose"],
             preprocessing=config_teras["preprocessing_steps"],
+            generate_metadata=config_teras["generate_metadata"],
         )
 
         # Saving log command
