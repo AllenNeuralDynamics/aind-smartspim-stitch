@@ -1976,10 +1976,18 @@ def main() -> str:
     output_folder = None
 
     if validate_dataset(dataset_path=args["input_data"], validate_mdata=False):
+        input_data = os.path.abspath(args["input_data"])
+        output_folder = os.path.abspath(args["output_data"])
+        preprocessed_data = os.path.abspath(args["preprocessed_data"])
+
+        print(
+            f"Input data: {input_data} \nOutput data: {output_folder} \nPreprocessed data: {preprocessed_data}"
+        )
+
         output_folder = execute_terastitcher(
-            input_data=args["input_data"],
-            output_folder=args["output_data"],
-            preprocessed_data=args["preprocessed_data"],
+            input_data=input_data,
+            output_folder=output_folder,
+            preprocessed_data=preprocessed_data,
             config_teras=args,
         )
 

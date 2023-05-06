@@ -106,7 +106,7 @@ class ImportParameters(DefaultSchema):
     mdata_bin = Str(
         required=False,
         metadata={"description": "Location of the metadata files"},
-        dump_default="/scratch",
+        dump_default="../scratch",
     )
 
     additional_params = List(Str(), required=False, cli_as_single_argument=True)
