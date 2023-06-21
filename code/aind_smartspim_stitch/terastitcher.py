@@ -282,6 +282,15 @@ class TeraStitcher:
                 process_name="stitched",
             )
 
+            copied_metadata = utils.copy_available_metadata(
+                input_path=self.__input_data.parent,
+                output_path=self.__output_jsons_path,
+                ignore_files=[
+                    "data_description.json",  # Ignoring data description since we're generating it above
+                    "processing.json",  # This is generated with all the steps
+                ],
+            )
+
         # Setting logger
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)

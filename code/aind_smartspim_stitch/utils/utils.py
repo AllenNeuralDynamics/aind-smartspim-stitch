@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, List, Optional, Union
 
 from aind_data_schema import DerivedDataDescription, Processing
+from aind_data_schema.base import AindCoreModel
 from aind_data_schema.data_description import Funding, Institution, Modality, RawDataDescription
 
 # IO types
@@ -569,3 +570,77 @@ def wavelength_to_hex(wavelength: int) -> int:
         if wavelength < ub:  # Exclusive
             return hex_val
     return hex_val  # hex_val is set to the last color in for loop
+
+
+def copy_file(input_filename: PathLike, output_filename: PathLike):
+    """
+    Copies a file to an output path
+
+    Parameters
+    ----------
+    input_filename: PathLike
+        Path where the file is located
+
+    output_filename: PathLike
+        Path where the file will be copied
+    """
+
+    try:
+        shutil.copy(input_filename, output_filename)
+
+    except shutil.SameFileError:
+        raise shutil.SameFileError(f"The filename {input_filename} already exists in the output path.")
+
+    except PermissionError:
+        raise PermissionError(
+            f"Not able to copy the file. Please, check the permissions in the output path."
+        )
+
+
+def copy_available_metadata(
+    input_path: PathLike, output_path: PathLike, ignore_files: List[str]
+) -> List[PathLike]:
+    """
+    Copies all the valid metadata from the aind-data-schema
+    repository that exists in a given path.
+
+    Parameters
+    -----------
+    input_path: PathLike
+        Path where the metadata is located
+
+    output_path: PathLike
+        Path where we will copy the found
+        metadata
+
+    ignore_files: List[str]
+        List with the filenames of the metadata
+        that we need to ignore from the aind-data-schema
+
+    Returns
+    --------
+    List[PathLike]
+        List with the metadata files that
+        were copied
+    """
+
+    # We get all the valid filenames from the aind core model
+    metadata_to_find = [cls.default_filename() for cls in AindCoreModel.__subclasses__()]
+
+    # Making sure the paths are pathlib objects
+    input_path = Path(input_path)
+    output_path = Path(output_path)
+
+    found_metadata = []
+
+    for metadata_filename in metadata_to_find:
+        metadata_filename = input_path.joinpath(metadata_filename)
+
+        if metadata_filename.exists() and metadata_filename.name not in ignore_files:
+            found_metadata.append(metadata_filename)
+
+            # Copying file to output path
+            output_filename = output_path.joinpath(metadata_filename.name)
+            copy_file(metadata_filename, output_filename)
+
+    return found_metadata
