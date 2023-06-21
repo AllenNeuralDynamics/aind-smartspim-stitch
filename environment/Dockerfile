@@ -40,9 +40,9 @@ ENV LD_LIBRARY_PATH "$LD_LIBRARY_PATH:/home/zulu8.62.0.19-ca-jdk8.0.332-linux_x6
 
 # Maven setup (for n5-spark utilities)
 RUN cd /home && \ 
-    wget https://dlcdn.apache.org/maven/maven-3/3.8.7/binaries/apache-maven-3.8.7-bin.tar.gz && \
-    tar -xzf apache-maven-3.8.7-bin.tar.gz
-ENV PATH "/home/apache-maven-3.8.7/bin:$PATH"
+    wget https://dlcdn.apache.org/maven/maven-3/3.9.1/binaries/apache-maven-3.9.1-bin.tar.gz && \
+    tar -xzf apache-maven-3.9.1-bin.tar.gz
+ENV PATH "/home/apache-maven-3.9.1/bin:$PATH"
 ENV PATH "/home/zulu8.62.0.19-ca-jdk8.0.332-linux_x64/bin:$PATH"
 
 RUN echo "localhost slots=70" > /home/hostfile
@@ -69,7 +69,7 @@ RUN pip install -U --no-cache-dir \
     bokeh==2.4.2 \
     zarr==2.13.3 \
     pint==0.20.1 \
-    aind-data-schema==0.12.5 \
+    aind-data-schema==0.13.52 \
     xmltodict==0.13.0 \
     natsort==8.2.0 \
     pims==0.6.1 \

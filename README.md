@@ -1,6 +1,10 @@
 # aind-smartspim-stitch
 ---
 
+This version works with the Code Ocean pipeline feature. Some modifications
+needed to be done in order to make it work since pipelines in code ocean do not
+admit parameters.
+
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
 [![Programming Languages](https://img.shields.io/github/languages/count/AllenNeuralDynamics/aind-smartspim-stitch)](https://github.com/AllenNeuralDynamics/aind-smartspim-stitch)
 ![Code Style](https://img.shields.io/badge/code%20style-black-black)

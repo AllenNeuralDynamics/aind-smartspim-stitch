@@ -33,7 +33,7 @@ dependencies = [
     'pystripe@git+https://github.com/AllenNeuralDynamics/pystripe.git@feature/output_format',
     'ome-zarr@git+https://github.com/AllenNeuralDynamics/ome-zarr-py.git@feature/delayed-dask-poc',
     'aicsimageio@git+https://github.com/camilolaiton/aicsimageio.git@feature/zarrwriter-multiscales-daskjobs',
-    'aind-data-schema==0.12.5',
+    'aind-data-schema==0.13.52',
     'xmltodict==0.13.0',
     'natsort==8.2.0',
     'pims==0.6.1'

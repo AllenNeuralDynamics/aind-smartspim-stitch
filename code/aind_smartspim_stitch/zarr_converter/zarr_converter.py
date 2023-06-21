@@ -25,6 +25,7 @@ from natsort import natsorted
 from numcodecs import blosc
 from skimage.io import imread as sk_imread
 
+from ..utils import utils
 from .zarr_converter_params import ZarrConvertParams, get_default_config
 
 PathLike = Union[str, Path]
@@ -285,7 +286,10 @@ def concatenate_dask_arrays(arr_1: ArrayLike, arr_2: ArrayLike, axis: int) -> Ar
 
 
 def read_chunked_stitched_image_per_channel(
-    directory_structure: dict, channel_name: str, start_slice: int, end_slice: int,
+    directory_structure: dict,
+    channel_name: str,
+    start_slice: int,
+    end_slice: int,
 ) -> ArrayLike:
     """
     Creates a dask array of the whole image volume
@@ -490,7 +494,11 @@ def channel_parallel_reading(
 
         res = []
         with multiprocessing.Pool(workers) as pool:
-            results = pool.imap(_read_chunked_stitched_image_per_channel, args, chunksize=chunks,)
+            results = pool.imap(
+                _read_chunked_stitched_image_per_channel,
+                args,
+                chunksize=chunks,
+            )
 
             for pos in results:
                 res.append(pos)
@@ -660,21 +668,19 @@ class ZarrConverter:
 
         self.opts = {
             "compressor": blosc.Blosc(
-                cname=blosc_config["codec"], clevel=blosc_config["clevel"], shuffle=blosc.SHUFFLE,
+                cname=blosc_config["codec"],
+                clevel=blosc_config["clevel"],
+                shuffle=blosc.SHUFFLE,
             )
         }
 
-        self.channels = channels
-        self.channel_colors = None
+        self.channels: list[str] = channels
+        self.channel_colors: list[int] = []
 
-        if channels is not None:
-            colors = [
-                0xFF0000,  # Red
-                0x00FF00,  # green
-                0xFF00FF,  # Purple
-                0xFFFF00,  # Yellow
-            ]
-            self.channel_colors = colors[: len(self.channels)]
+        for channel_str in self.channels:
+            em_wav: int = int(channel_str.split("_")[-1])
+            em_hex: int = utils.wavelength_to_hex(em_wav)
+            self.channel_colors.append(em_hex)
 
         # get_blosc_codec(writer_config['codec'], writer_config['clevel'])
 
@@ -746,7 +752,9 @@ class ZarrConverter:
             }
         }
 
-    def convert(self, writer_config: dict, image_name: str = "zarr_multiscale.zarr") -> None:
+    def convert(
+        self, writer_config: dict, image_name: str = "zarr_multiscale.zarr", axis_chunksize: int = 128
+    ) -> None:
         """
         Executes the OME-Zarr conversion
 
@@ -759,6 +767,9 @@ class ZarrConverter:
         image_name: str
             Name of the image
 
+        chunksize: int
+            Chunksize that will be used per
+            axis
         """
         directory_structure = read_image_directory_structure(self.input_data)
         sample_img = get_sample_img(directory_structure)
@@ -797,11 +808,14 @@ class ZarrConverter:
                 "local_directory": self.dask_folder,
                 "tcp-timeout": "300s",
                 "array.chunk-size": "384MiB",
-                "distributed.comm.timeouts": {"connect": "300s", "tcp": "300s",},
+                "distributed.comm.timeouts": {
+                    "connect": "300s",
+                    "tcp": "300s",
+                },
                 "distributed.scheduler.bandwidth": 100000000,
                 # "managed_in_memory",#
                 "distributed.worker.memory.rebalance.measure": "optimistic",
-                "distributed.worker.memory.target": False,  # 0.85,
+                "distributed.worker.memory.target": 0.90,  # 0.85,
                 "distributed.worker.memory.spill": 0.92,  # False,#
                 "distributed.worker.memory.pause": 0.95,  # False,#
                 "distributed.worker.memory.terminate": 0.98,  # False, #
@@ -832,10 +846,14 @@ class ZarrConverter:
         # Writing multiscale image
         with performance_report(filename=dask_report_file):
             for idx in range(n_channels):
+                # Sub image volume
                 channel_img = image[0][idx]
+                print(f"Partitions before: {channel_img.npartitions} {channel_img.shape}")
+                channel_img = channel_img.rechunk((axis_chunksize, axis_chunksize, axis_chunksize))
+                print(f"Partitions after: {channel_img.npartitions} {channel_img.shape}")
 
                 pyramid_data = self.compute_pyramid(
-                    data=channel_img,
+                    data=dask.optimize(channel_img)[0],
                     n_lvls=writer_config["pyramid_levels"],
                     scale_axis=scale_axis,
                     chunks=channel_img.chunksize,
@@ -843,21 +861,20 @@ class ZarrConverter:
 
                 # Getting 5D
                 pyramid_data = [pad_array_n_d(pyramid) for pyramid in pyramid_data]
-                print(f"Pyramid {self.channels[idx]}: ", pyramid_data)
 
                 for pyramid in pyramid_data:
                     print(
                         f"""
+                        Channel {self.channels[idx]}
                         Pyramid {pyramid}
                         - partitions: {pyramid.npartitions}
+                        - chunkszie: {pyramid_data[0].chunksize}
                         """
                     )
 
                 image_name = self.channels[idx] + ".zarr" if self.channels else image_name
                 channel_names = [self.channels[idx]] if self.channels else None
                 channel_colors = [self.channel_colors[idx]] if self.channel_colors else None
-
-                print(pyramid_data[0].chunksize)
 
                 dask_jobs = self.writer.write_multiscale(
                     pyramid=pyramid_data,
@@ -897,7 +914,10 @@ def main():
     zarr_converter = ZarrConverter(
         input_data=args["input_data"],
         output_data=args["output_data"],
-        blosc_config={"codec": args["writer"]["codec"], "clevel": args["writer"]["clevel"],},
+        blosc_config={
+            "codec": args["writer"]["codec"],
+            "clevel": args["writer"]["clevel"],
+        },
         channels=["CH_0", "CH_1"],
         physical_pixels=[2.0, 1.8, 1.8],
     )

@@ -42,7 +42,10 @@ def _create_tiffs_files(path_to_tiffs: str, n_tiffs: int = 4, shape: Tuple[int] 
 
 
 def _create_multichannel_tiff_files(
-    root: str, n_tiffs: int = 4, n_channels: int = 3, shape: Tuple[int] = (256, 256, 256),
+    root: str,
+    n_tiffs: int = 4,
+    n_channels: int = 3,
+    shape: Tuple[int] = (256, 256, 256),
 ):
     """
     Creates a dataset with a single/multiple channel(s)
@@ -221,7 +224,12 @@ class TestZarrConverter(unittest.TestCase):
                     "family": "linear",
                     "inverted": False,
                     "label": f"Channel:{filename}:0",
-                    "window": {"end": 1.0, "max": 1.0, "min": 0.0, "start": 0.0,},
+                    "window": {
+                        "end": 1.0,
+                        "max": 1.0,
+                        "min": 0.0,
+                        "start": 0.0,
+                    },
                 }
             ],
             "id": 1,
@@ -259,7 +267,12 @@ class TestZarrConverter(unittest.TestCase):
                     "family": "linear",
                     "inverted": False,
                     "label": channels[channel_idx],
-                    "window": {"end": 1.0, "max": 1.0, "min": 0.0, "start": 0.0,},
+                    "window": {
+                        "end": 1.0,
+                        "max": 1.0,
+                        "min": 0.0,
+                        "start": 0.0,
+                    },
                 },
             )
 
@@ -327,7 +340,16 @@ class TestZarrConverter(unittest.TestCase):
             datasets.append(
                 {
                     "coordinateTransformations": [
-                        {"scale": [1.0, 1.0, z_voxelsize, z_voxelsize, z_voxelsize,], "type": "scale",}
+                        {
+                            "scale": [
+                                1.0,
+                                1.0,
+                                z_voxelsize,
+                                z_voxelsize,
+                                z_voxelsize,
+                            ],
+                            "type": "scale",
+                        }
                     ],
                     "path": str(n_scale),
                 }

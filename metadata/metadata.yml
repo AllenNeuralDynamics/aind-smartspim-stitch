@@ -1,7 +1,9 @@
 metadata_version: 1
 name: SmartSPIM Stitching Capsule
 description: A tool for fast automatic 3D-stitching of teravoxel-sized microscopy
-  images using cloud computing resources and TeraStitcher.
+  images using cloud computing resources and TeraStitcher. This version works with
+  the code ocean pipeline feature since at this moment, it is not possible to
+  include parameters in the execution.
 tags:
 - SmartSPIM
 authors:
