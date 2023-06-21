@@ -67,7 +67,6 @@ def set_up_pipeline_parameters(smartspim_dataset: str, pipeline_config: dict, de
 
         axis_size = None
         axis_name = axis_name.casefold()
-        print(resolutions)
 
         for resolution in resolutions:
             if axis_name == resolution["axis_name"].casefold():
@@ -161,11 +160,9 @@ def get_data_config(
     # Doing this because of Code Ocean, ideally we would have
     # a single dataset in the pipeline
 
-    print("Data_folder: ", os.listdir(data_folder))
     derivatives_dict = utils.read_json_as_dict(f"{data_folder}/{processing_manifest_path}")
     data_description_dict = utils.read_json_as_dict(f"{data_folder}/{data_description_path}")
 
-    print(data_description_dict)
     smartspim_dataset = data_description_dict["name"]
 
     return derivatives_dict, smartspim_dataset
@@ -178,10 +175,6 @@ def main() -> None:
 
     results_folder = os.path.abspath("../results")
     data_folder = os.path.abspath("../data")
-    print("Data folder: ", os.listdir("../data"))
-    print("Folder: ", os.listdir(data_folder))
-    print("Glob in data folder: ", glob("../data/*"))
-    print("Glob inside data folders: ", glob("../data/*/*"))
 
     # Dataset configuration in the processing_manifest.json
     pipeline_config, smartspim_dataset = get_data_config(data_folder=data_folder)
@@ -196,7 +189,7 @@ def main() -> None:
         # Setting up incoming parameters from pipeline
         smartspim_config = set_up_pipeline_parameters(smartspim_dataset, pipeline_config, default_config)
 
-        print("Smartspim config: ", smartspim_config)
+        logger.info(f"Smartspim config: {smartspim_config}")
         output_folder = terastitcher.main(smartspim_config)
         bucket_path = "aind-open-data"
 
