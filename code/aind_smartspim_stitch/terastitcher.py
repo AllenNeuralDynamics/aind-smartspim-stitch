@@ -1951,4 +1951,3 @@ def main(smartspim_config: dict) -> str:
 
 if __name__ == "__main__":
     main()
-    # process_multiple_datasets()
