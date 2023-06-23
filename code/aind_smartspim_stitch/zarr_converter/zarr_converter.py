@@ -753,7 +753,11 @@ class ZarrConverter:
         }
 
     def convert(
-        self, writer_config: dict, image_name: str = "zarr_multiscale.zarr", axis_chunksize: int = 128
+        self,
+        writer_config: dict,
+        image_name: str = "zarr_multiscale.zarr",
+        axis_chunksize: int = 128,
+        workers: int = 0,
     ) -> None:
         """
         Executes the OME-Zarr conversion
@@ -767,15 +771,21 @@ class ZarrConverter:
         image_name: str
             Name of the image
 
-        chunksize: int
+        axis_chunksize: int
             Chunksize that will be used per
-            axis
+            axis. Default 128
+
+        workers: int
+            Number of workers to use in the
+            image format conversion. Default: 0
+            which means that the algorithm
+            will figure out the number of available
+            cpus
         """
         directory_structure = read_image_directory_structure(self.input_data)
         sample_img = get_sample_img(directory_structure)
 
         # Reading multichannel image volume
-        workers = 0
         start_time = time.time()
 
         image = pad_array_n_d(
@@ -824,7 +834,7 @@ class ZarrConverter:
             }
         )
 
-        n_workers = multiprocessing.cpu_count()
+        n_workers = multiprocessing.cpu_count() if workers == 0 else workers
         threads_per_worker = 1
         # Using 1 thread since is in single machine.
         # Avoiding the use of multithreaded due to GIL

@@ -931,7 +931,7 @@ class TeraStitcher:
             config["physical_pixels"],
         )
 
-        converter.convert(config)
+        converter.convert(writer_config=config, workers=config["cpus"])
 
     def create_ng_link(self, config: dict, channels: List[str]) -> str:
         """
@@ -1735,6 +1735,7 @@ class TeraStitcher:
         ]
 
         config["ome_zarr_params"]["physical_pixels"] = physical_pixels
+        config["ome_zarr_params"]["cpus"] = config["merge"]["cpu_params"]["number_processes"]
 
         self.convert_to_ome_zarr(config["ome_zarr_params"], channels)
         end_date_time = datetime.now()
