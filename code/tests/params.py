@@ -64,10 +64,7 @@ def get_helper_additional_params_command_params():
     helper_additional_params_command function
     """
     return [
-        [
-            ["sparse_data", "libtiff_uncompress"],
-            "--sparse_data --libtiff_uncompress ",
-        ],
+        [["sparse_data", "libtiff_uncompress"], "--sparse_data --libtiff_uncompress ",],
         [[], ""],
     ]
 
