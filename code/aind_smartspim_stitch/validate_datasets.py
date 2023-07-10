@@ -80,13 +80,11 @@ class SmartSPIMReader:
 
             for dataset in datasets:
                 dataconvention_match = re.match(
-                    SmartSPIMReader.RegexPatterns.smartspim_regex.value,
-                    dataset,
+                    SmartSPIMReader.RegexPatterns.smartspim_regex.value, dataset,
                 )
 
                 oldconvention_match = re.match(
-                    SmartSPIMReader.RegexPatterns.smartspim_old_regex.value,
-                    dataset,
+                    SmartSPIMReader.RegexPatterns.smartspim_old_regex.value, dataset,
                 )
 
                 if dataconvention_match:
@@ -344,11 +342,7 @@ def validate_metadata_parallel(
         res = []
 
         with multiprocessing.Pool(workers) as pool:
-            results = pool.imap(
-                _validate_rows,
-                args,
-                chunksize=1,
-            )
+            results = pool.imap(_validate_rows, args, chunksize=1,)
 
             for pos in results:
                 res.append(pos)

@@ -40,8 +40,8 @@ ENV LD_LIBRARY_PATH "$LD_LIBRARY_PATH:/home/zulu8.62.0.19-ca-jdk8.0.332-linux_x6
 
 # Maven setup (for n5-spark utilities)
 RUN cd /home && \ 
-    wget https://dlcdn.apache.org/maven/maven-3/3.9.2/binaries/apache-maven-3.9.2-bin.tar.gz && \
-    tar -xzf apache-maven-3.9.2-bin.tar.gz
+    wget https://dlcdn.apache.org/maven/maven-3/3.9.3/binaries/apache-maven-3.9.3-bin.tar.gz && \
+    tar -xzf apache-maven-3.9.3-bin.tar.gz
 ENV PATH "/home/apache-maven-3.9.2/bin:$PATH"
 ENV PATH "/home/zulu8.62.0.19-ca-jdk8.0.332-linux_x64/bin:$PATH"
 
@@ -69,16 +69,16 @@ RUN pip install -U --no-cache-dir \
     bokeh==2.4.2 \
     zarr==2.13.3 \
     pint==0.20.1 \
-    aind-data-schema==0.13.11 \
+    aind-data-schema==0.13.61 \
     xmltodict==0.13.0 \
     natsort==8.2.0 \
     pims==0.6.1 \
     dask[distributed]==2022.11.1 \
     PyExifTool==0.5.5 \
     tqdm==4.64.1 \
-    git+https://github.com/AllenNeuralDynamics/aind-ng-link.git \
+    aind-ng-link==1.0.6 \
     git+https://github.com/AllenNeuralDynamics/pystripe.git@feature/output_format \
-    git+https://github.com/AllenNeuralDynamics/ome-zarr-py.git@feature/delayed-dask-poc \
+    ome-zarr==0.8.0 \
     aicsimageio@git+https://github.com/camilolaiton/aicsimageio.git@feature/zarrwriter-multiscales-daskjobs
 
 # ENV MALLOC_TRIM_THRESHOLD_ 0

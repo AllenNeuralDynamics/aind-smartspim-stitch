@@ -18,9 +18,7 @@ PathLike = Union[str, Path]
 
 
 def _create_images(
-    path: PathLike,
-    n_tiffs: Optional[int] = 4,
-    shape: Optional[Tuple[int]] = (128, 128),
+    path: PathLike, n_tiffs: Optional[int] = 4, shape: Optional[Tuple[int]] = (128, 128),
 ):
     """
     Creates images for tests

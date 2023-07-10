@@ -121,8 +121,7 @@ def copy_fused_results(output_folder: str, s3_path: str, results_folder: str):
         logger.info(out)
 
     utils.save_string_to_txt(
-        f"Stitched dataset saved in: {s3_path}",
-        f"{results_folder}/output_stitching.txt",
+        f"Stitched dataset saved in: {s3_path}", f"{results_folder}/output_stitching.txt",
     )
 
 
