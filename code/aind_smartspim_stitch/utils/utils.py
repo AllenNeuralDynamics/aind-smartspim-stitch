@@ -419,7 +419,7 @@ def generate_data_description(
     del data["name"]
 
     dt = datetime.now()
-    data["schema_version"] = "0.6.0"
+    data["schema_version"] = "0.7.1"
     data["modality"] = [Modality.SPIM]
     data["experiment_type"] = "SmartSPIM"
 
