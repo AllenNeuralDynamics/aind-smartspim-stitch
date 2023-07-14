@@ -131,10 +131,10 @@ class TeraStitcher:
         parallel: bool = True,
         pyscripts_path: Optional[PathLike] = None,
         computation: Optional[str] = "cpu",
-        preprocessing: Optional[dict] = None,
         verbose: Optional[bool] = False,
         preprocessing_folder: Optional[PathLike] = None,
-        generate_metadata: Optional[bool] = True,
+        generate_metadata: Optional[bool] = False,
+        metadata_folder: Optional[PathLike] = None,
     ) -> None:
         """
         Class constructor
@@ -157,15 +157,14 @@ class TeraStitcher:
         computation: Optional[str]
             String that indicates where will terastitcher run.
             Available options are: ['cpu', 'gpu']
-        preprocessing: Optional[dict]:
-            All the preprocessing steps prior to terastitcher's pipeline.
-            Default None.
         verbose: Optional[bool]
             True if you want to print outputs of
             all executed commands.
         generate_metadata: Optional[bool]
             True if you want to generate metadata based on
             aind-data-schema
+        metadata_folder: Optional[PathLike]
+            Path where the metadata files are located
 
         Raises
         ------------------------
@@ -187,9 +186,9 @@ class TeraStitcher:
         self.__platform = platform.system()
         self.__parastitcher_path = Path(pyscripts_path).joinpath("Parastitcher.py")
         self.__paraconverter_path = Path(pyscripts_path).joinpath("paraconverter.py")
-        self.preprocessing = preprocessing
         self.__verbose = verbose
         self.__generate_metadata = generate_metadata
+        self.__metadata_folder = Path(metadata_folder)
         self.__python_terminal = None
         self.metadata_path = self.__output_folder.joinpath("metadata/params")
         self.xmls_path = self.__output_folder.joinpath("metadata/xmls")
@@ -206,9 +205,9 @@ class TeraStitcher:
                     "version": "1.11.10",
                     "codeURL": "https://github.com/camilolaiton/TeraStitcher.git@fix/data_paths",
                 },
-                "pystripe": {
-                    "version": "0.2.0",
-                    "codeURL": "https://github.com/camilolaiton/pystripe.git@feature/output_format",
+                "destriper": {
+                    "version": "0.0.1",
+                    "codeURL": "https://github.com/AllenNeuralDynamics/aind-smartspim-destripe",
                 },
                 "aicsimageio": {
                     "version": "4.8.0",
@@ -272,9 +271,7 @@ class TeraStitcher:
             data_description_path = self.__output_jsons_path.joinpath("data_description.json")
 
             utils.generate_data_description(
-                raw_data_description_path=str(
-                    self.__input_data.parent.joinpath("data_description.json")
-                ),
+                raw_data_description_path=str(self.__metadata_folder.joinpath("data_description.json")),
                 dest_data_description=str(data_description_path),
                 process_name="stitched",
             )
@@ -1654,12 +1651,6 @@ class TeraStitcher:
         # If stitch_channel name is not in founded channels, ValueError is thrown
         index_channel = channels.index(config["stitch_channel"])
 
-        if self.preprocessing:
-            self.__execute_preprocessing_steps(exec_config, channels)
-
-            if "pystripe" in self.preprocessing:
-                self.__input_data = self.__preprocessing_folder.joinpath("destriped")
-
         if len(channels) > 1:
             self.logger.info(
                 f"Processing {channels} channels with informative channel {channels[index_channel]}"
@@ -1766,7 +1757,11 @@ def find_channels(path: PathLike, channel_regex: str = r"Ex_([0-9]*)_Em_([0-9]*)
 
 
 def execute_terastitcher(
-    input_data: PathLike, output_folder: PathLike, preprocessed_data: PathLike, config_teras: PathLike,
+    input_data: PathLike,
+    output_folder: PathLike,
+    preprocessed_data: PathLike,
+    metadata_folder: PathLike,
+    config_teras: PathLike,
 ) -> None:
     """
     Executes terastitcher with in-command parameters.
@@ -1793,6 +1788,10 @@ def execute_terastitcher(
         he timestamp and '_preprocessed' suffix. e.g.
         path/to/file/dataset_name ->
         path/to/file/dataset_name_%Y_%m_%d_%H_%M_%S_preprocessed
+    
+    metadata_folder: PathLike
+        Path where the metadata is placed for a SmartSPIM
+        dataset
 
     config_teras: Dict
         Dictionary with terastitcher's configuration.
@@ -1841,18 +1840,6 @@ def execute_terastitcher(
         )
 
     else:
-        # Check if we want to execute pystripe
-        if not config_teras["preprocessing_steps"]["pystripe"]["execute"]:
-            config_teras["preprocessing_steps"] = None
-
-        else:
-            try:
-                config_teras["preprocessing_steps"]["pystripe"]["input"] = Path(input_data)
-                config_teras["preprocessing_steps"]["pystripe"]["output"] = Path(
-                    preprocessed_data
-                ).joinpath("destriped")
-            except KeyError:
-                config_teras["preprocessing_steps"] = None
 
         terastitcher_tool = TeraStitcher(
             input_data=input_data,
@@ -1863,8 +1850,8 @@ def execute_terastitcher(
             computation="cpu",
             pyscripts_path=config_teras["pyscripts_path"],
             verbose=config_teras["verbose"],
-            preprocessing=config_teras["preprocessing_steps"],
             generate_metadata=config_teras["generate_metadata"],
+            metadata_folder=metadata_folder,
         )
 
         # Saving log command
@@ -1893,6 +1880,7 @@ def main(smartspim_config: dict) -> str:
         input_data = os.path.abspath(args["input_data"])
         output_folder = os.path.abspath(args["output_data"])
         preprocessed_data = os.path.abspath(args["preprocessed_data"])
+        metadata_folder = os.path.abspath(args["metadata_folder"])
 
         print(
             f"Input data: {input_data} \nOutput data: {output_folder} \nPreprocessed data: {preprocessed_data}"
@@ -1903,6 +1891,7 @@ def main(smartspim_config: dict) -> str:
             output_folder=output_folder,
             preprocessed_data=preprocessed_data,
             config_teras=args,
+            metadata_folder=metadata_folder,
         )
 
     else:

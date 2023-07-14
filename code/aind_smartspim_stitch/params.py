@@ -232,61 +232,6 @@ class MergeParameters(DefaultSchema):
     cpu_params = Nested(CPUParams)
 
 
-class PystripeParams(DefaultSchema):
-    """
-    Parameters for destriping microscopic images
-    """
-
-    execute = Boolean(required=False, matadata={"description": "Executes pystripe"}, dump_default=True,)
-
-    # input and output are already defined in PipelineParams Class
-    sigma1 = List(
-        Int(),
-        required=False,
-        metadata={
-            "description": """
-            bandwidth of the stripe filter
-            for the foreground for each channel
-            """
-        },
-        cli_as_single_argument=True,
-        dump_default=[256, 800, 800],
-    )
-
-    sigma2 = List(
-        Int(),
-        required=False,
-        metadata={
-            "description": """
-            bandwidth of the stripe filter for
-            the background for each channel
-            """
-        },
-        cli_as_single_argument=True,
-        dump_default=[256, 800, 800],
-    )
-
-    workers = Int(
-        required=False,
-        metadata={"description": "number of cpu workers to use in batch processing"},
-        dump_default=16,
-    )
-
-    output_format = Str(
-        required=False,
-        metadata={"description": "Output format for the images in pystripe step"},
-        dump_default=".tiff",
-    )
-
-
-class PreprocessingSteps(DefaultSchema):
-    """
-    All preprocessing steps applied to smartspim data
-    """
-
-    pystripe = Nested(PystripeParams, required=False)
-
-
 class Visualization(DefaultSchema):
     """
     Parameters for generating the visualization link
@@ -333,6 +278,16 @@ class PipelineParams(ArgSchema):
         },
     )
 
+    metadata_folder = Str(
+        required=True,
+        metadata={
+            "description": """
+            Path where the metadata is located
+            for a smartspim dataset
+            """
+        },
+    )
+
     stitch_channel = Str(
         required=True,
         metadata={"description": "Position of the informative channel for stitching"},
@@ -357,7 +312,6 @@ class PipelineParams(ArgSchema):
     )
 
     # Processing params
-    preprocessing_steps = Nested(PreprocessingSteps, required=False)
     import_data = Nested(ImportParameters, required=True)
     align = Nested(AlignParameters, required=False)
     threshold = Nested(ThresholdParameters, required=False)

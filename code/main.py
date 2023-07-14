@@ -1,12 +1,8 @@
 """
 Main function to execute dataset processing
 """
-import json
 import logging
 import os
-import re
-import sys
-from glob import glob
 from pathlib import Path
 from typing import Tuple
 
@@ -75,9 +71,11 @@ def set_up_pipeline_parameters(smartspim_dataset: str, pipeline_config: dict, de
 
         return axis_size
 
-    default_config["input_data"] = f"../data/SmartSPIM"
+    default_config["input_data"] = "../data"
     default_config["preprocessed_data"] = f"../scratch/{smartspim_dataset}"
     default_config["output_data"] = f"../results/{smartspim_dataset}"
+    default_config["metadata_folder"] = "../data"
+    default_config["generate_metadata"] = True
 
     default_config["stitch_channel"] = pipeline_config["stitching"]["channel"]
     default_config["import_data"]["vxl1"] = get_resolution_from_array(
@@ -93,7 +91,6 @@ def set_up_pipeline_parameters(smartspim_dataset: str, pipeline_config: dict, de
     dict_cpus = pipeline_config["stitching"].get("cpus")
     cpus = 16 if dict_cpus is None else dict_cpus
 
-    default_config["preprocessing_steps"]["pystripe"]["workers"] = cpus
     default_config["align"]["cpu_params"]["number_processes"] = cpus
     default_config["merge"]["cpu_params"]["number_processes"] = cpus
 
@@ -127,7 +124,7 @@ def copy_fused_results(output_folder: str, s3_path: str, results_folder: str):
 
 def get_data_config(
     data_folder: str,
-    processing_manifest_path: str = "derivatives/processing_manifest.json",
+    processing_manifest_path: str = "processing_manifest.json",
     data_description_path: str = "data_description.json",
 ) -> Tuple:
     """
@@ -197,7 +194,7 @@ def main() -> None:
         logger.info(f"Fused dataset in: {output_folder}")
 
         # Copying output to bucket
-        co_folder = output_folder.split("/")[1]
+        # co_folder = output_folder.split("/")[1]
         dataset_name = output_folder.split("/")[-1]
         s3_path = f"s3://{bucket_path}/{dataset_name}"
         copy_fused_results(output_folder, s3_path, results_folder)

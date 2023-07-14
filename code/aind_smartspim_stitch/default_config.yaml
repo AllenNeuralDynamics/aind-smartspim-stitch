@@ -1,18 +1,4 @@
 ---
-preprocessing_steps:
-  pystripe:
-    sigma1:
-    - 256
-    - 800
-    - 800
-    - 800
-    sigma2:
-    - 256
-    - 800
-    - 800
-    - 800
-    workers: 16
-    output_format: ".tiff"
 pyscripts_path: /home/TeraStitcher/src/utils/pyscripts
 import_data:
   ref1: X
