@@ -1328,27 +1328,27 @@ class TeraStitcher:
 
         """
 
-        self.data_processes["steps"].append(
-            DataProcess(
-                name=ProcessName.IMAGE_DESTRIPING,  # "Image destriping"
-                version=self.data_processes["tools"]["destriper"]["version"],
-                start_date_time=start_date_time,
-                end_date_time=end_date_time,
-                input_location=str(self.__input_data),
-                output_location=str(self.__output_folder),
-                code_url=self.data_processes["tools"]["destriper"]["codeURL"],
-                parameters={
-                    "no_cells_config": {
-                        "wavelet": "db3",
-                        "level": None,
-                        "sigma": 128,
-                        "max_threshold": 12,
-                    },
-                    "cells_config": {"wavelet": "db3", "level": None, "sigma": 64, "max_threshold": 3},
-                },
-                notes=f"Destriping all channels",
-            )
-        )
+        # self.data_processes["steps"].append(
+        #     DataProcess(
+        #         name=ProcessName.IMAGE_DESTRIPING,  # "Image destriping"
+        #         version=self.data_processes["tools"]["destriper"]["version"],
+        #         start_date_time=start_date_time,
+        #         end_date_time=end_date_time,
+        #         input_location=str(self.__input_data),
+        #         output_location=str(self.__output_folder),
+        #         code_url=self.data_processes["tools"]["destriper"]["codeURL"],
+        #         parameters={
+        #             "no_cells_config": {
+        #                 "wavelet": "db3",
+        #                 "level": None,
+        #                 "sigma": 128,
+        #                 "max_threshold": 12,
+        #             },
+        #             "cells_config": {"wavelet": "db3", "level": None, "sigma": 64, "max_threshold": 3},
+        #         },
+        #         notes=f"Destriping all channels",
+        #     )
+        # )
 
         # Creating fuse folder
         informative_channel = channels[pos_informative_channel]
