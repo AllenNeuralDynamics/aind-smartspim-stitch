@@ -171,6 +171,7 @@ def main() -> None:
 
     results_folder = os.path.abspath("../results")
     data_folder = os.path.abspath("../data")
+    print("Data: ", os.listdir(data_folder))
 
     # Dataset configuration in the processing_manifest.json
     pipeline_config, smartspim_dataset = get_data_config(data_folder=data_folder)

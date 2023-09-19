@@ -265,6 +265,10 @@ class TeraStitcher:
         # Setting stdout log file last because the folder
         # structure depends if preprocessing steps are provided
         self.stdout_log_file = self.metadata_path.joinpath("stdout_log.txt")
+        
+        # Setting logger
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
 
         if self.__generate_metadata:
             # Generates data description json for the derived dataset
@@ -276,18 +280,16 @@ class TeraStitcher:
                 process_name="stitched",
             )
 
+            print(f"Looking for metadata in {self.__metadata_folder}")
             copied_metadata = utils.copy_available_metadata(
-                input_path=self.__input_data.parent,
+                input_path=self.__metadata_folder,
                 output_path=self.__output_jsons_path,
                 ignore_files=[
                     "data_description.json",  # Ignoring data description since we're generating it above
                     "processing.json",  # This is generated with all the steps
                 ],
             )
-
-        # Setting logger
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.INFO)
+            print(f"Copied metadata: {copied_metadata}")
 
     def __check_installation(self, tool_name: str = "terastitcher") -> bool:
         """
