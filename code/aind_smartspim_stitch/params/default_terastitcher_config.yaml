@@ -1,0 +1,37 @@
+---
+pyscripts_path: /home/TeraStitcher/src/utils/pyscripts
+import_data:
+  ref1: X
+  ref2: Y
+  ref3: D
+  vxl1: 1.8
+  vxl2: 1.8
+  vxl3: 2
+  additional_params:
+  - sparse_data
+  - libtiff_uncompress
+align:
+  cpu_params:
+    estimate_processes: false
+    image_depth: 4200
+    number_processes: 16
+    hostfile: "/home/hostfile"
+    additional_params:
+    - use-hwthread-cpus
+    - allow-run-as-root
+  subvoldim: 100
+  sD: 5
+threshold:
+  reliability_threshold: 0.7
+ome_zarr_params:
+  codec: zstd
+  clevel: 3
+  scale_factor:
+  - 2
+  - 2
+  - 2
+  pyramid_levels: 5
+visualization:
+  ng_base_url: "https://aind-neuroglancer-sauujisjxq-uw.a.run.app"
+  mount_service: "s3"
+  bucket_path: "aind-open-data"

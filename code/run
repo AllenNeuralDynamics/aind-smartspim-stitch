@@ -7,8 +7,5 @@ set -ex
 source /opt/conda/etc/profile.d/conda.sh
 conda activate smart_stitcher
 
-# Split parameters for argschema
-# provide preprocessed_data path. The module adds timestamp and suffix '_preprocessed'
-# provide output_data path. The module adds timestamp and suffix '_stitched'
-
-python -u main.py
+# This is the master script for the capsule. When you click "Reproducible Run", the code in this file will execute.
+python -u run_capsule.py "$@"

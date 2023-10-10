@@ -2,12 +2,14 @@
 Utility functions
 """
 import json
+import logging
 import os
+import re
 import shutil
 import subprocess
 from datetime import date, datetime, time
 from pathlib import Path
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Tuple, Union
 
 from aind_data_schema import DerivedDataDescription, Processing
 from aind_data_schema.base import AindCoreModel
@@ -78,7 +80,9 @@ def delete_folder(dest_dir: PathLike, verbose: Optional[bool] = False) -> None:
 
 
 def execute_command_helper(
-    command: str, print_command: bool = False, stdout_log_file: Optional[PathLike] = None,
+    command: str,
+    print_command: bool = False,
+    stdout_log_file: Optional[PathLike] = None,
 ) -> None:
     """
     Execute a shell command.
@@ -395,7 +399,9 @@ def get_deepest_dirpath(folder: PathLike, ignore_folders: List[str] = ["metadata
 
 
 def generate_data_description(
-    raw_data_description_path: PathLike, dest_data_description: PathLike, process_name: str = "stitched",
+    raw_data_description_path: PathLike,
+    dest_data_description: PathLike,
+    process_name: str = "stitched",
 ) -> None:
     """
     Generates data description for the output folder.
@@ -449,7 +455,9 @@ def generate_data_description(
 
 
 def generate_processing(
-    data_processes: List[dict], dest_processing: PathLike, pipeline_version: str,
+    data_processes: List[dict],
+    dest_processing: PathLike,
+    pipeline_version: str,
 ) -> None:
     """
     Generates data description for the output folder.
@@ -638,3 +646,99 @@ def copy_available_metadata(
             copy_file(metadata_filename, output_filename)
 
     return found_metadata
+
+
+def create_align_folder_structure(output_alignment_path: PathLike, channel_name: str) -> Tuple:
+    """
+    Creates the stitch folder structure.
+
+    Parameters
+    -----------
+    output_alignment_path: PathLike
+        Path where we will generate
+        the XMLs for the image
+        transformations
+
+    channel_name: str
+        SmartSPIM channel name
+
+    Returns
+    -----------
+    str
+        Path to the metadata folder
+    """
+
+    # Creating folders if necessary
+    if not output_alignment_path.exists():
+        logging.info(f"Path {output_alignment_path} does not exists. We're creating one.")
+        create_folder(dest_dir=output_alignment_path)
+
+    metadata_folder = output_alignment_path.joinpath(f"metadata/stitch_{channel_name}")
+
+    create_folder(metadata_folder)
+
+    return metadata_folder
+
+
+def create_logger(output_log_path: PathLike) -> logging.Logger:
+    """
+    Creates a logger that generates
+    output logs to a specific path.
+
+    Parameters
+    ------------
+    output_log_path: PathLike
+        Path where the log is going
+        to be stored
+
+    Returns
+    -----------
+    logging.Logger
+        Created logger pointing to
+        the file path.
+    """
+    CURR_DATE_TIME = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    LOGS_FILE = f"{output_log_path}/fusion_log_{CURR_DATE_TIME}.log"
+
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s - %(levelname)s : %(message)s",
+        datefmt="%Y-%m-%d %H:%M",
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler(LOGS_FILE, "a"),
+        ],
+        force=True,
+    )
+
+    logging.disable("DEBUG")
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+
+    return logger
+
+
+def find_smartspim_channels(path: PathLike, channel_regex: str = r"Ex_([0-9]*)_Em_([0-9]*)$"):
+    """
+    Find image channels of a dataset using a regular expression.
+
+    Parameters
+    ------------------------
+
+    path:PathLike
+        Dataset path
+
+    channel_regex:str
+        Regular expression for filtering folders in dataset path.
+
+
+    Returns
+    ------------------------
+
+    List[str]:
+        List with the image channels. Empty list if
+        it does not find any channels with the
+        given regular expression.
+
+    """
+    return [path for path in os.listdir(path) if re.search(channel_regex, path)]

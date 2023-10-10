@@ -22,7 +22,7 @@ from natsort import natsorted
 from ng_link import NgState
 
 from .__init__ import __version__
-from .params import PipelineParams, get_default_config
+from .params.params import PipelineParams, get_default_config
 from .utils import utils
 from .validate_datasets import validate_dataset
 from .zarr_converter.zarr_converter import ZarrConverter
@@ -42,7 +42,10 @@ PathLike = Union[str, Path]
 
 
 def generate_new_channel_displ_xml(
-    informative_channel_xml, channel_name: str, regex_expr: str, encoding: str = "utf-8",
+    informative_channel_xml,
+    channel_name: str,
+    regex_expr: str,
+    encoding: str = "utf-8",
 ) -> str:
     """
     Generates an XML with the displacements
@@ -265,7 +268,7 @@ class TeraStitcher:
         # Setting stdout log file last because the folder
         # structure depends if preprocessing steps are provided
         self.stdout_log_file = self.metadata_path.joinpath("stdout_log.txt")
-        
+
         # Setting logger
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
@@ -951,9 +954,18 @@ class TeraStitcher:
         """
 
         dimensions = {
-            "z": {"voxel_size": config["physical_pixels"][0], "unit": "microns",},
-            "y": {"voxel_size": config["physical_pixels"][1], "unit": "microns",},
-            "x": {"voxel_size": config["physical_pixels"][2], "unit": "microns",},
+            "z": {
+                "voxel_size": config["physical_pixels"][0],
+                "unit": "microns",
+            },
+            "y": {
+                "voxel_size": config["physical_pixels"][1],
+                "unit": "microns",
+            },
+            "x": {
+                "voxel_size": config["physical_pixels"][2],
+                "unit": "microns",
+            },
             "t": {"voxel_size": 0.001, "unit": "seconds"},
         }
 
@@ -993,7 +1005,11 @@ class TeraStitcher:
                     # in zarr to change channel otherwise 0
                     "channel": 0,
                     "name": str(channels[channel_idx]),
-                    "shader": {"color": colors[channel_idx], "emitter": "RGB", "vec": "vec3",},
+                    "shader": {
+                        "color": colors[channel_idx],
+                        "emitter": "RGB",
+                        "vec": "vec3",
+                    },
                     "shaderControls": {"normalized": {"range": [0, 200]}},  # Optional
                 }
             )
@@ -1101,13 +1117,20 @@ class TeraStitcher:
                         input_location=params_copy["input"],
                         output_location=params_copy["output"],
                         code_url=self.data_processes["tools"]["pystripe"]["codeURL"],
-                        parameters={"sigma1": params_copy["sigma1"], "sigma2": params_copy["sigma2"],},
+                        parameters={
+                            "sigma1": params_copy["sigma1"],
+                            "sigma2": params_copy["sigma2"],
+                        },
                         notes=f"Destriping channel {channels[idx]}",
                     )
                 )
 
     def __compute_informative_channel(
-        self, config: dict, exec_config: dict, informative_channel: str, fuse_xmls: PathLike,
+        self,
+        config: dict,
+        exec_config: dict,
+        informative_channel: str,
+        fuse_xmls: PathLike,
     ) -> PathLike:
         """
         Computes 1-5 terastitcher steps for the informative
@@ -1305,7 +1328,11 @@ class TeraStitcher:
         return channels
 
     def stitch_multiple_channels(
-        self, config: dict, exec_config: dict, channels: List[str], pos_informative_channel: int = 0,
+        self,
+        config: dict,
+        exec_config: dict,
+        channels: List[str],
+        pos_informative_channel: int = 0,
     ) -> None:
         """
         Stitch a dataset using multiple channels.
@@ -1365,7 +1392,9 @@ class TeraStitcher:
                 continue
 
             exec_config["command"] = self.import_step_cmd(
-                config["import_data"].copy(), channels[idx], fuse_path=fuse_xmls,
+                config["import_data"].copy(),
+                channels[idx],
+                fuse_path=fuse_xmls,
             )
             self.logger.info(f"Import step for {channels[idx]} channel...")
 
@@ -1525,7 +1554,10 @@ class TeraStitcher:
         # Step 3
         self.logger.info("Projection step...")
         exec_config["command"] = self.input_output_step_cmd(
-            "displproj", f"xml_displcomp_{channel}.xml", f"xml_displproj_{channel}.xml", channel,
+            "displproj",
+            f"xml_displcomp_{channel}.xml",
+            f"xml_displproj_{channel}.xml",
+            channel,
         )
 
         start_date_time = datetime.now()
@@ -1579,7 +1611,10 @@ class TeraStitcher:
         # Step 5
         self.logger.info("Placing tiles step...")
         exec_config["command"] = self.input_output_step_cmd(
-            "placetiles", f"xml_displthres_{channel}.xml", f"xml_merging_{channel}.xml", channel,
+            "placetiles",
+            f"xml_displthres_{channel}.xml",
+            f"xml_merging_{channel}.xml",
+            channel,
         )
 
         start_date_time = datetime.now()
@@ -1696,7 +1731,8 @@ class TeraStitcher:
 
         if config["clean_output"]:
             utils.delete_folder(
-                self.__preprocessing_folder.joinpath("destriped"), self.__verbose,
+                self.__preprocessing_folder.joinpath("destriped"),
+                self.__verbose,
             )
 
         self.logger.info("Converting to OME-Zarr...")
@@ -1812,7 +1848,7 @@ def execute_terastitcher(
         he timestamp and '_preprocessed' suffix. e.g.
         path/to/file/dataset_name ->
         path/to/file/dataset_name_%Y_%m_%d_%H_%M_%S_preprocessed
-    
+
     metadata_folder: PathLike
         Path where the metadata is placed for a SmartSPIM
         dataset
@@ -1864,7 +1900,6 @@ def execute_terastitcher(
         )
 
     else:
-
         terastitcher_tool = TeraStitcher(
             input_data=input_data,
             output_folder=output_folder,

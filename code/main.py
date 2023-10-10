@@ -3,11 +3,11 @@ Main function to execute dataset processing
 """
 import logging
 import os
+from code.aind_smartspim_stitch.params.params import get_default_config
 from pathlib import Path
 from typing import Tuple
 
 from aind_smartspim_stitch import terastitcher
-from aind_smartspim_stitch.params import get_default_config
 from aind_smartspim_stitch.utils import utils
 
 logging.basicConfig(
@@ -118,7 +118,8 @@ def copy_fused_results(output_folder: str, s3_path: str, results_folder: str):
         logger.info(out)
 
     utils.save_string_to_txt(
-        f"Stitched dataset saved in: {s3_path}", f"{results_folder}/output_stitching.txt",
+        f"Stitched dataset saved in: {s3_path}",
+        f"{results_folder}/output_stitching.txt",
     )
 
 
@@ -179,7 +180,6 @@ def main() -> None:
     renamed_folder = None
 
     if len(pipeline_config) and len(smartspim_dataset):
-
         default_config = get_default_config()
 
         pipeline_config = pipeline_config["pipeline_processing"]
