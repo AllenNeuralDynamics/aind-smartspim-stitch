@@ -296,12 +296,13 @@ def terastitcher_stitch(
     data_processes.append(
         DataProcess(
             name=ProcessName.IMAGE_IMPORTING,
-            version=__version__,
+            software_version="1.11.10",
             start_date_time=import_start_time,
             end_date_time=import_end_time,
             input_location=str(channel_path),
             output_location=str(metadata_folder),
             code_url=code_url,
+            code_version=__version__,
             parameters=smartspim_config["import_data"],
             notes=f"TeraStitcher image import for channel {channel_name}",
         )
@@ -326,12 +327,13 @@ def terastitcher_stitch(
     data_processes.append(
         DataProcess(
             name=ProcessName.IMAGE_TILE_ALIGNMENT,
-            version=__version__,
+            software_version="1.11.10",
             start_date_time=align_start_time,
             end_date_time=align_end_time,
             input_location=str(metadata_folder.joinpath(f"xml_import_{channel_name}.xml")),
             output_location=str(metadata_folder.joinpath(f"xml_displcomp_{channel_name}.xml")),
             code_url=code_url,
+            code_version=__version__,
             parameters=smartspim_config["align"],
             notes=f"TeraStitcher image alignment for channel {channel_name} using NCC algorithm",
         )
@@ -357,12 +359,13 @@ def terastitcher_stitch(
     data_processes.append(
         DataProcess(
             name=ProcessName.IMAGE_TILE_PROJECTION,
-            version=__version__,
+            software_version="1.11.10",
             start_date_time=projection_start_time,
             end_date_time=projection_end_time,
             input_location=str(metadata_folder.joinpath(f"xml_displcomp_{channel_name}.xml")),
             output_location=str(metadata_folder.joinpath(f"xml_displproj_{channel_name}.xml")),
             code_url=code_url,
+            code_version=__version__,
             parameters={},
             notes=f"Projection in channel {channel_name}",
         )
@@ -388,12 +391,13 @@ def terastitcher_stitch(
     data_processes.append(
         DataProcess(
             name=ProcessName.IMAGE_THRESHOLDING,  # "Image thresholding"
-            version=__version__,
+            software_version="1.11.10",
             start_date_time=thres_start_time,
             end_date_time=thres_end_time,
             input_location=str(metadata_folder.joinpath(f"xml_displproj_{channel_name}.xml")),
             output_location=str(metadata_folder.joinpath(f"xml_displthres_{channel_name}.xml")),
             code_url=code_url,
+            code_version=__version__,
             parameters=smartspim_config["threshold"],
             notes=f"TeraStitcher thresholding in channel {channel_name}",
         )
@@ -418,12 +422,13 @@ def terastitcher_stitch(
     data_processes.append(
         DataProcess(
             name=ProcessName.IMAGE_TILE_ALIGNMENT,  # "Image tile alignment"
-            version=__version__,
+            software_version="1.11.10",
             start_date_time=placing_start_time,
             end_date_time=placing_end_time,
             input_location=str(metadata_folder.joinpath(f"xml_displthres_{channel_name}.xml")),
             output_location=merge_xml_informative,
             code_url=code_url,
+            code_version=__version__,
             parameters={},
             notes=f"Global optimization using MST algorithm for channel {channel_name}",
         )
@@ -527,4 +532,12 @@ def main(
     utils.copy_file(
         input_filename=terastitcher_alignment_filepath,
         output_filename=output_alignment_path.joinpath(final_alignment_name),
+    )
+
+    # Generating independent processing json
+    utils.generate_processing(
+        data_processes=data_processes,
+        dest_processing=metadata_folder,
+        processor_full_name="Camilo Laiton",
+        pipeline_version="1.5.0",
     )

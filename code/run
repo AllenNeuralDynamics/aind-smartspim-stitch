@@ -5,7 +5,7 @@ set -ex
 
 # Activate stitch env to solve argschema python version bug
 source /opt/conda/etc/profile.d/conda.sh
-conda activate smart_stitcher
+conda activate smartspim_stitcher
 
 # This is the master script for the capsule. When you click "Reproducible Run", the code in this file will execute.
 python -u run_capsule.py "$@"

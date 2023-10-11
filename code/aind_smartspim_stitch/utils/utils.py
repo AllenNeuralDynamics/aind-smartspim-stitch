@@ -11,9 +11,9 @@ from datetime import date, datetime, time
 from pathlib import Path
 from typing import Any, List, Optional, Tuple, Union
 
-from aind_data_schema import DerivedDataDescription, Processing
+from aind_data_schema import DataProcess, DerivedDataDescription, PipelineProcess, Processing
 from aind_data_schema.base import AindCoreModel
-from aind_data_schema.data_description import Funding, Institution, Modality, RawDataDescription
+from aind_data_schema.data_description import Institution, Modality, RawDataDescription
 
 # IO types
 PathLike = Union[str, Path]
@@ -455,10 +455,11 @@ def generate_data_description(
 
 
 def generate_processing(
-    data_processes: List[dict],
+    data_processes: List[DataProcess],
     dest_processing: PathLike,
+    processor_full_name: str,
     pipeline_version: str,
-) -> None:
+):
     """
     Generates data description for the output folder.
 
@@ -471,16 +472,27 @@ def generate_processing(
     dest_processing: PathLike
         Path where the processing file will be placed.
 
+    processor_full_name: str
+        Person in charged of running the pipeline
+        for this data asset
+
     pipeline_version: str
         Terastitcher pipeline version
 
     """
-
     # flake8: noqa: E501
-    processing = Processing(
-        pipeline_url="https://github.com/AllenNeuralDynamics/aind-smartspim-stitch",
-        pipeline_version=pipeline_version,
+    processing_pipeline = PipelineProcess(
         data_processes=data_processes,
+        processor_full_name=processor_full_name,
+        pipeline_version=pipeline_version,
+        pipeline_url="https://github.com/AllenNeuralDynamics/aind-smartspim-pipeline",
+        note="Metadata for fusion step",
+    )
+
+    processing = Processing(
+        processing_pipeline=processing_pipeline,
+        notes="This processing only contains metadata about fusion \
+            and needs to be compiled with other steps at the end",
     )
 
     with open(dest_processing, "w") as f:
