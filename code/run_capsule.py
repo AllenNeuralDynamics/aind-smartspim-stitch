@@ -11,7 +11,7 @@ from aind_smartspim_stitch.utils import utils
 
 def get_data_config(
     data_folder: PathLike,
-    processing_manifest_path: str = "processing_manifest.json",
+    processing_manifest_path: str = "derivatives/processing_manifest.json",
     data_description_path: str = "data_description.json",
 ) -> Tuple:
     """
@@ -111,7 +111,8 @@ def set_up_pipeline_parameters(pipeline_config: dict, default_config: dict):
     dict_cpus = pipeline_config["stitching"].get("cpus")
     cpus = 16 if dict_cpus is None else dict_cpus
 
-    default_config["merge"]["cpu_params"]["number_processes"] = cpus
+    default_config["align"]["cpu_params"]["number_processes"] = cpus
+    default_config["stitching"] = pipeline_config["stitching"].copy()
 
     return default_config
 
@@ -138,7 +139,7 @@ def validate_capsule_inputs(input_elements: List[str]) -> List[str]:
         required_input_element = Path(required_input_element)
 
         if not required_input_element.exists():
-            missing_inputs.append(required_input_element)
+            missing_inputs.append(str(required_input_element))
 
     return missing_inputs
 

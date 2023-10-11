@@ -1,5 +1,5 @@
-metadata_version: 1
-name: Pipeline Version - SmartSPIM Stitching Capsule
+metadata_version: 1.5.0
+name: aind-smartspim-stitch
 description: A tool for fast automatic 3D-stitching of teravoxel-sized microscopy
   images using cloud computing resources and TeraStitcher. This version works with
   the code ocean pipeline feature since at this moment, it is not possible to

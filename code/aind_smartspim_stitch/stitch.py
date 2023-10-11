@@ -144,7 +144,7 @@ def terastitcher_align_cmd(
     output_path = metadata_folder.joinpath(f"xml_displcomp_{channel_name}.xml")
     output_xml = f"--projout={output_path}"
 
-    parallel_command = build_parallel_command(align_params, "align", parastitcher_path)
+    parallel_command = build_parallel_command(align_params, parastitcher_path)
 
     parameters = utils.helper_build_param_value_command(align_params)
 
@@ -301,6 +301,7 @@ def terastitcher_stitch(
             end_date_time=import_end_time,
             input_location=str(channel_path),
             output_location=str(metadata_folder),
+            outputs={"output_file": str(metadata_folder.joinpath(f"xml_import_{channel_name}.xml"))},
             code_url=code_url,
             code_version=__version__,
             parameters=smartspim_config["import_data"],
@@ -331,7 +332,8 @@ def terastitcher_stitch(
             start_date_time=align_start_time,
             end_date_time=align_end_time,
             input_location=str(metadata_folder.joinpath(f"xml_import_{channel_name}.xml")),
-            output_location=str(metadata_folder.joinpath(f"xml_displcomp_{channel_name}.xml")),
+            output_location=str(metadata_folder),
+            outputs={"output_file": str(metadata_folder.joinpath(f"xml_displcomp_{channel_name}.xml"))},
             code_url=code_url,
             code_version=__version__,
             parameters=smartspim_config["align"],
@@ -363,7 +365,8 @@ def terastitcher_stitch(
             start_date_time=projection_start_time,
             end_date_time=projection_end_time,
             input_location=str(metadata_folder.joinpath(f"xml_displcomp_{channel_name}.xml")),
-            output_location=str(metadata_folder.joinpath(f"xml_displproj_{channel_name}.xml")),
+            output_location=str(metadata_folder),
+            outputs={"output_file": str(metadata_folder.joinpath(f"xml_displproj_{channel_name}.xml"))},
             code_url=code_url,
             code_version=__version__,
             parameters={},
@@ -395,7 +398,8 @@ def terastitcher_stitch(
             start_date_time=thres_start_time,
             end_date_time=thres_end_time,
             input_location=str(metadata_folder.joinpath(f"xml_displproj_{channel_name}.xml")),
-            output_location=str(metadata_folder.joinpath(f"xml_displthres_{channel_name}.xml")),
+            output_location=str(metadata_folder),
+            outputs={"output_file": str(metadata_folder.joinpath(f"xml_displthres_{channel_name}.xml"))},
             code_url=code_url,
             code_version=__version__,
             parameters=smartspim_config["threshold"],
@@ -426,7 +430,8 @@ def terastitcher_stitch(
             start_date_time=placing_start_time,
             end_date_time=placing_end_time,
             input_location=str(metadata_folder.joinpath(f"xml_displthres_{channel_name}.xml")),
-            output_location=merge_xml_informative,
+            output_location=str(metadata_folder),
+            outputs={"output_file": str(merge_xml_informative)},
             code_url=code_url,
             code_version=__version__,
             parameters={},
@@ -488,7 +493,7 @@ def main(
     smartspim_channels = utils.find_smartspim_channels(path=data_folder, channel_regex=channel_regex)
 
     if not len(smartspim_channels):
-        raise ValueError("No SmartSPIM channels found!")
+        raise ValueError(f"No SmartSPIM channels found in path {data_folder}.")
 
     # Finding stitching channel in the found channels
 
@@ -496,7 +501,7 @@ def main(
 
     for smartspim_channel in smartspim_channels:
         if smartspim_config["stitching"]["channel"] in smartspim_channel:
-            channel_name = smartspim_channels
+            channel_name = smartspim_channel
             break
 
     if channel_name is None:
@@ -506,7 +511,7 @@ def main(
 
     # Contains the paths where I'll place the
     # alignment metadata
-    (metadata_folder,) = utils.create_align_folder_structure(
+    metadata_folder = utils.create_align_folder_structure(
         output_alignment_path=output_alignment_path, channel_name=channel_name
     )
 
@@ -515,7 +520,7 @@ def main(
 
     logger.info(f"Output folders - Stitch metadata: {metadata_folder}")
 
-    logger.info(f"Generating derived data description")
+    logger.info("Generating derived data description")
 
     terastitcher_alignment_filepath, data_processes = terastitcher_stitch(
         data_folder=data_folder,
@@ -523,7 +528,6 @@ def main(
         channel_name=channel_name,
         smartspim_config=smartspim_config,
         logger=logger,
-        channel_regex=channel_regex,
     )
 
     logger.info(f"Final alignment file with TeraStitcher in path: {terastitcher_alignment_filepath}")

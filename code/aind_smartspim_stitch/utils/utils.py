@@ -11,9 +11,10 @@ from datetime import date, datetime, time
 from pathlib import Path
 from typing import Any, List, Optional, Tuple, Union
 
-from aind_data_schema import DataProcess, DerivedDataDescription, PipelineProcess, Processing
+from aind_data_schema import DerivedDataDescription
 from aind_data_schema.base import AindCoreModel
 from aind_data_schema.data_description import Institution, Modality, RawDataDescription
+from aind_data_schema.processing import DataProcess, PipelineProcess, Processing
 
 # IO types
 PathLike = Union[str, Path]
@@ -118,39 +119,30 @@ def execute_command_helper(
         raise subprocess.CalledProcessError(return_code, command)
 
 
-def execute_command(config: dict) -> None:
+def execute_command(command: str, logger: logging.Logger, verbose: Optional[bool] = False):
     """
     Execute a shell command with a given configuration.
 
     Parameters
     ------------------------
-
     command: str
         Command that we want to execute.
 
-    print_command: bool
-        Bool that dictates if we print the command in the console.
+    logger: logging.Logger
+        Logger object
+
+    verbose: Optional[bool]
+        Prints the command in the console
 
     Raises
     ------------------------
-
     CalledProcessError:
         if the command could not be executed (Returned non-zero status).
 
     """
-    # Command is not executed when info
-    # is True
-    if config["info"]:
-        config["logger"].info(config["command"])
-    else:
-        for out in execute_command_helper(
-            config["command"], config["verbose"], config["stdout_log_file"]
-        ):
-            if len(out):
-                config["logger"].info(out)
-
-            if config["exists_stdout"]:
-                save_string_to_txt(out, config["stdout_log_file"], "a")
+    for out in execute_command_helper(command, verbose):
+        if len(out):
+            logger.info(out)
 
 
 def check_path_instance(obj: object) -> bool:
@@ -450,8 +442,7 @@ def generate_data_description(
         investigators=data.investigators,
     )
 
-    with open(dest_data_description, "w") as f:
-        f.write(derived.json(indent=3))
+    derived.write_standard_file(output_directory=dest_data_description)
 
 
 def generate_processing(
@@ -495,8 +486,7 @@ def generate_processing(
             and needs to be compiled with other steps at the end",
     )
 
-    with open(dest_processing, "w") as f:
-        f.write(processing.json(indent=3))
+    processing.write_standard_file(output_directory=dest_processing)
 
 
 def check_type_helper(value: Any, val_type: type) -> bool:
@@ -660,7 +650,7 @@ def copy_available_metadata(
     return found_metadata
 
 
-def create_align_folder_structure(output_alignment_path: PathLike, channel_name: str) -> Tuple:
+def create_align_folder_structure(output_alignment_path: PathLike, channel_name: str) -> str:
     """
     Creates the stitch folder structure.
 
