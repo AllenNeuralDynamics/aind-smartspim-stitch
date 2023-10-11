@@ -11,7 +11,7 @@ from aind_smartspim_stitch.utils import utils
 
 def get_data_config(
     data_folder: PathLike,
-    processing_manifest_path: str = "derivatives/processing_manifest.json",
+    processing_manifest_path: str = "processing_manifest.json",
     data_description_path: str = "data_description.json",
 ) -> Tuple:
     """
