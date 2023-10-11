@@ -43,8 +43,17 @@ def get_data_config(
     # Doing this because of Code Ocean, ideally we would have
     # a single dataset in the pipeline
 
-    derivatives_dict = utils.read_json_as_dict(f"{data_folder}/{processing_manifest_path}")
-    data_description_dict = utils.read_json_as_dict(f"{data_folder}/{data_description_path}")
+    processing_manifest_path = Path(f"{data_folder}/{processing_manifest_path}")
+    data_description_path = Path(f"{data_folder}/{data_description_path}")
+
+    if not processing_manifest_path.exists():
+        raise ValueError(f"Please, check processing manifest path: {processing_manifest_path}")
+
+    if not data_description_path.exists():
+        raise ValueError(f"Please, check data description path: {data_description_path}")
+
+    derivatives_dict = utils.read_json_as_dict(str(processing_manifest_path))
+    data_description_dict = utils.read_json_as_dict(str(data_description_path))
 
     smartspim_dataset = data_description_dict["name"]
 
@@ -150,7 +159,7 @@ def run():
     # Absolute paths of common Code Ocean folders
     data_folder = os.path.abspath("../data")
     results_folder = os.path.abspath("../results")
-    scratch_folder = os.path.abspath("../scratch")
+    # scratch_folder = os.path.abspath("../scratch")
 
     # It is assumed that these files
     # will be in the data folder

@@ -7,9 +7,9 @@ import os
 import re
 import shutil
 import subprocess
-from datetime import date, datetime, time
+from datetime import datetime
 from pathlib import Path
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Union
 
 from aind_data_schema import DerivedDataDescription
 from aind_data_schema.base import AindCoreModel
@@ -287,49 +287,6 @@ def helper_additional_params_command(params: List[str]) -> str:
     return additional_params
 
 
-def gscfuse_mount(bucket_name: PathLike, params: dict) -> None:
-    """
-    Mounts a bucket in a GCP Virtual Machine using GCSFUSE.
-
-    Parameters
-    ------------------------
-
-    bucket_name: str
-        Name of the bucket.
-
-    params: dict
-        Dictionary with the GCSFUSE params.
-
-    """
-
-    built_params = helper_build_param_value_command(params, equal_con=False)
-    additional_params = helper_additional_params_command(params["additional_params"])
-
-    gfuse_cmd = f"""gcsfuse {additional_params}
-     {built_params} {bucket_name} {bucket_name}"""
-
-    for out in execute_command_helper(gfuse_cmd, True):
-        print(out)
-
-
-def gscfuse_unmount(mount_dir: PathLike) -> None:
-    """
-    Unmounts a bucket in a VM's local folder.
-
-    Parameters
-    ------------------------
-
-    bucket_name: str
-        Name of the bucket.
-
-    """
-
-    fuser_cmd = f"fusermount -u {mount_dir}"
-
-    for out in execute_command_helper(fuser_cmd, True):
-        print(out)
-
-
 def save_string_to_txt(txt: str, filepath: PathLike, mode="w") -> None:
     """
     Saves a text in a file in the given mode.
@@ -350,99 +307,6 @@ def save_string_to_txt(txt: str, filepath: PathLike, mode="w") -> None:
 
     with open(filepath, mode) as file:
         file.write(txt + "\n")
-
-
-def get_deepest_dirpath(folder: PathLike, ignore_folders: List[str] = ["metadata"]) -> PathLike:
-    """
-    Returns the deepest folder path in the provided folder.
-
-    Parameters
-    ------------------------
-
-    folder: PathLike
-        Path where the search will be carried out.
-
-    ignore_folders: List[str]
-        List of folders that need to be ignored
-
-    Returns
-    ------------------------
-
-    PathLike:
-        Path of the deepest directory
-    """
-
-    deepest_path = None
-    deep_val = 0
-
-    for root, dirs, files in os.walk(folder, topdown=False):
-        if any(ignore_folder in root for ignore_folder in ignore_folders):
-            continue
-
-        for foldername in dirs:
-            tmp_path = os.path.join(root, foldername)
-            if tmp_path.count(os.path.sep) > deep_val and not any(
-                ignore_folder in foldername for ignore_folder in ignore_folders
-            ):
-                deepest_path = tmp_path
-                deep_val = tmp_path.count(os.path.sep)
-
-    return Path(deepest_path)
-
-
-def generate_data_description(
-    raw_data_description_path: PathLike,
-    dest_data_description: PathLike,
-    process_name: str = "stitched",
-) -> None:
-    """
-    Generates data description for the output folder.
-
-    Parameters
-    ------------------------
-
-    raw_data_description_path: PathLike
-        Path where the data description file is located.
-
-    dest_data_description: PathLike
-        Path where the new data description will be placed.
-
-    process_name: str
-        Process name of the new dataset
-
-    """
-
-    f = open(raw_data_description_path, "r")
-    data = json.load(f)
-    del data["name"]
-
-    dt = datetime.now()
-    data["schema_version"] = "0.7.1"
-    data["modality"] = [Modality.SPIM]
-    data["experiment_type"] = "SmartSPIM"
-
-    institution = data["institution"]
-    if isinstance(data["institution"], dict) and "abbreviation" in data["institution"]:
-        institution = data["institution"]["abbreviation"]
-
-    data["institution"] = Institution[institution]
-    data["investigators"] = []
-    data = RawDataDescription(**data)
-
-    derived = DerivedDataDescription(
-        input_data_name=data.name,
-        process_name=process_name,
-        creation_date=dt.date(),
-        creation_time=dt.time(),
-        institution=data.institution,
-        funding_source=data.funding_source,
-        modality=data.modality,
-        experiment_type=data.experiment_type,
-        subject_id=data.subject_id,
-        investigators=data.investigators,
-    )
-
-    derived.write_standard_file(output_directory=dest_data_description)
 
 
 def generate_processing(
@@ -533,47 +397,6 @@ def generate_timestamp(time_format: str = "%Y-%m-%d_%H-%M-%S") -> str:
         moment in string format.
     """
     return datetime.now().strftime(time_format)
-
-
-def wavelength_to_hex(wavelength: int) -> int:
-    """
-    Converts wavelength to corresponding color hex value.
-
-    Parameters
-    ------------------------
-    wavelength: int
-        Integer value representing wavelength.
-
-    Returns
-    ------------------------
-    int:
-        Hex value color.
-    """
-    # Each wavelength key is the upper bound to a wavelgnth band.
-    # Wavelengths range from 380-750nm.
-    # Color map wavelength/hex pairs are generated by sampling along a CIE diagram arc.
-    color_map = {
-        460: 0x690AFE,  # Purple
-        470: 0x3F2EFE,  # Blue-Purple
-        480: 0x4B90FE,  # Blue
-        490: 0x59D5F8,  # Blue-Green
-        500: 0x5DF8D6,  # Green
-        520: 0x5AFEB8,  # Green
-        540: 0x58FEA1,  # Green
-        560: 0x51FF1E,  # Green
-        565: 0xBBFB01,  # Green-Yellow
-        575: 0xE9EC02,  # Yellow
-        580: 0xF5C503,  # Yellow-Orange
-        590: 0xF39107,  # Orange
-        600: 0xF15211,  # Orange-Red
-        620: 0xF0121E,  # Red
-        750: 0xF00050,
-    }  # Pink
-
-    for ub, hex_val in color_map.items():
-        if wavelength < ub:  # Exclusive
-            return hex_val
-    return hex_val  # hex_val is set to the last color in for loop
 
 
 def copy_file(input_filename: PathLike, output_filename: PathLike):

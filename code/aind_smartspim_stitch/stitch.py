@@ -266,7 +266,7 @@ def terastitcher_stitch(
     data_processes = []
 
     parastitcher_path = Path(smartspim_config["pyscripts_path"]).joinpath("Parastitcher.py")
-    paraconverter_path = Path(smartspim_config["pyscripts_path"]).joinpath("paraconverter.py")
+    # paraconverter_path = Path(smartspim_config["pyscripts_path"]).joinpath("paraconverter.py")
 
     # Converting to Path object
     data_folder = Path(data_folder)
