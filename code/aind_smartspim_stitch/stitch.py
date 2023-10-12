@@ -573,10 +573,12 @@ def main(
 
     # Getting tracked resources and plotting image
     utils.stop_child_process(profile_process)
-    utils.generate_resources_graphs(
-        time_points,
-        cpu_percentages,
-        memory_usages,
-        metadata_folder,
-        "smartspim_stitching",
-    )
+
+    if len(time_points):
+        utils.generate_resources_graphs(
+            time_points,
+            cpu_percentages,
+            memory_usages,
+            metadata_folder,
+            "smartspim_stitching",
+        )

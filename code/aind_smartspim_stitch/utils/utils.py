@@ -645,6 +645,13 @@ def generate_resources_graphs(
     prefix: str
         Prefix name for the image
     """
+    time_len = len(time_points)
+    memory_len = len(memory_usages)
+    cpu_len = len(cpu_percentages)
+
+    min_len = min([time_len, memory_len, cpu_len])
+    if not min_len:
+        return
 
     plt.figure(figsize=(10, 6))
 
