@@ -165,6 +165,7 @@ def run():
     # will be in the data folder
     required_input_elements = [
         f"{data_folder}/processing_manifest.json",
+        f"{data_folder}/data_description.json",
     ]
 
     missing_files = validate_capsule_inputs(required_input_elements)
