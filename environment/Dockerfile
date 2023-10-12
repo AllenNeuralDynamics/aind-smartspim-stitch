@@ -57,4 +57,6 @@ RUN pip install -U --no-cache-dir \
     'tifffile < 2022.4.22' \
     argschema==3.0.4 \
     mpi4py \
-    aind-data-schema==0.15.3
+    aind-data-schema==0.15.3 \
+    psutil==5.9.5 \
+    matplotlib==3.7.3

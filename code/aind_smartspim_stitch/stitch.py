@@ -4,6 +4,7 @@ for a SmartSPIM dataset using TeraStitcher
 """
 
 import logging
+import multiprocessing
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Tuple
@@ -517,18 +518,42 @@ def main(
 
     # Logger pointing everything to the metadata path
     logger = utils.create_logger(output_log_path=metadata_folder)
+    utils.print_system_information(logger)
 
+    logger.info(f"{'='*40} SmartSPIM Stitching {'='*40}")
     logger.info(f"Output folders - Stitch metadata: {metadata_folder}")
 
-    logger.info("Generating derived data description")
+    # Tracking compute resources
+    # Subprocess to track used resources
+    manager = multiprocessing.Manager()
+    time_points = manager.list()
+    cpu_percentages = manager.list()
+    memory_usages = manager.list()
 
-    terastitcher_alignment_filepath, data_processes = terastitcher_stitch(
-        data_folder=data_folder,
-        metadata_folder=metadata_folder,
-        channel_name=channel_name,
-        smartspim_config=smartspim_config,
-        logger=logger,
+    profile_process = multiprocessing.Process(
+        target=utils.profile_resources,
+        args=(
+            time_points,
+            cpu_percentages,
+            memory_usages,
+            20,
+        ),
     )
+    profile_process.daemon = True
+    profile_process.start()
+
+    try:
+        terastitcher_alignment_filepath, data_processes = terastitcher_stitch(
+            data_folder=data_folder,
+            metadata_folder=metadata_folder,
+            channel_name=channel_name,
+            smartspim_config=smartspim_config,
+            logger=logger,
+        )
+    except BaseException as e:
+        logger.error(f"An unknown error happened -> {e}")
+        utils.stop_child_process(profile_process)
+        raise ValueError
 
     logger.info(f"Final alignment file with TeraStitcher in path: {terastitcher_alignment_filepath}")
 
@@ -544,4 +569,14 @@ def main(
         dest_processing=metadata_folder,
         processor_full_name="Camilo Laiton",
         pipeline_version="1.5.0",
+    )
+
+    # Getting tracked resources and plotting image
+    utils.stop_child_process(profile_process)
+    utils.generate_resources_graphs(
+        time_points,
+        cpu_percentages,
+        memory_usages,
+        metadata_folder,
+        "smartspim_stitching",
     )
