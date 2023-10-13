@@ -130,7 +130,11 @@ def read_image_directory_structure(folder_dir: PathLike) -> dict:
     return directory_structure
 
 
-def lazy_tiff_reader(filename: PathLike):
+def lazy_tiff_reader(
+    filename: PathLike,
+    shape: Optional[Tuple[int]] = None,
+    dtype: Optional[type] = None,
+) -> ArrayLike:
     """
     Creates a dask array to read an image located in a specific path.
 
@@ -140,6 +144,15 @@ def lazy_tiff_reader(filename: PathLike):
     filename: PathLike
         Path to the image
 
+    shape: Optional[Tuple[int]]
+        Optional shape provided to the
+        reader to avoid accessing to the
+        metadata
+
+    dtype: Optional[type]
+        Optional array type to the reader
+        to avoid accessing to the metadata
+
     Returns
     ------------------------
 
@@ -148,9 +161,10 @@ def lazy_tiff_reader(filename: PathLike):
     """
     name = "imread-%s" % tokenize(filename, map(os.path.getmtime, filename))
 
-    with pims.open(filename) as imgs:
-        shape = (1,) + (len(imgs),) + imgs.frame_shape
-        dtype = np.dtype(imgs.pixel_type)
+    if dtype is None or shape is None:
+        with pims.open(filename) as imgs:
+            dtype = np.dtype(imgs.pixel_type)
+            shape = (1,) + (len(imgs),) + imgs.frame_shape
 
     key = [(name,) + (0,) * len(shape)]
     value = [(add_leading_dim, (sk_imread, filename))]
@@ -286,7 +300,10 @@ def concatenate_dask_arrays(arr_1: ArrayLike, arr_2: ArrayLike, axis: int) -> Ar
 
 
 def read_chunked_stitched_image_per_channel(
-    directory_structure: dict, channel_name: str, start_slice: int, end_slice: int,
+    directory_structure: dict,
+    channel_name: str,
+    start_slice: int,
+    end_slice: int,
 ) -> ArrayLike:
     """
     Creates a dask array of the whole image volume
@@ -321,10 +338,9 @@ def read_chunked_stitched_image_per_channel(
     concat_z_3d_blocks = concat_horizontals = horizontal = None
 
     # Getting col structure
-    cols = list(directory_structure.values())[0]
-    cols_paths = list(cols.keys())
+    rows = list(directory_structure.values())[0]
+    rows_paths = list(rows.keys())
     first = True
-    # len_chunks = len(chunksize)
 
     for slice_pos in range(start_slice, end_slice):
         idx_col = 0
@@ -332,21 +348,39 @@ def read_chunked_stitched_image_per_channel(
 
         concat_horizontals = None
 
-        for column_name in cols_paths:
+        for row_name in rows_paths:
             idx_row = 0
             horizontal = []
+            # Shape and dtype read per worker
+            shape = None
+            dtype = None
+            column_names = list(directory_structure[channel_name][row_name].keys())
+            n_cols = len(column_names)
 
-            for row_name in directory_structure[channel_name][column_name]:
+            for column_name_idx in range(n_cols):
                 valid_image = True
+                column_name = column_names[column_name_idx]
+                last_col = column_name_idx == n_cols - 1
+
+                # If it's the last column, we need to read metadata since
+                # due to uneven image shapes of the brain
+                if last_col:
+                    shape = None
+                    dtype = None
 
                 try:
-                    slice_name = directory_structure[channel_name][column_name][row_name][slice_pos]
+                    slice_name = directory_structure[channel_name][row_name][column_name][slice_pos]
 
                     filepath = str(
-                        channel_name.joinpath(column_name).joinpath(row_name).joinpath(slice_name)
+                        channel_name.joinpath(row_name).joinpath(column_name).joinpath(slice_name)
                     )
 
-                    new_arr = lazy_tiff_reader(filepath)
+                    new_arr = lazy_tiff_reader(filepath, dtype=dtype, shape=shape)
+
+                    # Saving shape and dtype to avoid further image reading
+                    if shape is None or dtype is None:
+                        shape = new_arr.shape
+                        dtype = new_arr.dtype
 
                 except ValueError:
                     print("No valid image in ", slice_pos)
@@ -392,7 +426,6 @@ def _read_chunked_stitched_image_per_channel(args_dict: dict):
 def channel_parallel_reading(
     directory_structure: dict,
     channel_idx: int,
-    sample_img: ArrayLike,
     workers: Optional[int] = 0,
     chunks: Optional[int] = 1,
     ensure_parallel: Optional[bool] = True,
@@ -447,8 +480,6 @@ def channel_parallel_reading(
     if n_images < workers and ensure_parallel:
         workers = n_images
 
-    print("Chunk size for parallel reading: ", sample_img.chunksize)
-
     if n_images < workers or not ensure_parallel:
         dask_array = read_chunked_stitched_image_per_channel(
             directory_structure=directory_structure,
@@ -461,10 +492,8 @@ def channel_parallel_reading(
     else:
         images_per_worker = n_images // workers
         print(
-            f"""
-            Setting workers to {workers} - {images_per_worker}
-             - total images: {n_images}
-            """
+            f"Setting workers to {workers} - {images_per_worker} \
+            total images: {n_images}"
         )
 
         # Getting 5 dim image TCZYX
@@ -473,6 +502,9 @@ def channel_parallel_reading(
         end_slice = images_per_worker
 
         for idx_worker in range(workers):
+            print(
+                f"Worker [{idx_worker}] processing [{start_slice} - {end_slice}] VAL: {end_slice == n_images} n images: {n_images}"
+            )
             arg_dict = {
                 "directory_structure": directory_structure,
                 "channel_name": channel_paths[channel_idx],
@@ -491,7 +523,11 @@ def channel_parallel_reading(
 
         res = []
         with multiprocessing.Pool(workers) as pool:
-            results = pool.imap(_read_chunked_stitched_image_per_channel, args, chunksize=chunks,)
+            results = pool.imap(
+                _read_chunked_stitched_image_per_channel,
+                args,
+                chunksize=chunks,
+            )
 
             for pos in results:
                 res.append(pos)
@@ -509,7 +545,6 @@ def channel_parallel_reading(
 
 def parallel_read_chunked_stitched_multichannel_image(
     directory_structure: dict,
-    sample_img: dask.array.core.Array,
     workers: Optional[int] = 0,
     ensure_parallel: Optional[bool] = True,
 ) -> ArrayLike:
@@ -558,7 +593,6 @@ def parallel_read_chunked_stitched_multichannel_image(
         read_chunked_channel = channel_parallel_reading(
             directory_structure,
             channel_idx,
-            sample_img,
             workers=workers,
             ensure_parallel=ensure_parallel,
         )
@@ -661,7 +695,9 @@ class ZarrConverter:
 
         self.opts = {
             "compressor": blosc.Blosc(
-                cname=blosc_config["codec"], clevel=blosc_config["clevel"], shuffle=blosc.SHUFFLE,
+                cname=blosc_config["codec"],
+                clevel=blosc_config["clevel"],
+                shuffle=blosc.SHUFFLE,
             )
         }
 
@@ -809,7 +845,10 @@ class ZarrConverter:
                 "local_directory": self.dask_folder,
                 "tcp-timeout": "300s",
                 "array.chunk-size": "384MiB",
-                "distributed.comm.timeouts": {"connect": "300s", "tcp": "300s",},
+                "distributed.comm.timeouts": {
+                    "connect": "300s",
+                    "tcp": "300s",
+                },
                 "distributed.scheduler.bandwidth": 100000000,
                 # "managed_in_memory",#
                 "distributed.worker.memory.rebalance.measure": "optimistic",
@@ -912,7 +951,10 @@ def main():
     zarr_converter = ZarrConverter(
         input_data=args["input_data"],
         output_data=args["output_data"],
-        blosc_config={"codec": args["writer"]["codec"], "clevel": args["writer"]["clevel"],},
+        blosc_config={
+            "codec": args["writer"]["codec"],
+            "clevel": args["writer"]["clevel"],
+        },
         channels=["CH_0", "CH_1"],
         physical_pixels=[2.0, 1.8, 1.8],
     )

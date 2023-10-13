@@ -19,7 +19,9 @@ class OmeZarrParams(DefaultSchema):
     )
 
     clevel = Int(
-        required=False, metadata={"description": "Parameter for ome-zarr compressor"}, dump_default=1,
+        required=False,
+        metadata={"description": "Parameter for ome-zarr compressor"},
+        dump_default=1,
     )
 
     scale_factor = List(
@@ -43,9 +45,15 @@ class ZarrConvertParams(ArgSchema):
     image configuration
     """
 
-    input_data = InputDir(required=True, metadata={"description": "Path where the data is located"},)
+    input_data = InputDir(
+        required=True,
+        metadata={"description": "Path where the data is located"},
+    )
 
-    output_data = Str(required=True, metadata={"description": "Path where the data will be saved"},)
+    output_data = Str(
+        required=True,
+        metadata={"description": "Path where the data will be saved"},
+    )
 
     writer = Nested(OmeZarrParams, required=False)
 
@@ -54,4 +62,11 @@ def get_default_config() -> dict:
     """
     Returns the default image converter parameters
     """
-    return {"writer": {"codec": "zstd", "clevel": 1, "scale_factor": [2, 2, 2], "pyramid_levels": 5,}}
+    return {
+        "writer": {
+            "codec": "zstd",
+            "clevel": 1,
+            "scale_factor": [2, 2, 2],
+            "pyramid_levels": 5,
+        }
+    }

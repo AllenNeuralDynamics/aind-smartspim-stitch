@@ -26,7 +26,8 @@ class TestUtils(unittest.TestCase):
         """
         self._tmp_dir = tempfile.TemporaryDirectory()
         utils.save_dict_as_json(
-            f"{self._tmp_dir.name}/test_json_2.json", {"number": 13, "text": "this is a test"},
+            f"{self._tmp_dir.name}/test_json_2.json",
+            {"number": 13, "text": "this is a test"},
         )
 
     @parameterized.expand(params.get_save_dict_as_json_params())
@@ -66,7 +67,10 @@ class TestUtils(unittest.TestCase):
 
     @parameterized.expand(params.get_helper_build_param_value_command_params())
     def test_helper_build_param_value_command(
-        self, default_config: dict, expected_output: str, equal_con: Optional[bool] = True,
+        self,
+        default_config: dict,
+        expected_output: str,
+        equal_con: Optional[bool] = True,
     ):
         """
         Tests the helper function to build parameters

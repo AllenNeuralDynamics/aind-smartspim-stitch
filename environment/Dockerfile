@@ -77,6 +77,7 @@ RUN pip install -U --no-cache-dir \
     PyExifTool==0.5.5 \
     tqdm==4.64.1 \
     aind-ng-link==1.0.6 \
+    imagecodecs[all]==2023.3.16 \
     git+https://github.com/AllenNeuralDynamics/pystripe.git@feature/output_format \
     ome-zarr==0.8.0 \
     aicsimageio@git+https://github.com/camilolaiton/aicsimageio.git@feature/zarrwriter-multiscales-daskjobs
