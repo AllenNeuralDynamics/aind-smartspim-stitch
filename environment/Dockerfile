@@ -6,6 +6,8 @@ ARG GIT_ASKPASS
 ARG GIT_ACCESS_TOKEN
 COPY git-askpass /
 
+ARG MAVEN_VERSION=3.9.5
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     build-essential \
@@ -40,9 +42,9 @@ ENV LD_LIBRARY_PATH "$LD_LIBRARY_PATH:/home/zulu8.62.0.19-ca-jdk8.0.332-linux_x6
 
 # Maven setup (for n5-spark utilities)
 RUN cd /home && \ 
-    wget https://dlcdn.apache.org/maven/maven-3/3.9.3/binaries/apache-maven-3.9.3-bin.tar.gz && \
-    tar -xzf apache-maven-3.9.3-bin.tar.gz
-ENV PATH "/home/apache-maven-3.9.2/bin:$PATH"
+    wget https://dlcdn.apache.org/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz && \
+    tar -xzf apache-maven-$MAVEN_VERSION-bin.tar.gz
+ENV PATH "/home/apache-maven-$MAVEN_VERSION/bin:$PATH"
 ENV PATH "/home/zulu8.62.0.19-ca-jdk8.0.332-linux_x64/bin:$PATH"
 
 RUN echo "localhost slots=70" > /home/hostfile
