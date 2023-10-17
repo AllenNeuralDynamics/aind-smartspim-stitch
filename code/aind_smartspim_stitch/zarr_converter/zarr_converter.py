@@ -810,14 +810,13 @@ class ZarrConverter:
             cpus
         """
         directory_structure = read_image_directory_structure(self.input_data)
-        sample_img = get_sample_img(directory_structure)
 
         # Reading multichannel image volume
         start_time = time.time()
 
         image = pad_array_n_d(
             parallel_read_chunked_stitched_multichannel_image(
-                directory_structure, sample_img, workers, ensure_parallel=True
+                directory_structure, workers, ensure_parallel=True
             )
         )
         end_time = time.time()
