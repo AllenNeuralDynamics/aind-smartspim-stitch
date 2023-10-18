@@ -656,7 +656,7 @@ def generate_resources_graphs(
     plt.figure(figsize=(10, 6))
 
     plt.subplot(2, 1, 1)
-    plt.plot(time_points, cpu_percentages, label="CPU Usage")
+    plt.plot(time_points[:min_len], cpu_percentages[:min_len], label="CPU Usage")
     plt.xlabel("Time (s)")
     plt.ylabel("CPU Usage (%)")
     plt.title("CPU Usage Over Time")
@@ -664,7 +664,7 @@ def generate_resources_graphs(
     plt.legend()
 
     plt.subplot(2, 1, 2)
-    plt.plot(time_points, memory_usages, label="Memory Usage")
+    plt.plot(time_points[:min_len], memory_usages[:min_len], label="Memory Usage")
     plt.xlabel("Time (s)")
     plt.ylabel("Memory Usage (%)")
     plt.title("Memory Usage Over Time")
