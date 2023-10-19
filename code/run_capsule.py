@@ -118,7 +118,7 @@ def set_up_pipeline_parameters(pipeline_config: dict, default_config: dict):
     )
 
     dict_cpus = pipeline_config["stitching"].get("cpus")
-    cpus = 16 if dict_cpus is None else dict_cpus
+    cpus = utils.get_code_ocean_cpu_limit() if dict_cpus is None else dict_cpus
 
     default_config["align"]["cpu_params"]["number_processes"] = cpus
     default_config["stitching"] = pipeline_config["stitching"].copy()
