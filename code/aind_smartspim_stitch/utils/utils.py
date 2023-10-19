@@ -501,7 +501,7 @@ def create_align_folder_structure(output_alignment_path: PathLike, channel_name:
         logging.info(f"Path {output_alignment_path} does not exists. We're creating one.")
         create_folder(dest_dir=output_alignment_path)
 
-    metadata_folder = output_alignment_path.joinpath(f"metadata/stitch_{channel_name}")
+    metadata_folder = output_alignment_path.joinpath(f"stitch_metadata_{channel_name}/stitch_{channel_name}")
 
     create_folder(metadata_folder)
 
