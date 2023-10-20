@@ -379,9 +379,7 @@ def generate_processing(
             and needs to be compiled with other steps at the end",
     )
 
-    # processing.write_standard_file(output_directory=dest_processing)
-    with open(dest_processing, "w") as f:
-        f.write(processing.json(indent=3))
+    processing.write_standard_file(output_directory=dest_processing)
 
 
 def check_type_helper(value: Any, val_type: type) -> bool:
