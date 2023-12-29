@@ -17,7 +17,7 @@ from typing import Any, List, Optional, Union
 import matplotlib.pyplot as plt
 import psutil
 from aind_data_schema.base import AindCoreModel
-from aind_data_schema.processing import DataProcess, PipelineProcess, Processing
+from aind_data_schema.core.processing import DataProcess, PipelineProcess, Processing
 
 # IO types
 PathLike = Union[str, Path]

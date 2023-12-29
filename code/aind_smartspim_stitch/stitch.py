@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Tuple
 
-from aind_data_schema.processing import DataProcess, ProcessName
+from aind_data_schema.core.processing import DataProcess, ProcessName
 
 from .__init__ import __version__
 from ._shared.types import PathLike

@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import List, Optional, Union
 
 import xmltodict
-from aind_data_schema.processing import DataProcess, ProcessName
+from aind_data_schema.core.processing import DataProcess, ProcessName
 from argschema import ArgSchemaParser
 from natsort import natsorted
 from ng_link import NgState
