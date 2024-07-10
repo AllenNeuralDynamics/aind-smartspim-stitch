@@ -1,6 +1,7 @@
 """
 Main function to execute dataset processing
 """
+
 import logging
 import os
 from code.aind_smartspim_stitch.params.params import get_default_config

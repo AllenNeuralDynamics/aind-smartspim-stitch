@@ -1,6 +1,7 @@
 """
 Path parser class when we're using GCP
 """
+
 import re
 from pathlib import Path
 from typing import List, Union

@@ -1,6 +1,7 @@
 """
 Module to declare the parameters for the stitching package
 """
+
 import os
 import platform
 import pprint as pp
