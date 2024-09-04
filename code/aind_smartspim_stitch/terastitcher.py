@@ -2,6 +2,7 @@
 Module for executing TeraStitcher software automatically
 for the smartspim data
 """
+
 import errno
 import logging
 import math
