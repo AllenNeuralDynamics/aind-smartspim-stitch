@@ -568,7 +568,7 @@ def main(
         data_processes=data_processes,
         dest_processing=metadata_folder,
         processor_full_name="Camilo Laiton",
-        pipeline_version="1.5.0",
+        pipeline_version="1.6.0",
     )
 
     # Getting tracked resources and plotting image
