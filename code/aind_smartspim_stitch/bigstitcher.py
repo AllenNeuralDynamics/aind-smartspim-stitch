@@ -10,12 +10,11 @@ from time import time
 from typing import List, Optional, Tuple
 
 import dask.array as da
-import smartspim_bigstitcher_utility
-import utils
 from aind_data_schema.core.processing import DataProcess, ProcessName
 from natsort import natsorted
 
-from .utils.utils import create_folder, generate_processing
+from . import smartspim_bigstitcher_utility
+from .utils import utils
 
 
 def validate_capsule_inputs(input_elements: List[str]) -> List[str]:
@@ -337,13 +336,13 @@ def main(
     output_json_file: str
         Path where the json file will be written
     results_folder: Path
-
-    smartspim_dataset_name:
-
+        Results folder
+    smartspim_dataset_name: str
+        SmartSPIM dataset name
     """
     start_time = time()
     metadata_folder = results_folder.joinpath("metadata")
-    create_folder(str(metadata_folder))
+    utils.create_folder(str(metadata_folder))
 
     output_json = create_smartspim_tile_metadata(
         stitching_channel_path=stitching_channel_path,
@@ -402,7 +401,7 @@ def main(
             )
         )
 
-        generate_processing(
+        utils.generate_processing(
             data_processes=data_processes,
             dest_processing=metadata_folder,
             processor_full_name="Camilo Laiton",

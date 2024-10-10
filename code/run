@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-set -ex
 
-# This is the master script for the capsule. When you click "Reproducible Run", the code in this file will execute.
-
-# Activate stitch env to solve argschema python version bug
 source /opt/conda/etc/profile.d/conda.sh
-conda activate smartspim_stitcher
+conda activate create_smartspim_stitch
 
-# This is the master script for the capsule. When you click "Reproducible Run", the code in this file will execute.
-python -u run_capsule.py "$@"
+# Creates the SmartSPIM BigStitcher XML
+big_stitcher_json=$(python run_capsule.py)
+
+conda deactivate
+
+# echo "Captured Output: $big_stitcher_json"
+python -m aind_exaspim_pipeline_utils.imagej_wrapper --input_json $big_stitcher_json --log_level="DEBUG"

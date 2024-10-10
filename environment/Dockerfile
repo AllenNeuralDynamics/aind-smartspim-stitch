@@ -30,7 +30,8 @@ RUN pip install -U --no-cache-dir \
     toml==0.10.2 \
     zarr==2.16.1 \
     natsort==8.4.0 \
-    aind-data-schema==1.0.0
+    aind-data-schema==1.0.0 \
+    matplotlib==3.9.2
 
 SHELL ["/bin/bash", "-c"]
 

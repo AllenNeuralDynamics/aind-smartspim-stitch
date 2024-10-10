@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -e
+git clone -b feat-phase-correlation https://github.com/AllenNeuralDynamics/aind-exaSPIM-pipeline-utils.git
+pip install -e ./aind-exaSPIM-pipeline-utils
+ImageJ --headless --update add-update-site BigStitcher https://sites.imagej.net/BigStitcher/
+ImageJ --headless --update add-update-site AllenNeuralDynamics https://sites.imagej.net/AllenNeuralDynamics 
+ImageJ --headless --update update jars/bigdataviewer-omezarr-0.2.2.jar 
+ImageJ --headless --update update plugins/Big_Stitcher-1.2.11.jar
+ImageJ --headless --update update
+
+# cp -r /code/FIJI.app /FIJI.app
