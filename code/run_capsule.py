@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import List, Tuple
 
-from aind_smartspim_stitch import stitch
+from aind_smartspim_stitch import bigstitcher, stitch
 from aind_smartspim_stitch._shared.types import PathLike
 from aind_smartspim_stitch.params import get_yaml
 from aind_smartspim_stitch.utils import utils
@@ -139,8 +139,36 @@ def validate_capsule_inputs(input_elements: List[str]) -> List[str]:
     return missing_inputs
 
 
-def run():
-    """Function to start image fusion"""
+def get_resolution(acquisition_config: dict) -> Tuple[float]:
+    """
+    Get the image resolution from the acquisition.json metadata
+
+    Parameters
+    ----------
+    acquisition_config: dict
+        Acquisition metadata
+
+    Returns
+    -------
+    Tuple[float]
+        Tuple with the floats for image resolution
+    """
+
+    # Grabbing a tile with metadata from acquisition - we assume all dataset
+    # was acquired with the same resolution
+    tile_coord_transforms = acquisition_config["tiles"][0]["coordinate_transformations"]
+
+    scale_transform = [x["scale"] for x in tile_coord_transforms if x["type"] == "scale"][0]
+
+    x = float(scale_transform[0])
+    y = float(scale_transform[1])
+    z = float(scale_transform[2])
+
+    return x, y, z
+
+
+def run_terastitcher():
+    """Function to start image stitching with terastitcher"""
 
     # Absolute paths of common Code Ocean folders
     data_folder = os.path.abspath("../data")
@@ -182,6 +210,50 @@ def run():
 
     stitch.main(
         data_folder=data_folder, output_alignment_path=results_folder, smartspim_config=smartspim_config
+    )
+
+
+def run():
+    """Function that runs image stitching with BigStitcher"""
+    data_folder = Path(os.path.abspath("../data"))
+    results_folder = Path(os.path.abspath("../results"))
+    # scratch_folder = Path(os.path.abspath("../scratch"))
+
+    # It is assumed that these files
+    # will be in the data folder
+
+    required_input_elements = [
+        f"{data_folder}/processing_manifest.json",
+        f"{data_folder}/data_description.json",
+        f"{data_folder}/acquisition.json",
+    ]
+
+    missing_files = validate_capsule_inputs(required_input_elements)
+
+    if len(missing_files):
+        raise ValueError(f"We miss the following files in the capsule input: {missing_files}")
+
+    pipeline_config, smartspim_dataset_name, acquisition_dict = get_data_config(
+        data_folder=data_folder,
+        processing_manifest_path="processing_manifest.json",
+        data_description_path="data_description.json",
+        acquisition_path="acquisition.json",
+    )
+
+    voxel_resolution = get_resolution(acquisition_dict)
+    stitching_channel = pipeline_config["pipeline_processing"]["stitching"]["channel"]
+
+    stitching_channel_path = data_folder.joinpath(f"preprocessed_data/{stitching_channel}")
+
+    output_json_file = results_folder.joinpath(f"{smartspim_dataset_name}_tile_metadata.json")
+
+    # Computing image transformations with bigtstitcher
+    bigstitcher.main(
+        stitching_channel_path=stitching_channel_path,
+        voxel_resolution=voxel_resolution,
+        output_json_file=output_json_file,
+        results_folder=results_folder,
+        smartspim_dataset_name=smartspim_dataset_name,
     )
 
 

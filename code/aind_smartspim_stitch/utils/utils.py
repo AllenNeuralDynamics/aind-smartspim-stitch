@@ -341,7 +341,7 @@ def save_string_to_txt(txt: str, filepath: PathLike, mode="w") -> None:
 
 def generate_processing(
     data_processes: List[DataProcess],
-    dest_processing: PathLike,
+    dest_processing: str,
     processor_full_name: str,
     pipeline_version: str,
 ):
@@ -371,7 +371,7 @@ def generate_processing(
         processor_full_name=processor_full_name,
         pipeline_version=pipeline_version,
         pipeline_url="https://github.com/AllenNeuralDynamics/aind-smartspim-pipeline",
-        note="Metadata for fusion step",
+        note="Metadata for the stitching step, it does not include stitching compute time.",
     )
 
     processing = Processing(
