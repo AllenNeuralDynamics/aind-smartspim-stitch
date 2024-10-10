@@ -17,8 +17,8 @@ RUN conda install -y --channel=conda-forge --channel=bioconda \
         openjdk==8.0.332 \
     && conda clean -ya
 
-RUN conda create -n create_smartspim_stitch python=3.9 -y
-SHELL ["conda", "run", "-n", "create_smartspim_stitch", "/bin/bash", "-c"]
+RUN conda create -n smartspim_stitch python=3.9 -y
+SHELL ["conda", "run", "-n", "smartspim_stitch", "/bin/bash", "-c"]
 
 RUN pip install -U --no-cache-dir \
     dask==2024.1.1 \

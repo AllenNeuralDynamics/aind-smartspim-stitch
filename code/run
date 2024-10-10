@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 source /opt/conda/etc/profile.d/conda.sh
-conda activate create_smartspim_stitch
+conda activate smartspim_stitch
 
 # Creates the SmartSPIM BigStitcher XML
 big_stitcher_json=$(python run_capsule.py)
