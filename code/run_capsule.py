@@ -36,7 +36,7 @@ def run():
     stitching_channel = pipeline_config["pipeline_processing"]["stitching"]["channel"]
 
     stitching_channel_path = data_folder.joinpath(
-        f"preprocessed_data/{stitching_channel}")
+        f"preprocessed_data/{stitching_channel}"
     )
 
     output_json_file = results_folder.joinpath(f"{smartspim_dataset_name}_tile_metadata.json")
