@@ -132,6 +132,9 @@ def create_tile_metadata(
         for curr_row in rows:
             # Zarr path -> needs to be relative
             zarr_path = dataset_path.joinpath(f"{curr_col}0_{curr_row}0.zarr")
+            if not zarr_path.exists():
+                zarr_path = dataset_path.joinpath(f"{curr_col}0_{curr_row}0.ome.zarr")
+
             # zarr_path = Path(f"../{zarr_path.relative_to(current_script_dir)}")
             print("Zarr path before reading", zarr_path)
             # Image data
@@ -204,7 +207,7 @@ def create_smartspim_tile_metadata(
     for tile in tiles:
         # adding right split for .ome just in case
         curr_col, curr_row = tile.replace(".zarr", "").rsplit('.', 1)[0].split("_")
-        print("Curr col ", curr_col, " Curr row ", curr_row)
+        # print("Curr col ", curr_col, " Curr row ", curr_row)
         curr_col = int(curr_col) // 10
         curr_row = int(curr_row) // 10
 

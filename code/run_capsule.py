@@ -31,7 +31,7 @@ def run():
         data_description_path="data_description.json",
         acquisition_path="acquisition.json",
     )
-    print("Data in folder: ", list(data_folder.glob("*")))
+    print("Data in folder: ", list(data_folder.glob("preprocessed_data/*")))
 
     voxel_resolution = utils.get_resolution(acquisition_dict)
     stitching_channel = pipeline_config["pipeline_processing"]["stitching"]["channel"]
