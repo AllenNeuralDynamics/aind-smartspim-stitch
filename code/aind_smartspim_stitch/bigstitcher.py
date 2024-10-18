@@ -203,7 +203,7 @@ def create_smartspim_tile_metadata(
     # SmartSPIM format is a folder in tenths of microns
     for tile in tiles:
         # adding right split for .ome just in case
-        curr_col, curr_row = tile.replace(".zarr", "").rsplit('.', 1).split("_")
+        curr_col, curr_row = tile.replace(".zarr", "").rsplit('.', 1)[0].split("_")
         curr_col = int(curr_col) // 10
         curr_row = int(curr_row) // 10
 
