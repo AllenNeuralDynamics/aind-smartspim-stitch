@@ -369,7 +369,7 @@ def main(
 
         smartspim_bigstitcher_utility.write_xml(tree, output_big_stitcher_xml)
 
-        res_for_transforms = (3.6, 3.6, 4.0)
+        res_for_transforms = (4.0, 4.0, 2.0)
         estimated_downsample = get_estimated_downsample(
             voxel_resolution=voxel_resolution, phase_corr_res=res_for_transforms
         )
