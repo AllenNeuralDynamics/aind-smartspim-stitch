@@ -7,8 +7,8 @@ RUN apt-get update && apt-get upgrade -y --no-install-recommends && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN conda install -y -c conda-forge -c bioconda \
-        fiji=20220414 \
-        openjdk=8.0.332 && \
+        fiji \
+        openjdk && \
     conda clean --all --yes
 
 RUN conda create -n smartspim_stitch python=3.9 --no-default-packages -y && \
