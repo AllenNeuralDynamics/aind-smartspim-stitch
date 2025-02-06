@@ -1,0 +1,39 @@
+FROM continuumio/miniconda3:23.9.0-0
+LABEL maintainer="Camilo Laiton <camilo.laiton@alleninstitute.org>"
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN conda install -y -c conda-forge -c bioconda \
+        fiji=20220414 \
+        openjdk=8.0.332 && \
+    conda clean --all --yes
+
+RUN conda create -n smartspim_stitch python=3.9 --no-default-packages -y && \
+    conda clean --all --yes
+
+ENV PATH="/opt/conda/envs/smartspim_stitch/bin:$PATH"
+
+RUN conda run -n smartspim_stitch pip install --no-cache-dir \
+    dask==2024.1.1 \
+    dask-image==2023.8.1 \
+    numpy==1.26.3 \
+    pathlib==1.0.1 \
+    psutil==5.9.5 \
+    regex==2023.10.3 \
+    toml==0.10.2 \
+    zarr==2.16.1 \
+    natsort==8.4.0 \
+    aind-data-schema==1.0.0 \
+    matplotlib==3.9.2
+
+RUN curl -fsSL -o /tmp/code-server.tar.gz https://github.com/coder/code-server/releases/download/v4.9.0/code-server-4.9.0-linux-amd64.tar.gz && \
+    mkdir -p /.code-server && \
+    tar -xzf /tmp/code-server.tar.gz -C /.code-server --strip-components=1 && \
+    rm /tmp/code-server.tar.gz && \
+    ln -s /.code-server/bin/code-server /usr/bin/code-server
+
+COPY postInstall /
+RUN /postInstall
