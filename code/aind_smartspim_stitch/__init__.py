@@ -9,8 +9,8 @@ __author_emails__ = [
 ]
 __license__ = "MIT"
 __description__ = (
-    "Image preprocessing for flatfield correction and "
-    "image destriping"
+    "Repository for computing image transformations to "
+    "fuse stacks of images in OMEZarr format"
 )
 __url__ = "https://github.com/AllenNeuralDynamics/aind-smartspim-destripe"
 
