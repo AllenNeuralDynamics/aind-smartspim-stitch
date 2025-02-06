@@ -3,7 +3,7 @@ LABEL maintainer="Camilo Laiton <camilo.laiton@alleninstitute.org>"
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get upgrade -y --no-install-recommends && \
+RUN apt-get update && apt-get upgrade -y --no-install-recommends curl && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN conda install -y -c conda-forge -c bioconda \
