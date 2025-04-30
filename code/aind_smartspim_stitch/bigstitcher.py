@@ -13,7 +13,7 @@ import dask.array as da
 from aind_data_schema.core.processing import DataProcess, ProcessName
 from natsort import natsorted
 
-from . import smartspim_bigstitcher_utility
+from . import __maintainers__, __pipeline_version__, __version__, smartspim_bigstitcher_utility
 from .utils import utils
 
 
@@ -205,7 +205,7 @@ def create_smartspim_tile_metadata(
     # SmartSPIM format is a folder in tenths of microns
     for tile in tiles:
         # adding right split for .ome just in case
-        curr_col, curr_row = tile.replace(".zarr", "").rsplit('.', 1)[0].split("_")
+        curr_col, curr_row = tile.replace(".zarr", "").rsplit(".", 1)[0].split("_")
         curr_col = int(curr_col) // 10
         curr_row = int(curr_row) // 10
 
@@ -398,7 +398,7 @@ def main(
                 output_location=str(output_big_stitcher_json),
                 outputs={"output_file": str(output_big_stitcher_json)},
                 code_url="",
-                code_version="1.2.5",
+                code_version=__version__,
                 parameters=smartspim_stitching_params,
                 notes="Creation of stitching parameters",
             )
@@ -407,8 +407,8 @@ def main(
         utils.generate_processing(
             data_processes=data_processes,
             dest_processing=metadata_folder,
-            processor_full_name="Camilo Laiton",
-            pipeline_version="3.0.0",
+            processor_full_name=__maintainers__[0],
+            pipeline_version=__pipeline_version__,
         )
 
         with open(output_big_stitcher_json, "w") as f:

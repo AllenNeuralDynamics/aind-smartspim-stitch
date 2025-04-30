@@ -1,4 +1,8 @@
-import os
+"""
+Run the capsule
+This script is used to run the capsule for stitching images using BigStitcher.
+"""
+
 from pathlib import Path
 
 from aind_smartspim_stitch import bigstitcher
@@ -7,8 +11,8 @@ from aind_smartspim_stitch.utils import utils
 
 def run():
     """Function that runs image stitching with BigStitcher"""
-    data_folder = Path(os.path.abspath("../data"))
-    results_folder = Path(os.path.abspath("../results"))
+    data_folder = Path("../data")  # os.path.abspath(
+    results_folder = Path("../results")  # os.path.abspath(
     # scratch_folder = Path(os.path.abspath("../scratch"))
 
     # It is assumed that these files
@@ -35,9 +39,7 @@ def run():
     voxel_resolution = utils.get_resolution(acquisition_dict)
     stitching_channel = pipeline_config["pipeline_processing"]["stitching"]["channel"]
 
-    stitching_channel_path = data_folder.joinpath(
-        f"preprocessed_data/{stitching_channel}"
-    )
+    stitching_channel_path = data_folder.joinpath(f"preprocessed_data/{stitching_channel}")
 
     output_json_file = results_folder.joinpath(f"{smartspim_dataset_name}_tile_metadata.json")
 
