@@ -39,7 +39,7 @@ def run():
     voxel_resolution = utils.get_resolution(acquisition_dict)
     stitching_channel = pipeline_config["pipeline_processing"]["stitching"]["channel"]
 
-    stitching_channel_path = data_folder.joinpath(f"preprocessed_data/{stitching_channel}")
+    stitching_channel_path = data_folder.joinpath(f"SPIM/{stitching_channel}")
 
     output_json_file = results_folder.joinpath(f"{smartspim_dataset_name}_tile_metadata.json")
 
@@ -50,6 +50,7 @@ def run():
         output_json_file=output_json_file,
         results_folder=results_folder,
         smartspim_dataset_name=smartspim_dataset_name,
+        res_for_transforms = (1.8, 1.8, 2.0),
     )
 
 

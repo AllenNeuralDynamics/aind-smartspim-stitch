@@ -282,9 +282,9 @@ def get_stitching_dict(specimen_id: str, dataset_xml_path: str, downsample: Opti
         "phase_correlation_params": {
             "downsample": downsample,
             "min_correlation": 0.6,
-            "max_shift_in_x": 10,
-            "max_shift_in_y": 10,
-            "max_shift_in_z": 10,
+            "max_shift_in_x": 50,
+            "max_shift_in_y": 50,
+            "max_shift_in_z": 50,
         },
     }
     return stitching_dict
@@ -326,6 +326,7 @@ def main(
     output_json_file,
     results_folder,
     smartspim_dataset_name,
+    res_for_transforms = (1.8, 1.8, 2.0),
 ):
     """
     Computes image stitching with BigStitcher using Phase Correlation
@@ -369,7 +370,6 @@ def main(
 
         smartspim_bigstitcher_utility.write_xml(tree, output_big_stitcher_xml)
 
-        res_for_transforms = (1.8, 1.8, 2.0)
         estimated_downsample = get_estimated_downsample(
             voxel_resolution=voxel_resolution, phase_corr_res=res_for_transforms
         )
