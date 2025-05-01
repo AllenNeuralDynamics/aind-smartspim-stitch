@@ -11,7 +11,7 @@ from aind_smartspim_stitch.utils import utils
 
 def run():
     """Function that runs image stitching with BigStitcher"""
-    data_folder = Path("../data/SmartSPIM_764702_2025-04-28_16-29-18")  # os.path.abspath(
+    data_folder = Path("../data")  # os.path.abspath(
     results_folder = Path("../results")  # os.path.abspath(
     # scratch_folder = Path(os.path.abspath("../scratch"))
 
@@ -19,14 +19,13 @@ def run():
     # will be in the data folder
 
     required_input_elements = [
-        f"{data_folder}/SPIM/derivatives/processing_manifest.json",
+        f"{data_folder}/processing_manifest.json",
         f"{data_folder}/data_description.json",
         f"{data_folder}/acquisition.json",
     ]
 
     # it'll fail explicitly
-    # TODO replace for data
-    path_to_cloud_data = list(Path("/data").glob("path_to_cloud_*"))[0]
+    path_to_cloud_data = list(data_folder.glob("path_to_cloud_*"))[0]
 
     with path_to_cloud_data.open("r", encoding="utf-8") as f:
         read_s3_path = f.readlines()
@@ -42,7 +41,7 @@ def run():
 
     pipeline_config, smartspim_dataset_name, acquisition_dict = utils.get_data_config(
         data_folder=data_folder,
-        processing_manifest_path="SPIM/derivatives/processing_manifest.json",
+        processing_manifest_path="processing_manifest.json",
         data_description_path="data_description.json",
         acquisition_path="acquisition.json",
     )
@@ -50,7 +49,7 @@ def run():
     voxel_resolution = utils.get_resolution(acquisition_dict)
     stitching_channel = pipeline_config["pipeline_processing"]["stitching"]["channel"]
 
-    stitching_channel_path = data_folder.joinpath(f"SPIM/{stitching_channel}")
+    stitching_channel_path = data_folder.joinpath(f"preprocessed_data/{stitching_channel}")
     s3_path_to_data = f"{read_s3_path}/{stitching_channel}"
 
     output_json_file = results_folder.joinpath(f"{smartspim_dataset_name}_tile_metadata.json")
