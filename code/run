@@ -8,5 +8,5 @@ big_stitcher_json=$(python run_capsule.py)
 
 conda activate bigstitcher_env
 
-# echo "Captured Output: $big_stitcher_json"
+#echo "Captured Output: $big_stitcher_json"
 python -m aind_exaspim_pipeline_utils.imagej_wrapper --input_json $big_stitcher_json --log_level="DEBUG"  --results_path ../results --parallel 16
