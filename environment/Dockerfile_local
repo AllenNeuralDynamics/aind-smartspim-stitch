@@ -53,5 +53,8 @@ RUN curl -fsSL -o /tmp/code-server.tar.gz https://github.com/coder/code-server/r
     rm /tmp/code-server.tar.gz && \
     ln -s /.code-server/bin/code-server /usr/bin/code-server
 
+SHELL ["/bin/bash", "-c"]
+RUN conda create -n bigstitcher_env python=3.9 -y
+
 COPY postInstall /
 RUN /postInstall
