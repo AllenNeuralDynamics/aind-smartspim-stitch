@@ -34,6 +34,9 @@ SHELL ["conda", "run", "--no-capture-output", "-n", "smartspim_stitch", "/bin/ba
 
 ENV PATH="/opt/conda/envs/smartspim_stitch/bin:$PATH"
 
+# --------------------- #
+#  PYTHON DEPENDENCIES  #
+# --------------------- #
 RUN conda run -n smartspim_stitch pip install --no-cache-dir \
     dask==2024.1.1 \
     dask-image==2023.8.1 \
@@ -47,12 +50,18 @@ RUN conda run -n smartspim_stitch pip install --no-cache-dir \
     aind-data-schema==1.0.0 \
     matplotlib==3.9.2
 
+# --------------------- #
+#     CODE SERVER       #
+# --------------------- #
 RUN curl -fsSL -o /tmp/code-server.tar.gz https://github.com/coder/code-server/releases/download/v4.9.0/code-server-4.9.0-linux-amd64.tar.gz && \
     mkdir -p /.code-server && \
     tar -xzf /tmp/code-server.tar.gz -C /.code-server --strip-components=1 && \
     rm /tmp/code-server.tar.gz && \
     ln -s /.code-server/bin/code-server /usr/bin/code-server
 
+# --------------------- #
+#   CUSTOM POST SETUP   #
+# --------------------- #
 SHELL ["/bin/bash", "-c"]
 RUN conda create -n bigstitcher_env python=3.9 -y
 
