@@ -1,43 +1,27 @@
-# FROM continuumio/miniconda3:23.9.0-0
-FROM condaforge/miniforge3:latest
-
-# --------------------- #
-#      METADATA         #
-# --------------------- #
-LABEL maintainer="Camilo Laiton <camilo.laiton@alleninstitute.org>" \
-      org.opencontainers.image.title="Image Stitching" \
-      org.opencontainers.image.description="Container for image stitching with BigStitcher." \
-      org.opencontainers.image.version="1.2.7" \
-      org.opencontainers.image.licenses="MIT"
+# ------------------------- #
+#     Stage 1: Builder      #
+# ------------------------- #
+FROM condaforge/miniforge3:latest AS builder
 
 ARG DEBIAN_FRONTEND=noninteractive
+ENV CONDA_ENV=smartspim_stitch
+ENV JAVA_HOME=/opt/conda
 
-# --------------------- #
-#   SYSTEM DEPENDENCIES #
-# --------------------- #
+# Install build-time dependencies
 RUN apt-get update && \
-    apt-get upgrade -y --no-install-recommends && \
-    apt-get install -y curl gcc g++ libc6 libxss-dev \
-    libxxf86vm-dev libxkbfile-dev libxv-dev --fix-missing && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    apt-get install -y curl gcc g++ libc6 libxss-dev libxxf86vm-dev libxkbfile-dev libxv-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-# --------------------- #
-#     CONDA SETUP       #
-# --------------------- #
+# Install Fiji + OpenJDK and create env
 RUN conda install -y -c conda-forge -c bioconda fiji openjdk && \
-    conda clean -afy && \
-    conda create -y -n smartspim_stitch python=3.9 --no-default-packages && \
+    conda create -y -n $CONDA_ENV python=3.9 --no-default-packages && \
     conda clean -afy
 
-# Activate Conda env for all subsequent commands
+ENV PATH="/opt/conda/envs/$CONDA_ENV/bin:$PATH"
 SHELL ["conda", "run", "--no-capture-output", "-n", "smartspim_stitch", "/bin/bash", "-c"]
 
-ENV PATH="/opt/conda/envs/smartspim_stitch/bin:$PATH"
-
-# --------------------- #
-#  PYTHON DEPENDENCIES  #
-# --------------------- #
-RUN conda run -n smartspim_stitch pip install --no-cache-dir \
+# Install Python packages
+RUN pip install --no-cache-dir \
     dask==2024.1.1 \
     dask-image==2023.8.1 \
     numpy==1.26.3 \
@@ -50,20 +34,43 @@ RUN conda run -n smartspim_stitch pip install --no-cache-dir \
     aind-data-schema==1.0.0 \
     matplotlib==3.9.2
 
-# --------------------- #
-#     CODE SERVER       #
-# --------------------- #
+# Install code-server
 RUN curl -fsSL -o /tmp/code-server.tar.gz https://github.com/coder/code-server/releases/download/v4.9.0/code-server-4.9.0-linux-amd64.tar.gz && \
     mkdir -p /.code-server && \
     tar -xzf /tmp/code-server.tar.gz -C /.code-server --strip-components=1 && \
-    rm /tmp/code-server.tar.gz && \
-    ln -s /.code-server/bin/code-server /usr/bin/code-server
+    rm /tmp/code-server.tar.gz
 
-# --------------------- #
-#   CUSTOM POST SETUP   #
-# --------------------- #
+# ------------------------- #
+#     Stage 2: Runtime      #
+# ------------------------- #
+FROM condaforge/miniforge3:latest
+
+LABEL maintainer="Camilo Laiton <camilo.laiton@alleninstitute.org>" \
+    org.opencontainers.image.title="Image Stitching" \
+    org.opencontainers.image.description="Container for image stitching with BigStitcher." \
+    org.opencontainers.image.version="1.2.7" \
+    org.opencontainers.image.licenses="MIT"
+
+ARG CONDA_ENV=smartspim_stitch
+ENV PATH="/opt/conda/envs/$CONDA_ENV/bin:$PATH"
+ENV JAVA_HOME=/opt/conda
+
+# System libs required by Fiji / GUI tools
+RUN apt-get update && \
+    apt-get install -y libc6 libxss-dev libxxf86vm-dev libxkbfile-dev libxv-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy only the built environment and code-server from builder
+COPY --from=builder /opt/conda /opt/conda
+COPY --from=builder /.code-server /opt/code-server
+RUN ln -s /opt/code-server/bin/code-server /usr/bin/code-server
+
+# Add BigStitcher secondary env
 SHELL ["/bin/bash", "-c"]
 RUN conda create -n bigstitcher_env python=3.9 -y
 
+# Add your custom logic
 COPY postInstall /
 RUN /postInstall
+
+CMD ["bash"]
