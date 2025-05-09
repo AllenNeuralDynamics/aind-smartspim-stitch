@@ -29,18 +29,14 @@ RUN /opt/conda/envs/smartspim_stitch/bin/pip install --no-cache-dir \
     zarr==2.16.1 \
     natsort==8.4.0 \
     aind-data-schema==1.0.0 \
-    matplotlib==3.9.2
+    matplotlib==3.9.2 \
+    git+https://github.com/AllenNeuralDynamics/aind-exaSPIM-pipeline-utils.git@refactor-exaspim-utils-wrapperonly#egg=aind-exaSPIM-pipeline-utils[imagejwrapperonly]
 
 # Install code-server
 RUN curl -fsSL -o /tmp/code-server.tar.gz https://github.com/coder/code-server/releases/download/v4.9.0/code-server-4.9.0-linux-amd64.tar.gz && \
     mkdir -p /.code-server && \
     tar -xzf /tmp/code-server.tar.gz -C /.code-server --strip-components=1 && \
     rm /tmp/code-server.tar.gz
-
-# Add BigStitcher secondary env - with explicit pip path to avoid host leakage
-RUN conda create -n bigstitcher_env python=3.9 -y && \
-    /opt/conda/envs/bigstitcher_env/bin/pip install --no-cache-dir pydantic>=2.0.0 && \
-    /opt/conda/envs/bigstitcher_env/bin/pip install --no-cache-dir git+https://github.com/AllenNeuralDynamics/aind-exaSPIM-pipeline-utils.git@refactor-exaspim-utils
 
 # ------------------------- #
 #     Stage 2: Runtime      #
@@ -50,7 +46,7 @@ FROM condaforge/miniforge3:latest
 LABEL maintainer="Camilo Laiton <camilo.laiton@alleninstitute.org>" \
     org.opencontainers.image.title="Image Stitching" \
     org.opencontainers.image.description="Container for image stitching with BigStitcher." \
-    org.opencontainers.image.version="1.2.7" \
+    org.opencontainers.image.version="1.2.6" \
     org.opencontainers.image.licenses="MIT"
 
 # Ensure no Python environment leaks
@@ -76,26 +72,9 @@ RUN echo 'eval "$(conda shell.bash hook)"' >> /root/.bashrc
 # Make sure PATH is properly set
 ENV PATH="/opt/conda/bin:${PATH}"
 
-# Create activation scripts for conda environments
-RUN mkdir -p /etc/entrypoint-scripts && \
-    echo '#!/bin/bash' > /etc/entrypoint-scripts/activate_smartspim_stitch.sh && \
-    echo 'export PYTHONPATH=""' >> /etc/entrypoint-scripts/activate_smartspim_stitch.sh && \
-    echo 'export PYTHONUSERBASE="/opt/pythonuserbase"' >> /etc/entrypoint-scripts/activate_smartspim_stitch.sh && \
-    echo 'export PIP_CONFIG_FILE=/dev/null' >> /etc/entrypoint-scripts/activate_smartspim_stitch.sh && \
-    echo 'source /opt/conda/bin/activate smartspim_stitch' >> /etc/entrypoint-scripts/activate_smartspim_stitch.sh && \
-    echo 'exec "$@"' >> /etc/entrypoint-scripts/activate_smartspim_stitch.sh && \
-    echo '#!/bin/bash' > /etc/entrypoint-scripts/activate_bigstitcher.sh && \
-    echo 'export PYTHONPATH=""' >> /etc/entrypoint-scripts/activate_bigstitcher.sh && \
-    echo 'export PYTHONUSERBASE="/opt/pythonuserbase"' >> /etc/entrypoint-scripts/activate_bigstitcher.sh && \
-    echo 'export PIP_CONFIG_FILE=/dev/null' >> /etc/entrypoint-scripts/activate_bigstitcher.sh && \
-    echo 'source /opt/conda/bin/activate bigstitcher_env' >> /etc/entrypoint-scripts/activate_bigstitcher.sh && \
-    echo 'exec "$@"' >> /etc/entrypoint-scripts/activate_bigstitcher.sh && \
-    chmod +x /etc/entrypoint-scripts/*.sh
-
 RUN ImageJ --headless --update add-update-site BigStitcher https://sites.imagej.net/BigStitcher/ \
     && ImageJ --headless --update add-update-site AllenNeuralDynamics https://sites.imagej.net/AllenNeuralDynamics \
     && ImageJ --headless --update update update-all
 
 # Default entrypoint and command
 ENTRYPOINT ["/bin/bash"]
-CMD ["-c", "echo 'Container is running. Use one of these commands to activate environments:\\n- source /opt/conda/bin/activate smartspim_stitch\\n- source /opt/conda/bin/activate bigstitcher_env\\n\\nOr use the helper scripts:\\n- /etc/entrypoint-scripts/activate_smartspim_stitch.sh bash\\n- /etc/entrypoint-scripts/activate_bigstitcher.sh bash'; bash"]
