@@ -71,6 +71,6 @@ RUN conda create -n bigstitcher_env python=3.9 -y
 
 # Add your custom logic
 COPY postInstall /
-RUN /postInstall
+RUN chmod +x postInstall && bash /postInstall
 
 CMD ["bash"]
