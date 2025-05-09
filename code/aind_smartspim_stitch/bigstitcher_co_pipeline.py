@@ -4,6 +4,7 @@ bigstitcher for SmartSPIM data structure
 """
 
 import json
+import math
 import os
 from pathlib import Path
 from time import time
@@ -13,7 +14,7 @@ import dask.array as da
 from aind_data_schema.core.processing import DataProcess, ProcessName
 from natsort import natsorted
 
-from . import smartspim_bigstitcher_utility
+from . import __maintainers__, __pipeline_version__, __version__, smartspim_bigstitcher_utility
 from .utils import utils
 
 
@@ -205,7 +206,7 @@ def create_smartspim_tile_metadata(
     # SmartSPIM format is a folder in tenths of microns
     for tile in tiles:
         # adding right split for .ome just in case
-        curr_col, curr_row = tile.replace(".zarr", "").rsplit('.', 1)[0].split("_")
+        curr_col, curr_row = tile.replace(".zarr", "").rsplit(".", 1)[0].split("_")
         curr_col = int(curr_col) // 10
         curr_row = int(curr_row) // 10
 
@@ -282,9 +283,9 @@ def get_stitching_dict(specimen_id: str, dataset_xml_path: str, downsample: Opti
         "phase_correlation_params": {
             "downsample": downsample,
             "min_correlation": 0.6,
-            "max_shift_in_x": 10,
-            "max_shift_in_y": 10,
-            "max_shift_in_z": 10,
+            "max_shift_in_x": 30,
+            "max_shift_in_y": 30,
+            "max_shift_in_z": 30,
         },
     }
     return stitching_dict
@@ -294,38 +295,40 @@ def get_estimated_downsample(
     voxel_resolution: List[float], phase_corr_res: Tuple[float] = (8.0, 8.0, 4.0)
 ) -> int:
     """
-    Get the estimated multiscale based on the provided
-    voxel resolution. This is used for image stitching.
-
-    e.g., if the original resolution is (1.8. 1.8, 2.0)
-    in XYZ order, and you provide (3.6, 3.6, 4.0) as
-    image resolution, then the picked resolution will be
-    1.
+    Estimate the multiscale level (power-of-two downsampling) such that
+    the resolution at that level is at least the phase_corr_res in all axes.
 
     Parameters
     ----------
-    voxel_resolution: List[float]
-        Image original resolution. This would be the resolution
-        in the multiscale "0".
-    phase_corr_res: Tuple[float]
-        Approximated resolution that will be used for bigstitcher
-        in the computation of the transforms. Default: (8.0, 8.0, 4.0)
+    voxel_resolution : List[float]
+        Resolution of the original image at level 0 (in XYZ order).
+    phase_corr_res : Tuple[float]
+        Target resolution for phase correlation (in XYZ order).
+
+    Returns
+    -------
+    int
+        Estimated downsample level (0 or higher).
     """
 
-    downsample_versions = []
-    for idx in range(len(voxel_resolution)):
-        downsample_versions.append(phase_corr_res[idx] // voxel_resolution[idx])
+    levels = []
+    for vres, cres in zip(voxel_resolution, phase_corr_res):
+        if cres < vres:
+            raise ValueError("phase_corr_res must be greater than or equal to voxel_resolution.")
+        ratio = cres / vres
+        levels.append(math.floor(math.log2(ratio)))
 
-    downsample_res = int(min(downsample_versions) - 1)
-    return downsample_res
+    return max(levels)
 
 
 def main(
     stitching_channel_path,
+    s3_path_to_data,
     voxel_resolution,
     output_json_file,
     results_folder,
     smartspim_dataset_name,
+    res_for_transforms=(1.8, 1.8, 2.0),
 ):
     """
     Computes image stitching with BigStitcher using Phase Correlation
@@ -333,7 +336,7 @@ def main(
     Parameters
     ----------
     stitching_channel_path: str
-        Path where the stitching channel is located
+        Path where the stitching channel is located locally
     voxel_resolution: Tuple[float]
         Voxel resolution in order XYZ
     output_json_file: str
@@ -360,16 +363,13 @@ def main(
     output_big_stitcher_xml = None
     if output_json is not None:
         stitching_channel = stitching_channel_path.name
-        tree = smartspim_bigstitcher_utility.parse_json(
-            output_json, str(stitching_channel_path), microns=True
-        )
+        tree = smartspim_bigstitcher_utility.parse_json(output_json, str(s3_path_to_data), microns=True)
         output_big_stitcher_xml = (
             f"{results_folder}/{smartspim_dataset_name}_stitching_channel_{stitching_channel}.xml"
         )
 
         smartspim_bigstitcher_utility.write_xml(tree, output_big_stitcher_xml)
 
-        res_for_transforms = (1.8, 1.8, 2.0)
         estimated_downsample = get_estimated_downsample(
             voxel_resolution=voxel_resolution, phase_corr_res=res_for_transforms
         )
@@ -398,7 +398,7 @@ def main(
                 output_location=str(output_big_stitcher_json),
                 outputs={"output_file": str(output_big_stitcher_json)},
                 code_url="",
-                code_version="1.2.5",
+                code_version=__version__,
                 parameters=smartspim_stitching_params,
                 notes="Creation of stitching parameters",
             )
@@ -407,8 +407,8 @@ def main(
         utils.generate_processing(
             data_processes=data_processes,
             dest_processing=metadata_folder,
-            processor_full_name="Camilo Laiton",
-            pipeline_version="3.0.0",
+            processor_full_name=__maintainers__[0],
+            pipeline_version=__pipeline_version__,
         )
 
         with open(output_big_stitcher_json, "w") as f:
