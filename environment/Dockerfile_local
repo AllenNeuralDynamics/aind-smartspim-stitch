@@ -40,6 +40,13 @@ RUN curl -fsSL -o /tmp/code-server.tar.gz https://github.com/coder/code-server/r
     tar -xzf /tmp/code-server.tar.gz -C /.code-server --strip-components=1 && \
     rm /tmp/code-server.tar.gz
 
+# Add BigStitcher secondary env
+RUN conda create -n bigstitcher_env python=3.9 -y
+SHELL ["conda", "run", "--no-capture-output", "-n", "bigstitcher_env", "/bin/bash", "-c"]
+
+RUN pip install --no-cache-dir \
+    git+https://github.com/AllenNeuralDynamics/aind-exaSPIM-pipeline-utils.git@refactor-exaspim-utils
+
 # ------------------------- #
 #     Stage 2: Runtime      #
 # ------------------------- #
@@ -65,12 +72,8 @@ COPY --from=builder /opt/conda /opt/conda
 COPY --from=builder /.code-server /opt/code-server
 RUN ln -s /opt/code-server/bin/code-server /usr/bin/code-server
 
-# Add BigStitcher secondary env
-SHELL ["/bin/bash", "-c"]
-RUN conda create -n bigstitcher_env python=3.9 -y
-
-# Add your custom logic
-COPY postInstall /
-RUN chmod +x postInstall && bash /postInstall
+RUN ImageJ --headless --update add-update-site BigStitcher https://sites.imagej.net/BigStitcher/ \
+    && ImageJ --headless --update add-update-site AllenNeuralDynamics https://sites.imagej.net/AllenNeuralDynamics \
+    && ImageJ --headless --update update update-all
 
 CMD ["bash"]
