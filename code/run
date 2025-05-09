@@ -1,22 +1,21 @@
+
 #!/usr/bin/env bash
 set -e
 
-# Activate the smartspim_stitch environment for the first part
-source /opt/conda/bin/activate smartspim_stitch
+# Unset any potentially problematic environment variables
+unset PYTHONPATH
+unset PYTHONHOME
+unset PYTHONSTARTUP
+unset PYTHONUSERBASE
+export PIP_CONFIG_FILE=/dev/null
 
-# Run with first env
-big_stitcher_json=$(python run_capsule.py)
+# Run the first part with smartspim_stitch environment
+big_stitcher_json=$(/etc/entrypoint-scripts/activate_smartspim_stitch.sh python run_capsule.py)
 
 echo "Running BigStitcher with JSON: $big_stitcher_json"
 
-# Deactivate current environment
-conda deactivate
-
-# Activate bigstitcher_env for the second part
-source /opt/conda/bin/activate bigstitcher_env
-
-# Run the second command directly (no need for conda run since we've already activated)
-python -m aind_exaspim_pipeline_utils.imagej_wrapper \
+# Run the second part with bigstitcher_env environment
+/etc/entrypoint-scripts/activate_bigstitcher.sh python -m aind_exaspim_pipeline_utils.imagej_wrapper \
     --input_json "$big_stitcher_json" \
     --log_level "DEBUG" \
     --results_path ../results \

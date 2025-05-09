@@ -17,10 +17,8 @@ RUN conda install -y -c conda-forge -c bioconda fiji openjdk && \
     conda create -y -n $CONDA_ENV python=3.9 --no-default-packages && \
     conda clean -afy
 
-SHELL ["conda", "run", "--no-capture-output", "-n", "smartspim_stitch", "/bin/bash", "-c"]
-
 # Install Python packages
-RUN pip install --no-cache-dir \
+RUN /opt/conda/envs/smartspim_stitch/bin/pip install --no-cache-dir \
     dask==2024.1.1 \
     dask-image==2023.8.1 \
     numpy==1.26.3 \
@@ -55,6 +53,11 @@ LABEL maintainer="Camilo Laiton <camilo.laiton@alleninstitute.org>" \
     org.opencontainers.image.version="1.2.7" \
     org.opencontainers.image.licenses="MIT"
 
+# Ensure no Python environment leaks
+ENV PYTHONPATH=""
+ENV PIP_CONFIG_FILE=/dev/null
+ENV PIP_NO_CACHE_DIR=1
+ENV PYTHONUSERBASE="/opt/pythonuserbase"
 ENV JAVA_HOME=/opt/conda
 
 # System libs required by Fiji / GUI tools
@@ -70,22 +73,28 @@ RUN ln -s /opt/code-server/bin/code-server /usr/bin/code-server
 # Add conda initialization to bashrc
 RUN echo 'eval "$(conda shell.bash hook)"' >> /root/.bashrc
 
-RUN ImageJ --headless --update add-update-site BigStitcher https://sites.imagej.net/BigStitcher/ \
-    && ImageJ --headless --update add-update-site AllenNeuralDynamics https://sites.imagej.net/AllenNeuralDynamics \
-    && ImageJ --headless --update update update-all
-
 # Make sure PATH is properly set
 ENV PATH="/opt/conda/bin:${PATH}"
 
 # Create activation scripts for conda environments
 RUN mkdir -p /etc/entrypoint-scripts && \
     echo '#!/bin/bash' > /etc/entrypoint-scripts/activate_smartspim_stitch.sh && \
+    echo 'export PYTHONPATH=""' >> /etc/entrypoint-scripts/activate_smartspim_stitch.sh && \
+    echo 'export PYTHONUSERBASE="/opt/pythonuserbase"' >> /etc/entrypoint-scripts/activate_smartspim_stitch.sh && \
+    echo 'export PIP_CONFIG_FILE=/dev/null' >> /etc/entrypoint-scripts/activate_smartspim_stitch.sh && \
     echo 'source /opt/conda/bin/activate smartspim_stitch' >> /etc/entrypoint-scripts/activate_smartspim_stitch.sh && \
     echo 'exec "$@"' >> /etc/entrypoint-scripts/activate_smartspim_stitch.sh && \
     echo '#!/bin/bash' > /etc/entrypoint-scripts/activate_bigstitcher.sh && \
+    echo 'export PYTHONPATH=""' >> /etc/entrypoint-scripts/activate_bigstitcher.sh && \
+    echo 'export PYTHONUSERBASE="/opt/pythonuserbase"' >> /etc/entrypoint-scripts/activate_bigstitcher.sh && \
+    echo 'export PIP_CONFIG_FILE=/dev/null' >> /etc/entrypoint-scripts/activate_bigstitcher.sh && \
     echo 'source /opt/conda/bin/activate bigstitcher_env' >> /etc/entrypoint-scripts/activate_bigstitcher.sh && \
     echo 'exec "$@"' >> /etc/entrypoint-scripts/activate_bigstitcher.sh && \
     chmod +x /etc/entrypoint-scripts/*.sh
+
+RUN ImageJ --headless --update add-update-site BigStitcher https://sites.imagej.net/BigStitcher/ \
+    && ImageJ --headless --update add-update-site AllenNeuralDynamics https://sites.imagej.net/AllenNeuralDynamics \
+    && ImageJ --headless --update update update-all
 
 # Default entrypoint and command
 ENTRYPOINT ["/bin/bash"]
