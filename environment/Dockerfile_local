@@ -39,12 +39,10 @@ RUN curl -fsSL -o /tmp/code-server.tar.gz https://github.com/coder/code-server/r
     tar -xzf /tmp/code-server.tar.gz -C /.code-server --strip-components=1 && \
     rm /tmp/code-server.tar.gz
 
-# Add BigStitcher secondary env
-RUN conda create -n bigstitcher_env python=3.9 -y
-SHELL ["conda", "run", "--no-capture-output", "-n", "bigstitcher_env", "/bin/bash", "-c"]
-
-RUN pip install --no-cache-dir \
-    git+https://github.com/AllenNeuralDynamics/aind-exaSPIM-pipeline-utils.git@refactor-exaspim-utils
+# Add BigStitcher secondary env - with explicit pip path to avoid host leakage
+RUN conda create -n bigstitcher_env python=3.9 -y && \
+    /opt/conda/envs/bigstitcher_env/bin/pip install --no-cache-dir pydantic>=2.0.0 && \
+    /opt/conda/envs/bigstitcher_env/bin/pip install --no-cache-dir git+https://github.com/AllenNeuralDynamics/aind-exaSPIM-pipeline-utils.git@refactor-exaspim-utils
 
 # ------------------------- #
 #     Stage 2: Runtime      #
@@ -69,6 +67,26 @@ COPY --from=builder /opt/conda /opt/conda
 COPY --from=builder /.code-server /opt/code-server
 RUN ln -s /opt/code-server/bin/code-server /usr/bin/code-server
 
+# Add conda initialization to bashrc
+RUN echo 'eval "$(conda shell.bash hook)"' >> /root/.bashrc
+
 RUN ImageJ --headless --update add-update-site BigStitcher https://sites.imagej.net/BigStitcher/ \
     && ImageJ --headless --update add-update-site AllenNeuralDynamics https://sites.imagej.net/AllenNeuralDynamics \
     && ImageJ --headless --update update update-all
+
+# Make sure PATH is properly set
+ENV PATH="/opt/conda/bin:${PATH}"
+
+# Create activation scripts for conda environments
+RUN mkdir -p /etc/entrypoint-scripts && \
+    echo '#!/bin/bash' > /etc/entrypoint-scripts/activate_smartspim_stitch.sh && \
+    echo 'source /opt/conda/bin/activate smartspim_stitch' >> /etc/entrypoint-scripts/activate_smartspim_stitch.sh && \
+    echo 'exec "$@"' >> /etc/entrypoint-scripts/activate_smartspim_stitch.sh && \
+    echo '#!/bin/bash' > /etc/entrypoint-scripts/activate_bigstitcher.sh && \
+    echo 'source /opt/conda/bin/activate bigstitcher_env' >> /etc/entrypoint-scripts/activate_bigstitcher.sh && \
+    echo 'exec "$@"' >> /etc/entrypoint-scripts/activate_bigstitcher.sh && \
+    chmod +x /etc/entrypoint-scripts/*.sh
+
+# Default entrypoint and command
+ENTRYPOINT ["/bin/bash"]
+CMD ["-c", "echo 'Container is running. Use one of these commands to activate environments:\\n- source /opt/conda/bin/activate smartspim_stitch\\n- source /opt/conda/bin/activate bigstitcher_env\\n\\nOr use the helper scripts:\\n- /etc/entrypoint-scripts/activate_smartspim_stitch.sh bash\\n- /etc/entrypoint-scripts/activate_bigstitcher.sh bash'; bash"]
