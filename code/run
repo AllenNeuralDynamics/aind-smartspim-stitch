@@ -1,12 +1,21 @@
 #!/usr/bin/env bash
+set -e
 
 source /opt/conda/etc/profile.d/conda.sh
+
+# Activate the first environment
 conda activate smartspim_stitch
 
-# Creates the SmartSPIM BigStitcher XML
+# Run Python script that creates the JSON
 big_stitcher_json=$(python run_capsule.py)
 
+# Deactivate and switch to the second environment
+conda deactivate
 conda activate bigstitcher_env
 
-#echo "Captured Output: $big_stitcher_json"
-python -m aind_exaspim_pipeline_utils.imagej_wrapper --input_json $big_stitcher_json --log_level="DEBUG"  --results_path ../results --parallel 16
+# Run the ImageJ wrapper
+python -m aind_exaspim_pipeline_utils.imagej_wrapper \
+    --input_json "$big_stitcher_json" \
+    --log_level "DEBUG" \
+    --results_path ../results \
+    --parallel 16
