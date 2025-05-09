@@ -74,7 +74,9 @@ ENV PATH="/opt/conda/bin:${PATH}"
 
 RUN ImageJ --headless --update add-update-site BigStitcher https://sites.imagej.net/BigStitcher/ \
     && ImageJ --headless --update add-update-site AllenNeuralDynamics https://sites.imagej.net/AllenNeuralDynamics \
-    && ImageJ --headless --update update update-all
+    && ImageJ --headless --update update jars/bigdataviewer-omezarr-0.2.4.jar  \
+    && ImageJ --headless --update update plugins/Big_Stitcher-1.2.12.jar \
+    && ImageJ --headless --update update
 
 # Default entrypoint and command
 ENTRYPOINT ["/bin/bash"]
