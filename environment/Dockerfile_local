@@ -17,7 +17,6 @@ RUN conda install -y -c conda-forge -c bioconda fiji openjdk && \
     conda create -y -n $CONDA_ENV python=3.9 --no-default-packages && \
     conda clean -afy
 
-ENV PATH="/opt/conda/envs/$CONDA_ENV/bin:$PATH"
 SHELL ["conda", "run", "--no-capture-output", "-n", "smartspim_stitch", "/bin/bash", "-c"]
 
 # Install Python packages
@@ -58,8 +57,6 @@ LABEL maintainer="Camilo Laiton <camilo.laiton@alleninstitute.org>" \
     org.opencontainers.image.version="1.2.7" \
     org.opencontainers.image.licenses="MIT"
 
-ARG CONDA_ENV=smartspim_stitch
-ENV PATH="/opt/conda/envs/$CONDA_ENV/bin:$PATH"
 ENV JAVA_HOME=/opt/conda
 
 # System libs required by Fiji / GUI tools
@@ -75,5 +72,3 @@ RUN ln -s /opt/code-server/bin/code-server /usr/bin/code-server
 RUN ImageJ --headless --update add-update-site BigStitcher https://sites.imagej.net/BigStitcher/ \
     && ImageJ --headless --update add-update-site AllenNeuralDynamics https://sites.imagej.net/AllenNeuralDynamics \
     && ImageJ --headless --update update update-all
-
-CMD ["bash"]
