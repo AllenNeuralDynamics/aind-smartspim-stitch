@@ -9,13 +9,16 @@ import numpy as np
 # Pasting the code here we need
 def parse_json(json_path: str, s3_data_path: str, microns=False) -> ET.ElementTree:
 
+    print("Input json path: ", json_path)
+    print("S3 data path: ", s3_data_path)
+
     def extract_tile_channel_numbers(json_dict: dict):
 
         tile_channel_list = []
         for i, item in enumerate(json_dict):
             # get the channel number
             channel_number = get_tile_channel(item["file"])
-            # print(f'channel_number: {channel_number}')
+            print(f'channel_number: {channel_number}')
             tile_channel_list.append(channel_number)
         return tile_channel_list
 

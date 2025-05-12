@@ -12,14 +12,15 @@ export PIP_CONFIG_FILE=/dev/null
 source /opt/conda/etc/profile.d/conda.sh
 conda activate smartspim_stitch
 
+python run_capsule.py
 # Run the first step
-big_stitcher_json=$(python run_capsule.py)
+# big_stitcher_json=$(python run_capsule.py)
 
-echo "Running BigStitcher with JSON: $big_stitcher_json"
+# echo "Running BigStitcher with JSON: $big_stitcher_json"
 
-# Run the second step using the same environment
-python -m aind_exaspim_pipeline_utils.imagej_wrapper \
-    --input_json "$big_stitcher_json" \
-    --log_level "DEBUG" \
-    --results_path ../results \
-    --parallel 16
+# # Run the second step using the same environment
+# python -m aind_exaspim_pipeline_utils.imagej_wrapper \
+#     --input_json "$big_stitcher_json" \
+#     --log_level "DEBUG" \
+#     --results_path ../results \
+#     --parallel 16
