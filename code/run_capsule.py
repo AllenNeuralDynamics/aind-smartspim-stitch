@@ -39,8 +39,6 @@ def run():
         f"preprocessed_data/{stitching_channel}"
     )
 
-    print("Stitching channel path: ", stitching_channel_path)
-
     output_json_file = results_folder.joinpath(f"{smartspim_dataset_name}_tile_metadata.json")
 
     # Computing image transformations with bigtstitcher
