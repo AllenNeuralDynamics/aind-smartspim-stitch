@@ -18,7 +18,6 @@ def parse_json(json_path: str, s3_data_path: str, microns=False) -> ET.ElementTr
         for i, item in enumerate(json_dict):
             # get the channel number
             channel_number = get_tile_channel(item["file"])
-            print(f'channel_number: {channel_number}')
             tile_channel_list.append(channel_number)
         return tile_channel_list
 
@@ -26,11 +25,13 @@ def parse_json(json_path: str, s3_data_path: str, microns=False) -> ET.ElementTr
         """Extracts the channel number from the tile_name"""
 
         # get the channel number only if the tile name has 'ch' in it
-        if "ch" in tile_name:
-            print(f"tile_name: {tile_name}")
-            channel_number = tile_name.split("_")[-1].split(".")[0]
-        else:
-            channel_number = 0  # assume we are doing single channel stitching
+        # if "ch" in tile_name:
+        #     print(f"tile_name: {tile_name}")
+        #     channel_number = tile_name.split("_")[-1].split(".")[0]
+        # else:
+        # In SmartSPIM, the channel number is not in the tile name
+
+        channel_number = 0  # assume we are doing single channel stitching
         return channel_number
 
     def get_tile_number_lookup(json_dict: dict):
