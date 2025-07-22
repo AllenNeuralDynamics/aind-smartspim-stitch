@@ -326,6 +326,7 @@ def main(
     output_json_file,
     results_folder,
     smartspim_dataset_name,
+    res_for_transforms = (8.0, 8.0, 8.0),
 ):
     """
     Computes image stitching with BigStitcher using Phase Correlation
@@ -369,7 +370,6 @@ def main(
 
         smartspim_bigstitcher_utility.write_xml(tree, output_big_stitcher_xml)
 
-        res_for_transforms = (4.0, 4.0, 4.0)
         estimated_downsample = get_estimated_downsample(
             voxel_resolution=voxel_resolution, phase_corr_res=res_for_transforms
         )
