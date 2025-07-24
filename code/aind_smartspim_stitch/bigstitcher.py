@@ -397,8 +397,10 @@ def main(
         output_big_stitcher_xml = (
             f"{results_folder}/{smartspim_dataset_name}_stitching_channel_{stitching_channel}.xml"
         )
+        output_big_stitcher_resolved_xml = f"{results_folder}/bigstitcher.xml"
 
         smartspim_bigstitcher_utility.write_xml(tree, output_big_stitcher_xml)
+        smartspim_bigstitcher_utility.write_xml(tree, output_big_stitcher_resolved_xml)
 
         estimated_downsample = get_estimated_downsample(
             voxel_resolution=voxel_resolution, phase_corr_res=res_for_transforms
@@ -409,13 +411,20 @@ def main(
             shape=(20, 1600, 2000), overlap=0.1, pyramid_level=downsampled_scale
         )
 
+        # Assuming machine with 128G and 16 cores
+        env.update(
+            {
+                "JAVA_HEAP_SIZE": "128g",
+                "SPARK_THREADS": "16",
+                "MAIN_CLASS": "net.preibisch.bigstitcher.spark.SparkPairwiseStitching",
+            }
+        )
+
         stitching_command = [
             "bash",
-            "./stitching",
-            "-x",
-            str(output_big_stitcher_xml),
-            "-o",
-            results_folder,
+            "./bigstitcher_spark_scripts/run_classes.sh",
+            "--xml",
+            str(output_big_stitcher_resolved_xml),
             "--downsampling",
             f"{downsampled_scale},{downsampled_scale},{downsampled_scale}",
             "--maxShiftZ",
@@ -433,13 +442,16 @@ def main(
             env=env,
         )
 
+        # Updating java class to solver for global optimization
+        env.update({"MAIN_CLASS": "net.preibisch.bigstitcher.spark.Solver"})
+
         global_opt_command = [
             "bash",
-            "./solver",
-            "-x",
-            str(f"{results_folder}/bigstitcher.xml"),
-            "-s",
-            "STITCHING"
+            "./bigstitcher_spark_scripts/run_classes.sh",
+            "--xml",
+            str(output_big_stitcher_resolved_xml),
+            "--sourcePoints",
+            "STITCHING",
         ]
 
         process2 = subprocess.run(
@@ -468,10 +480,7 @@ def main(
                 outputs={"output_file": str(output_big_stitcher_json)},
                 code_url="",
                 code_version="1.2.7",
-                parameters={
-                    "stitching": stitching_command,
-                    "global_optimization": global_opt_command
-                },
+                parameters={"stitching": stitching_command, "global_optimization": global_opt_command},
                 notes="Running stitching and global optimization separately",
             )
         )
