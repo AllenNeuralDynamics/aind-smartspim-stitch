@@ -15,6 +15,7 @@ COPY git-askpass /
 # Set environment variables
 ENV AWS_REGION=us-west-2
 ENV JAVA_OPTS="-Djava.awt.headless=true"
+ENV HOME="/root"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
