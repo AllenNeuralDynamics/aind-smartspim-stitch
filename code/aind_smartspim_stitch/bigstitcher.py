@@ -411,7 +411,7 @@ def main(
 
         stitching_command = [
             "bash",
-            f"./stitching",
+            "./stitching",
             "-x",
             str(output_big_stitcher_xml),
             "-o",
@@ -428,6 +428,22 @@ def main(
 
         process1 = subprocess.run(
             stitching_command,
+            check=True,
+            cwd=BIGSTITCHER_PATH,
+            env=env,
+        )
+
+        global_opt_command = [
+            "bash",
+            "./solver",
+            "-x",
+            str(f"{results_folder}/bigstitcher.xml"),
+            "-s",
+            "STITCHING"
+        ]
+
+        process2 = subprocess.run(
+            global_opt_command,
             check=True,
             cwd=BIGSTITCHER_PATH,
             env=env,
@@ -452,8 +468,11 @@ def main(
                 outputs={"output_file": str(output_big_stitcher_json)},
                 code_url="",
                 code_version="1.2.7",
-                parameters=stitching_command,
-                notes="Creation of stitching parameters",
+                parameters={
+                    "stitching": stitching_command,
+                    "global_optimization": global_opt_command
+                },
+                notes="Running stitching and global optimization separately",
             )
         )
 
