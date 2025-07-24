@@ -49,7 +49,7 @@ RUN wget -qO code-server.tar.gz https://github.com/coder/code-server/releases/do
     ln -s /.code-server/bin/code-server /usr/bin/code-server
 
 # Install Python aind-data-schema
-RUN pip install -U --no-cache-dir aind-data-schema==1.4.0
+RUN pip3 install --no-cache-dir aind-data-schema==1.4.0 psutil PyYAML natsort 'dask[distributed]'
 
 # Setting BigStitcher Home dir that will be installed in postInstall
 ENV BIGSTITCHER_HOME=/home/BigStitcher-Spark
