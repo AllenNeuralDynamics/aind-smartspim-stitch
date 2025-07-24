@@ -1,16 +1,5 @@
 #!/usr/bin/env bash
 set -e
 
-# Unset any potentially problematic environment variables
-unset PYTHONPATH
-unset PYTHONHOME
-unset PYTHONSTARTUP
-unset PYTHONUSERBASE
-export PIP_CONFIG_FILE=/dev/null
-
-# Set up conda from /opt/conda
-source /opt/conda/etc/profile.d/conda.sh
-conda activate smartspim_stitch
-
 # Run the first step
-python run_capsule.py
+python run_capsule.py "$@"
