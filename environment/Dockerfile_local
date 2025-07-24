@@ -33,7 +33,6 @@ RUN wget -q https://cdn.azul.com/zulu/bin/zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x
 ENV JAVA_HOME="/home/zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64"
 ENV PATH="$JAVA_HOME/bin:$PATH"
 ENV LD_LIBRARY_PATH="$JAVA_HOME/jre/lib/amd64/server"
-ENV HOME="/root"
 
 # Install Miniconda
 RUN wget -qO Miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
