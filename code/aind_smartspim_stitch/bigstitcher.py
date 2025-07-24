@@ -321,7 +321,11 @@ def get_estimated_downsample(
     return downsample_res
 
 
-def get_max_shifts(shape, overlap, pyramid_level):
+def get_max_shifts(
+    shape: tuple,
+    overlap: float,
+    pyramid_level: int,
+    min_shift: int=10):
     """
     Calculate the maximum shifts in Z, Y, and X dimensions
     based on image shape and overlap percentage.
@@ -332,6 +336,10 @@ def get_max_shifts(shape, overlap, pyramid_level):
         Shape of the image (Z, Y, X).
     overlap : float
         Overlap as a fraction (e.g., 0.1 for 10%).
+    pyramid_level: int
+        Pyramid level from the zarr multiscale
+    min_shift: int
+        Minimum shift
 
     Returns
     -------
@@ -340,7 +348,9 @@ def get_max_shifts(shape, overlap, pyramid_level):
     """
     if not (0 <= overlap <= 1):
         raise ValueError("Overlap must be between 0 and 1.")
-    return tuple(int((dim * overlap) // pyramid_level) for dim in shape)
+    shifts = tuple(int((dim * overlap) // pyramid_level) for dim in shape)
+    shifts = [int(s) if s < min_shift else min_shift for s in shifts]
+    return shifts
 
 
 def main(
