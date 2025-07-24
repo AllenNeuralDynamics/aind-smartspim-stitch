@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -e
+
+BIGSTITCHER_FOLDER="BigStitcher-Spark"
+BIG_REPO_URL="https://github.com/JaneliaSciComp/BigStitcher-Spark.git"
+BIG_HEAD_COMMIT="e112363" # March 10th 2025
+
+N5_AWS_FOLDER="n5-aws-s3"
+N5_AWS_REPO_URL="https://github.com/saalfeldlab/n5-aws-s3.git"
+N5_AWS_TAG="255389c" # March 10th 2025
+
+BUILD_FOLDER="/home"
+ls -d $BUILD_FOLDER/
+
+# CORES=16
+# MEM_GB=128
+
+# Create the BUILD_FOLDER if it does not exist
+mkdir -p "$BUILD_FOLDER"
+
+# Clone BigStitcher-Spark if not already present
+if [ -d "$BUILD_FOLDER/$BIGSTITCHER_FOLDER" ]; then
+    echo "The folder '$BIGSTITCHER_FOLDER' already exists."
+else
+    echo "Cloning BigStitcher-Spark..."
+    git clone "$BIG_REPO_URL" "$BUILD_FOLDER/$BIGSTITCHER_FOLDER"
+    cd "$BUILD_FOLDER/$BIGSTITCHER_FOLDER"
+    git checkout "$BIG_HEAD_COMMIT"
+fi
+
+# Clone n5-aws-s3 if not already present
+if [ -d "$BUILD_FOLDER/$N5_AWS_FOLDER" ]; then
+    echo "The folder '$N5_AWS_FOLDER' already exists."
+else
+    echo "Cloning n5-aws-s3..."
+    git clone "$N5_AWS_REPO_URL" "$BUILD_FOLDER/$N5_AWS_FOLDER"
+    cd "$BUILD_FOLDER/$N5_AWS_FOLDER"
+    git checkout "$N5_AWS_TAG"
+fi
+
+# Build the projects
+cd "$BUILD_FOLDER/$N5_AWS_FOLDER"
+echo "$BUILD_FOLDER/$N5_AWS_FOLDER"
+mvn clean install
+
+cd "$BUILD_FOLDER/$BIGSTITCHER_FOLDER"
+echo "$BUILD_FOLDER/$N5_AWS_FOLDER"
+mvn clean package -U -P fatjar
+# ./install -t $CORES -m $MEM_GB
+chmod +x install
+./install
+
+ls -d $BUILD_FOLDER/
+

@@ -1,82 +1,68 @@
-# ------------------------- #
-#     Stage 1: Builder      #
-# ------------------------- #
-FROM condaforge/miniforge3:latest AS builder
+# Use a public base image
+FROM ubuntu:22.04
 
-ARG DEBIAN_FRONTEND=noninteractive
-ENV CONDA_ENV=smartspim_stitch
-ENV JAVA_HOME=/opt/conda
+LABEL maintainer="Camilo Laiton <camilo.laiton@alleninstitute.org>"
 
-# Install build-time dependencies
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV AWS_REGION=us-west-2
+ENV JAVA_OPTS="-Djava.awt.headless=true"
+ENV BIGSTITCHER_HOME=/home/BigStitcher-Spark
+ENV N5_AWS_FOLDER_HOME=/home/n5-aws-s3
+ENV CLASSPATH="$BIGSTITCHER_HOME/target/*:$N5_AWS_FOLDER_HOME/target/*"
+
+# Install required packages
 RUN apt-get update && \
-    apt-get install -y curl gcc g++ libc6 libxss-dev libxxf86vm-dev libxkbfile-dev libxv-dev && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends \
+        wget \
+        git \
+        curl \
+        libblosc-dev=1.21.1+ds2-2 \
+        maven=3.6.3-5 \
+        python3 \
+        python3-pip \
+        libc6 \
+        && rm -rf /var/lib/apt/lists/*
 
-# Install Fiji + OpenJDK and create env
-RUN conda install -y -c conda-forge -c bioconda fiji openjdk && \
-    conda create -y -n $CONDA_ENV python=3.9 --no-default-packages && \
-    conda clean -afy
+# Download and set up Java
+WORKDIR /home
+RUN wget -q https://cdn.azul.com/zulu/bin/zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64.tar.gz && \
+    tar -xzf zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64.tar.gz && \
+    rm zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64.tar.gz
+
+ENV JAVA_HOME="/home/zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64"
+ENV PATH="$JAVA_HOME/bin:$PATH"
+ENV LD_LIBRARY_PATH="$JAVA_HOME/jre/lib/amd64/server"
+ENV HOME="/root"
+
+# Install Miniconda
+RUN wget -qO Miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+    bash Miniconda.sh -b -p /opt/conda && \
+    rm Miniconda.sh
+
+# Add conda to PATH
+ENV PATH="/opt/conda/bin:$PATH"
+
+# Install additional conda packages with specific versions
+RUN conda install -y -c conda-forge \
+        ca-certificates=2024.7.4 \
+        openssl=3.3.1 \
+    && conda clean -ya
 
 # Install Python packages
-RUN /opt/conda/envs/smartspim_stitch/bin/pip install --no-cache-dir \
-    dask==2024.1.1 \
-    dask-image==2023.8.1 \
-    numpy==1.26.3 \
-    pathlib==1.0.1 \
-    psutil==5.9.5 \
-    regex==2023.10.3 \
-    toml==0.10.2 \
-    zarr==2.16.1 \
-    natsort==8.4.0 \
-    aind-data-schema==1.0.0 \
-    matplotlib==3.9.2 \
-    git+https://github.com/AllenNeuralDynamics/aind-exaSPIM-pipeline-utils.git@refactor-exaspim-utils-wrapperonly#egg=aind-exaSPIM-pipeline-utils[imagejwrapperonly]
+RUN pip3 install --no-cache-dir aind-data-schema==1.4.0 psutil PyYAML
 
-# Install code-server
-RUN curl -fsSL -o /tmp/code-server.tar.gz https://github.com/coder/code-server/releases/download/v4.9.0/code-server-4.9.0-linux-amd64.tar.gz && \
-    mkdir -p /.code-server && \
-    tar -xzf /tmp/code-server.tar.gz -C /.code-server --strip-components=1 && \
-    rm /tmp/code-server.tar.gz
+# Set up code-server
+WORKDIR /.code-server
+RUN wget -qO code-server.tar.gz https://github.com/coder/code-server/releases/download/v4.9.0/code-server-4.9.0-linux-amd64.tar.gz && \
+    tar -xvf code-server.tar.gz --strip-components=1 && \
+    rm code-server.tar.gz && \
+    ln -s /.code-server/bin/code-server /usr/bin/code-server
 
-# ------------------------- #
-#     Stage 2: Runtime      #
-# ------------------------- #
-FROM condaforge/miniforge3:latest
+# Copy and run post-install script
+COPY postInstall /
+RUN chmod +x /postInstall && /bin/bash /postInstall
 
-LABEL maintainer="Camilo Laiton <camilo.laiton@alleninstitute.org>" \
-    org.opencontainers.image.title="Image Stitching" \
-    org.opencontainers.image.description="Container for image stitching with BigStitcher." \
-    org.opencontainers.image.version="1.2.6" \
-    org.opencontainers.image.licenses="MIT"
-
-# Ensure no Python environment leaks
-ENV PYTHONPATH=""
-ENV PIP_CONFIG_FILE=/dev/null
-ENV PIP_NO_CACHE_DIR=1
-ENV PYTHONUSERBASE="/opt/pythonuserbase"
-ENV JAVA_HOME=/opt/conda
-
-# System libs required by Fiji / GUI tools
-RUN apt-get update && \
-    apt-get install -y libc6 libxss-dev libxxf86vm-dev libxkbfile-dev libxv-dev && \
-    rm -rf /var/lib/apt/lists/*
-
-# Copy only the built environment and code-server from builder
-COPY --from=builder /opt/conda /opt/conda
-COPY --from=builder /.code-server /opt/code-server
-RUN ln -s /opt/code-server/bin/code-server /usr/bin/code-server
-
-# Add conda initialization to bashrc
-RUN echo 'eval "$(conda shell.bash hook)"' >> /root/.bashrc
-
-# Make sure PATH is properly set
-ENV PATH="/opt/conda/bin:${PATH}"
-
-RUN ImageJ --headless --update add-update-site BigStitcher https://sites.imagej.net/BigStitcher/ \
-    && ImageJ --headless --update add-update-site AllenNeuralDynamics https://sites.imagej.net/AllenNeuralDynamics \
-    && ImageJ --headless --update update jars/bigdataviewer-omezarr-0.2.4.jar  \
-    && ImageJ --headless --update update plugins/Big_Stitcher-1.2.12.jar \
-    && ImageJ --headless --update update
-
-# Default entrypoint and command
-ENTRYPOINT ["/bin/bash"]
+# Set working directory
+ENV HOME=/root
+WORKDIR $HOME

@@ -5,6 +5,7 @@ bigstitcher for SmartSPIM data structure
 
 import json
 import os
+import subprocess
 from pathlib import Path
 from time import time
 from typing import List, Optional, Tuple
@@ -205,7 +206,7 @@ def create_smartspim_tile_metadata(
     # SmartSPIM format is a folder in tenths of microns
     for tile in tiles:
         # adding right split for .ome just in case
-        curr_col, curr_row = tile.replace(".zarr", "").rsplit('.', 1)[0].split("_")
+        curr_col, curr_row = tile.replace(".zarr", "").rsplit(".", 1)[0].split("_")
         curr_col = int(curr_col) // 10
         curr_row = int(curr_row) // 10
 
@@ -320,13 +321,35 @@ def get_estimated_downsample(
     return downsample_res
 
 
+def get_max_shifts(shape, overlap, pyramid_level):
+    """
+    Calculate the maximum shifts in Z, Y, and X dimensions
+    based on image shape and overlap percentage.
+
+    Parameters
+    ----------
+    shape : tuple of int
+        Shape of the image (Z, Y, X).
+    overlap : float
+        Overlap as a fraction (e.g., 0.1 for 10%).
+
+    Returns
+    -------
+    tuple of int
+        Maximum shift in (Z, Y, X) directions.
+    """
+    if not (0 <= overlap <= 1):
+        raise ValueError("Overlap must be between 0 and 1.")
+    return tuple(int((dim * overlap) // pyramid_level) for dim in shape)
+
+
 def main(
     stitching_channel_path,
     voxel_resolution,
     output_json_file,
     results_folder,
     smartspim_dataset_name,
-    res_for_transforms = (8.0, 8.0, 8.0),
+    res_for_transforms=(8.0, 8.0, 8.0),
 ):
     """
     Computes image stitching with BigStitcher using Phase Correlation
@@ -344,6 +367,13 @@ def main(
     smartspim_dataset_name: str
         SmartSPIM dataset name
     """
+
+    BIGSTITCHER_PATH = Path(os.getenv("BIGSTITCHER_HOME"))
+    env = os.environ.copy()
+
+    if not BIGSTITCHER_PATH.exists():
+        raise ValueError("Please, set the BIGSTITCHER_PATH env value.")
+
     start_time = time()
     metadata_folder = results_folder.joinpath("metadata")
     utils.create_folder(str(metadata_folder))
@@ -373,14 +403,37 @@ def main(
         estimated_downsample = get_estimated_downsample(
             voxel_resolution=voxel_resolution, phase_corr_res=res_for_transforms
         )
+        downsampled_scale = estimated_downsample * 2 if estimated_downsample else 1
+
+        max_shift_z, max_shift_y, max_shift_x = get_max_shifts(
+            shape=(20, 1600, 2000), overlap=0.1, pyramid_level=downsampled_scale
+        )
+
+        stitching_command = [
+            "bash",
+            f"./stitching",
+            "-x",
+            str(output_big_stitcher_xml),
+            "-o",
+            results_folder,
+            "--downsampling",
+            f"{downsampled_scale},{downsampled_scale},{downsampled_scale}",
+            "--maxShiftZ",
+            int(max_shift_z),
+            "--maxShiftY",
+            int(max_shift_y),
+            "--maxShiftX",
+            int(max_shift_x),
+        ]
+
+        process1 = subprocess.run(
+            stitching_command,
+            check=True,
+            cwd=BIGSTITCHER_PATH,
+            env=env,
+        )
 
         # print(f"Voxel resolution: {voxel_resolution} - Estimating transforms in res: {res_for_transforms} - Scale: {estimated_downsample}")
-
-        smartspim_stitching_params = get_stitching_dict(
-            specimen_id=smartspim_dataset_name,
-            dataset_xml_path=output_big_stitcher_xml,
-            downsample=estimated_downsample,
-        )
         end_time = time()
 
         output_big_stitcher_json = (
@@ -391,15 +444,15 @@ def main(
         data_processes.append(
             DataProcess(
                 name=ProcessName.IMAGE_TILE_ALIGNMENT,
-                software_version="1.2.11",
+                software_version="e112363",
                 start_date_time=start_time,
                 end_date_time=end_time,
                 input_location=str(smartspim_dataset_name),
                 output_location=str(output_big_stitcher_json),
                 outputs={"output_file": str(output_big_stitcher_json)},
                 code_url="",
-                code_version="1.2.5",
-                parameters=smartspim_stitching_params,
+                code_version="1.2.7",
+                parameters=stitching_command,
                 notes="Creation of stitching parameters",
             )
         )
@@ -410,12 +463,6 @@ def main(
             processor_full_name="Camilo Laiton",
             pipeline_version="3.0.0",
         )
-
-        with open(output_big_stitcher_json, "w") as f:
-            json.dump(smartspim_stitching_params, f, indent=4)
-
-        # Printing to get output on batch script
-        print(output_big_stitcher_json)
 
     else:
         print(f"An error happened while trying to write {output_json_file}")
