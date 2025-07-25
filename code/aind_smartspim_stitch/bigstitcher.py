@@ -438,11 +438,11 @@ def main(
             "--downsampling",
             f"{downsampled_scale},{downsampled_scale},{downsampled_scale}",
             "--maxShiftZ",
-            int(max_shift_z),
+            str(max_shift_z),
             "--maxShiftY",
-            int(max_shift_y),
+            str(max_shift_y),
             "--maxShiftX",
-            int(max_shift_x),
+            str(max_shift_x),
         ]
 
         process1 = subprocess.run(
