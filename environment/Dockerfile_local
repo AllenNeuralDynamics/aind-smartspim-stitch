@@ -17,6 +17,9 @@ RUN apt-get update && \
         wget \
         git \
         curl \
+        gcc \
+        build-essential \
+        python3-dev \
         libblosc-dev=1.21.1+ds2-2 \
         maven=3.6.3-5 \
         python3 \
