@@ -56,7 +56,8 @@ RUN conda install -y ca-certificates=2024.7.4 openssl=3.3.1 && \
     conda clean -ya
 
 # Install Python packages
-RUN pip3 install --no-cache-dir aind-data-schema==1.4.0 psutil PyYAML natsort 'dask[distributed]'
+RUN pip3 install --no-cache-dir aind-data-schema==1.4.0 psutil PyYAML natsort 'dask[distributed]' && \
+    pip install "dask[array]" --upgrade
 
 # Set up code-server
 WORKDIR /.code-server
