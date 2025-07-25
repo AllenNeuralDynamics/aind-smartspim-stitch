@@ -421,6 +421,10 @@ def main(
             shape=(20, 1600, 2000), overlap=0.1, pyramid_level=downsampled_scale
         )
 
+        curr_folder = Path(os.path.realpath(__file__)).parent
+
+        print(f"Current file path: {curr_folder}")
+
         # Assuming machine with 128G and 16 cores
         env.update(
             {
@@ -448,7 +452,7 @@ def main(
         process1 = subprocess.run(
             stitching_command,
             check=True,
-            # cwd=BIGSTITCHER_PATH,
+            cwd=curr_folder,
             env=env,
         )
 
@@ -467,7 +471,7 @@ def main(
         process2 = subprocess.run(
             global_opt_command,
             check=True,
-            # cwd=BIGSTITCHER_PATH,
+            cwd=curr_folder,
             env=env,
         )
 
