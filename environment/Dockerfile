@@ -60,7 +60,8 @@ RUN pip3 install --no-cache-dir \
     zarr==2.16.1 \
     natsort==8.4.0 \
     matplotlib==3.9.2 \
-    aind-data-schema==1.4.0
+    aind-data-schema==1.4.0 \
+    numcodecs==0.15.1
 
 # Setting BigStitcher Home dir that will be installed in postInstall
 ENV BIGSTITCHER_HOME=/home/BigStitcher-Spark
