@@ -448,7 +448,7 @@ def main(
         process1 = subprocess.run(
             stitching_command,
             check=True,
-            cwd=BIGSTITCHER_PATH,
+            # cwd=BIGSTITCHER_PATH,
             env=env,
         )
 
@@ -467,7 +467,7 @@ def main(
         process2 = subprocess.run(
             global_opt_command,
             check=True,
-            cwd=BIGSTITCHER_PATH,
+            # cwd=BIGSTITCHER_PATH,
             env=env,
         )
 
