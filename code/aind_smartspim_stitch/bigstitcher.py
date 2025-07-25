@@ -349,7 +349,7 @@ def get_max_shifts(
     if not (0 <= overlap <= 1):
         raise ValueError("Overlap must be between 0 and 1.")
     shifts = tuple(int((dim * overlap) // pyramid_level) for dim in shape)
-    shifts = [int(s) if s < min_shift else min_shift for s in shifts]
+    shifts = [int(s) if s > min_shift else min_shift for s in shifts]
     return shifts
 
 
@@ -417,6 +417,7 @@ def main(
         )
         downsampled_scale = estimated_downsample * 2 if estimated_downsample else 1
 
+        print("Estimated downsample: ", downsampled_scale)
         max_shift_z, max_shift_y, max_shift_x = get_max_shifts(
             shape=(20, 1600, 2000), overlap=0.1, pyramid_level=downsampled_scale
         )
