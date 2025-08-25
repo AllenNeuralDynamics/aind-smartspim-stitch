@@ -16,6 +16,9 @@ COPY git-askpass /
 ENV AWS_REGION=us-west-2
 ENV JAVA_OPTS="-Djava.awt.headless=true"
 ENV HOME="/root"
+ENV BIGSTITCHER_HOME=/home/BigStitcher-Spark
+ENV N5_AWS_FOLDER_HOME=/home/n5-aws-s3
+ENV CLASSPATH="$BIGSTITCHER_HOME/target/*:$N5_AWS_FOLDER_HOME/target/*"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -24,7 +27,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Download and set up Java
-WORKDIR /home
+WORKDIR $HOME
 RUN wget -q https://cdn.azul.com/zulu/bin/zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64.tar.gz && \
     tar -xzf zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64.tar.gz && \
     rm zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64.tar.gz
@@ -63,12 +66,8 @@ RUN pip3 install --no-cache-dir \
     aind-data-schema==1.4.0 \
     numcodecs==0.15.1
 
-# Setting BigStitcher Home dir that will be installed in postInstall
-ENV BIGSTITCHER_HOME=/home/BigStitcher-Spark
-
 # Copy and run post-install script
 COPY postInstall /
 RUN chmod +x /postInstall && /bin/bash /postInstall
 
-# Set working directory
-WORKDIR /home
+WORKDIR $HOME
