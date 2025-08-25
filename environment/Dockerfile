@@ -30,16 +30,15 @@ RUN apt-get update && \
 WORKDIR $HOME
 RUN wget -q https://cdn.azul.com/zulu/bin/zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64.tar.gz && \
     tar -xzf zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64.tar.gz && \
-    rm zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64.tar.gz
+    rm zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64.tar.gz && \
+    mv zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64 /opt/java
 
-ENV JAVA_HOME="/home/zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64"
+ENV JAVA_HOME="/opt/java"
 ENV PATH="$JAVA_HOME/bin:$PATH"
-ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$JAVA_HOME/jre/lib/amd64/server"
+
 
 # Accepting terms of service starting from version 24.3
 RUN conda config --set always_yes true && \
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
     conda install -y --freeze-installed \
         ca-certificates=2024.7.4 \
         openssl=3.3.1 \
@@ -64,10 +63,10 @@ RUN pip3 install --no-cache-dir \
     natsort==8.4.0 \
     matplotlib==3.9.2 \
     aind-data-schema==1.4.0 \
-    numcodecs==0.15.1
+    numcodecs==0.13.1
 
 # Copy and run post-install script
 COPY postInstall /
-RUN chmod +x /postInstall && /bin/bash /postInstall
+RUN /bin/bash /postInstall
 
 WORKDIR $HOME
