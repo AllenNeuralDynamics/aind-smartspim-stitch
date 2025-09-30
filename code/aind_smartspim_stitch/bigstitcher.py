@@ -351,7 +351,8 @@ def get_max_shifts(
     if not (0 <= overlap <= 1):
         raise ValueError("Overlap must be between 0 and 1.")
     shifts = tuple(int((dim * overlap) // pyramid_level) for dim in shape)
-    shifts = [int(s) + room if s > min_shift else min_shift for s in shifts]
+    shifts = [int(s) if s > min_shift else min_shift for s in shifts]
+    shifts = [s + room for s in shifts]
     return shifts
 
 
