@@ -46,7 +46,7 @@ def run():
         output_json_file=output_json_file,
         results_folder=results_folder,
         smartspim_dataset_name=smartspim_dataset_name,
-        res_for_transforms=(4.0, 3.6, 3.6),
+        res_for_transforms=(8.0, 7.2, 7.2),
     )
 
 

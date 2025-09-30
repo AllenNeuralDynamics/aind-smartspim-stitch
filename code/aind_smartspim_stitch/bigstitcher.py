@@ -295,14 +295,13 @@ def get_estimated_downsample(
     voxel_resolution: List[float], phase_corr_res: Tuple[float] = (8.0, 8.0, 4.0)
 ) -> int:
     """
-    Get the estimated multiscale based on the provided
+    Get the estimated multiscale level based on the provided
     voxel resolution. This is used for image stitching.
-
-    e.g., if the original resolution is (1.8. 1.8, 2.0)
+    e.g., if the original resolution is (1.8, 1.8, 2.0)
     in XYZ order, and you provide (3.6, 3.6, 4.0) as
-    image resolution, then the picked resolution will be
-    1.
-
+    phase_corr_res, then the picked downsample level will be
+    1 (since 3.6/1.8 = 2, 3.6/1.8 = 2, 4.0/2.0 = 2, and log2(2) = 1).
+    
     Parameters
     ----------
     voxel_resolution: List[float]
@@ -311,21 +310,32 @@ def get_estimated_downsample(
     phase_corr_res: Tuple[float]
         Approximated resolution that will be used for bigstitcher
         in the computation of the transforms. Default: (8.0, 8.0, 4.0)
+    
+    Returns
+    -------
+    int
+        The downsample level (0 or higher)
     """
-
-    downsample_versions = []
+    
+    downsample_factors = []
     for idx in range(len(voxel_resolution)):
-        downsample_versions.append(phase_corr_res[idx] // voxel_resolution[idx])
-
-    downsample_res = int(min(downsample_versions) - 1)
-    return downsample_res
-
+        factor = phase_corr_res[idx] / voxel_resolution[idx]
+        downsample_factors.append(factor)
+    
+    # Get the minimum downsample factor across all dimensions
+    min_factor = min(downsample_factors)
+    
+    # Convert to downsample level (assuming powers of 2)
+    # Use floor to be conservative
+    downsample_level = max(0, int(math.log2(min_factor)))
+    
+    return downsample_level
 
 def get_max_shifts(
     shape: tuple,
     overlap: float,
     pyramid_level: int,
-    min_shift: int=10,
+    min_shift: int = 10,
     room: int = 10
 ):
     """
@@ -335,13 +345,15 @@ def get_max_shifts(
     Parameters
     ----------
     shape : tuple of int
-        Shape of the image (Z, Y, X).
+        Shape of the image (Z, Y, X) at the given pyramid level.
     overlap : float
         Overlap as a fraction (e.g., 0.1 for 10%).
-    pyramid_level: int
-        Pyramid level from the zarr multiscale
-    min_shift: int
-        Minimum shift
+    pyramid_level : int
+        Pyramid level from the zarr multiscale (1 = full res).
+    min_shift : int
+        Minimum shift allowed.
+    room : int
+        Extra tolerance to add.
 
     Returns
     -------
@@ -350,11 +362,19 @@ def get_max_shifts(
     """
     if not (0 <= overlap <= 1):
         raise ValueError("Overlap must be between 0 and 1.")
-    shifts = tuple(int((dim * overlap) // pyramid_level) for dim in shape)
-    shifts = [int(s) if s > min_shift else min_shift for s in shifts]
-    shifts = [s + room for s in shifts]
-    return shifts
+    
+    # Ensure shape corresponds to this pyramid level
+    level_shape = tuple(int(dim // (2 ** (pyramid_level - 1))) for dim in shape)
+    
+    shifts = []
+    for dim in level_shape:
+        s = int(dim * overlap)
+        if s < min_shift:
+            s = min_shift
+        s += room
+        shifts.append(s)
 
+    return tuple(shifts)
 
 def main(
     stitching_channel_path,
