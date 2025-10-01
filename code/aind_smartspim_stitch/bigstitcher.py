@@ -13,6 +13,7 @@ from typing import List, Optional, Tuple
 import dask.array as da
 from aind_data_schema.core.processing import DataProcess, ProcessName
 from natsort import natsorted
+import math
 
 from . import smartspim_bigstitcher_utility
 from .utils import utils
