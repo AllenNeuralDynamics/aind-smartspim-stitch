@@ -1,3 +1,7 @@
+"""
+Run capsule for BigStitcher stitching
+"""
+
 import os
 from pathlib import Path
 
