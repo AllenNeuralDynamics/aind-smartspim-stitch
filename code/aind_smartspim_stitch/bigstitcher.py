@@ -4,6 +4,7 @@ bigstitcher for SmartSPIM data structure
 """
 
 import json
+import math
 import os
 import subprocess
 from pathlib import Path
@@ -13,7 +14,6 @@ from typing import List, Optional, Tuple
 import dask.array as da
 from aind_data_schema.core.processing import DataProcess, ProcessName
 from natsort import natsorted
-import math
 
 from . import smartspim_bigstitcher_utility
 from .utils import utils
@@ -302,7 +302,7 @@ def get_estimated_downsample(
     in XYZ order, and you provide (3.6, 3.6, 4.0) as
     phase_corr_res, then the picked downsample level will be
     1 (since 3.6/1.8 = 2, 3.6/1.8 = 2, 4.0/2.0 = 2, and log2(2) = 1).
-    
+
     Parameters
     ----------
     voxel_resolution: List[float]
@@ -311,33 +311,30 @@ def get_estimated_downsample(
     phase_corr_res: Tuple[float]
         Approximated resolution that will be used for bigstitcher
         in the computation of the transforms. Default: (8.0, 8.0, 4.0)
-    
+
     Returns
     -------
     int
         The downsample level (0 or higher)
     """
-    
+
     downsample_factors = []
     for idx in range(len(voxel_resolution)):
         factor = phase_corr_res[idx] / voxel_resolution[idx]
         downsample_factors.append(factor)
-    
+
     # Get the minimum downsample factor across all dimensions
     min_factor = min(downsample_factors)
-    
+
     # Convert to downsample level (assuming powers of 2)
     # Use floor to be conservative
     downsample_level = max(0, int(math.log2(min_factor)))
-    
+
     return downsample_level
 
+
 def get_max_shifts(
-    shape: tuple,
-    overlap: float,
-    pyramid_level: int,
-    min_shift: int = 10,
-    room: int = 10
+    shape: tuple, overlap: float, pyramid_level: int, min_shift: int = 10, room: int = 10
 ):
     """
     Calculate the maximum shifts in Z, Y, and X dimensions
@@ -363,10 +360,10 @@ def get_max_shifts(
     """
     if not (0 <= overlap <= 1):
         raise ValueError("Overlap must be between 0 and 1.")
-    
+
     # Ensure shape corresponds to this pyramid level
     level_shape = tuple(int(dim // (2 ** (pyramid_level - 1))) for dim in shape)
-    
+
     shifts = []
     for dim in level_shape:
         s = int(dim * overlap)
@@ -376,6 +373,7 @@ def get_max_shifts(
         shifts.append(s)
 
     return tuple(shifts)
+
 
 def main(
     stitching_channel_path,
@@ -474,7 +472,7 @@ def main(
             str(max_shift_x),
         ]
 
-        process1 = subprocess.run(
+        _ = subprocess.run(
             stitching_command,
             check=True,
             cwd=curr_folder,
@@ -493,14 +491,15 @@ def main(
             "STITCHING",
         ]
 
-        process2 = subprocess.run(
+        _ = subprocess.run(
             global_opt_command,
             check=True,
             cwd=curr_folder,
             env=env,
         )
 
-        # print(f"Voxel resolution: {voxel_resolution} - Estimating transforms in res: {res_for_transforms} - Scale: {estimated_downsample}")
+        # print(f"Voxel resolution: {voxel_resolution} - Estimating
+        # transforms in res: {res_for_transforms} - Scale: {estimated_downsample}")
         end_time = time()
 
         output_big_stitcher_json = (

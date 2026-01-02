@@ -374,7 +374,8 @@ def main(
             voxel_resolution=voxel_resolution, phase_corr_res=res_for_transforms
         )
 
-        # print(f"Voxel resolution: {voxel_resolution} - Estimating transforms in res: {res_for_transforms} - Scale: {estimated_downsample}")
+        # print(f"Voxel resolution: {voxel_resolution} - Estimating
+        # transforms in res: {res_for_transforms} - Scale: {estimated_downsample}")
 
         smartspim_stitching_params = get_stitching_dict(
             specimen_id=smartspim_dataset_name,

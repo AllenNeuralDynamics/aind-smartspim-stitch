@@ -513,7 +513,7 @@ def main():
             tile_status = validate_dataset(val_path, validate_metadata=validate_mdata)
 
         except FileNotFoundError as e:
-            logger.error(f"[!!] Check path {val_path}. This folder MUST have the channels!")
+            logger.error(f"[!!] Check path {val_path}. This folder MUST have the channels! {e}")
             check_paths.append(str(val_path))
 
         if not tile_status:
