@@ -252,7 +252,7 @@ def create_smartspim_tile_metadata(
 
 def get_stitching_dict(specimen_id: str, dataset_xml_path: str, downsample: Optional[int] = 2) -> dict:
     """
-    A function that writes a stitching dictioonary that will be used for
+    A function that writes a stitching dictionary that will be used for
     creating a json file that gives parmaters to bigstitcher sittching run
 
     Parameters

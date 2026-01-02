@@ -400,7 +400,12 @@ def main(
         SmartSPIM dataset name
     """
 
-    BIGSTITCHER_PATH = Path(os.getenv("BIGSTITCHER_HOME"))
+    BIGSTITCHER_PATH = os.getenv("BIGSTITCHER_HOME")
+
+    if BIGSTITCHER_PATH is None:
+        raise ValueError("Please, set the BIGSTITCHER_HOME env value.")
+
+    BIGSTITCHER_PATH = Path(BIGSTITCHER_PATH)
     env = os.environ.copy()
 
     if not BIGSTITCHER_PATH.exists():
