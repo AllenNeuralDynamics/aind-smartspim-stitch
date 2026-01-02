@@ -23,7 +23,7 @@ from natsort import natsorted
 from ng_link import NgState
 
 from .__init__ import __version__
-from .params.params import PipelineParams, get_default_config
+from .params.params import PipelineParams
 from .utils import utils
 from .validate_datasets import validate_dataset
 from .zarr_converter.zarr_converter import ZarrConverter

@@ -1,11 +1,8 @@
-""" top level run script """
+"""top level run script"""
 
 import os
-from pathlib import Path
-from typing import List, Tuple
 
 from aind_smartspim_stitch import stitch
-from aind_smartspim_stitch._shared.types import PathLike
 from aind_smartspim_stitch.params import get_yaml
 from aind_smartspim_stitch.utils import utils
 

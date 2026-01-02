@@ -6,7 +6,6 @@ bigstitcher for SmartSPIM data structure
 import json
 import math
 import os
-import subprocess
 from pathlib import Path
 from time import time
 from typing import List, Optional, Tuple
@@ -15,7 +14,7 @@ import dask.array as da
 from aind_data_schema.core.processing import DataProcess, ProcessName
 from natsort import natsorted
 
-from . import smartspim_bigstitcher_utility
+from . import __maintainers__, __pipeline_version__, __version__, smartspim_bigstitcher_utility
 from .utils import utils
 
 
@@ -253,7 +252,7 @@ def create_smartspim_tile_metadata(
 
 def get_stitching_dict(specimen_id: str, dataset_xml_path: str, downsample: Optional[int] = 2) -> dict:
     """
-    A function that writes a stitching dictioonary that will be used for
+    A function that writes a stitching dictionary that will be used for
     creating a json file that gives parmaters to bigstitcher sittching run
 
     Parameters
@@ -284,9 +283,9 @@ def get_stitching_dict(specimen_id: str, dataset_xml_path: str, downsample: Opti
         "phase_correlation_params": {
             "downsample": downsample,
             "min_correlation": 0.6,
-            "max_shift_in_x": 10,
-            "max_shift_in_y": 10,
-            "max_shift_in_z": 10,
+            "max_shift_in_x": 30,
+            "max_shift_in_y": 30,
+            "max_shift_in_z": 30,
         },
     }
     return stitching_dict
@@ -296,92 +295,40 @@ def get_estimated_downsample(
     voxel_resolution: List[float], phase_corr_res: Tuple[float] = (8.0, 8.0, 4.0)
 ) -> int:
     """
-    Get the estimated multiscale level based on the provided
-    voxel resolution. This is used for image stitching.
-    e.g., if the original resolution is (1.8, 1.8, 2.0)
-    in XYZ order, and you provide (3.6, 3.6, 4.0) as
-    phase_corr_res, then the picked downsample level will be
-    1 (since 3.6/1.8 = 2, 3.6/1.8 = 2, 4.0/2.0 = 2, and log2(2) = 1).
+    Estimate the multiscale level (power-of-two downsampling) such that
+    the resolution at that level is at least the phase_corr_res in all axes.
 
     Parameters
     ----------
-    voxel_resolution: List[float]
-        Image original resolution. This would be the resolution
-        in the multiscale "0".
-    phase_corr_res: Tuple[float]
-        Approximated resolution that will be used for bigstitcher
-        in the computation of the transforms. Default: (8.0, 8.0, 4.0)
+    voxel_resolution : List[float]
+        Resolution of the original image at level 0 (in XYZ order).
+    phase_corr_res : Tuple[float]
+        Target resolution for phase correlation (in XYZ order).
 
     Returns
     -------
     int
-        The downsample level (0 or higher)
+        Estimated downsample level (0 or higher).
     """
 
-    downsample_factors = []
-    for idx in range(len(voxel_resolution)):
-        factor = phase_corr_res[idx] / voxel_resolution[idx]
-        downsample_factors.append(factor)
+    levels = []
+    for vres, cres in zip(voxel_resolution, phase_corr_res):
+        if cres < vres:
+            raise ValueError("phase_corr_res must be greater than or equal to voxel_resolution.")
+        ratio = cres / vres
+        levels.append(math.floor(math.log2(ratio)))
 
-    # Get the minimum downsample factor across all dimensions
-    min_factor = min(downsample_factors)
-
-    # Convert to downsample level (assuming powers of 2)
-    # Use floor to be conservative
-    downsample_level = max(0, int(math.log2(min_factor)))
-
-    return downsample_level
-
-
-def get_max_shifts(
-    shape: tuple, overlap: float, pyramid_level: int, min_shift: int = 10, room: int = 10
-):
-    """
-    Calculate the maximum shifts in Z, Y, and X dimensions
-    based on image shape and overlap percentage.
-
-    Parameters
-    ----------
-    shape : tuple of int
-        Shape of the image (Z, Y, X) at the given pyramid level.
-    overlap : float
-        Overlap as a fraction (e.g., 0.1 for 10%).
-    pyramid_level : int
-        Pyramid level from the zarr multiscale (1 = full res).
-    min_shift : int
-        Minimum shift allowed.
-    room : int
-        Extra tolerance to add.
-
-    Returns
-    -------
-    tuple of int
-        Maximum shift in (Z, Y, X) directions.
-    """
-    if not (0 <= overlap <= 1):
-        raise ValueError("Overlap must be between 0 and 1.")
-
-    # Ensure shape corresponds to this pyramid level
-    level_shape = tuple(int(dim // (2 ** (pyramid_level - 1))) for dim in shape)
-
-    shifts = []
-    for dim in level_shape:
-        s = int(dim * overlap)
-        if s < min_shift:
-            s = min_shift
-        s += room
-        shifts.append(s)
-
-    return tuple(shifts)
+    return max(levels)
 
 
 def main(
     stitching_channel_path,
+    s3_path_to_data,
     voxel_resolution,
     output_json_file,
     results_folder,
     smartspim_dataset_name,
-    res_for_transforms=(8.0, 8.0, 8.0),
+    res_for_transforms=(1.8, 1.8, 2.0),
 ):
     """
     Computes image stitching with BigStitcher using Phase Correlation
@@ -389,7 +336,7 @@ def main(
     Parameters
     ----------
     stitching_channel_path: str
-        Path where the stitching channel is located
+        Path where the stitching channel is located locally
     voxel_resolution: Tuple[float]
         Voxel resolution in order XYZ
     output_json_file: str
@@ -399,18 +346,6 @@ def main(
     smartspim_dataset_name: str
         SmartSPIM dataset name
     """
-
-    BIGSTITCHER_PATH = os.getenv("BIGSTITCHER_HOME")
-
-    if BIGSTITCHER_PATH is None:
-        raise ValueError("Please, set the BIGSTITCHER_HOME env value.")
-
-    BIGSTITCHER_PATH = Path(BIGSTITCHER_PATH)
-    env = os.environ.copy()
-
-    if not BIGSTITCHER_PATH.exists():
-        raise ValueError("Please, set the BIGSTITCHER_PATH env value.")
-
     start_time = time()
     metadata_folder = results_folder.joinpath("metadata")
     utils.create_folder(str(metadata_folder))
@@ -428,83 +363,25 @@ def main(
     output_big_stitcher_xml = None
     if output_json is not None:
         stitching_channel = stitching_channel_path.name
-        tree = smartspim_bigstitcher_utility.parse_json(
-            output_json, str(stitching_channel_path), microns=True
-        )
+        tree = smartspim_bigstitcher_utility.parse_json(output_json, str(s3_path_to_data), microns=True)
         output_big_stitcher_xml = (
             f"{results_folder}/{smartspim_dataset_name}_stitching_channel_{stitching_channel}.xml"
         )
-        output_big_stitcher_resolved_xml = f"{results_folder}/bigstitcher.xml"
 
         smartspim_bigstitcher_utility.write_xml(tree, output_big_stitcher_xml)
-        smartspim_bigstitcher_utility.write_xml(tree, output_big_stitcher_resolved_xml)
 
         estimated_downsample = get_estimated_downsample(
             voxel_resolution=voxel_resolution, phase_corr_res=res_for_transforms
         )
-        downsampled_scale = estimated_downsample * 2 if estimated_downsample else 1
-
-        print("Estimated downsample: ", downsampled_scale)
-        max_shift_z, max_shift_y, max_shift_x = get_max_shifts(
-            shape=(20, 1600, 2000), overlap=0.1, pyramid_level=downsampled_scale
-        )
-
-        curr_folder = Path(os.path.realpath(__file__)).parent
-
-        print(f"Current file path: {curr_folder}")
-
-        # Assuming machine with 128G and 16 cores
-        env.update(
-            {
-                "JAVA_HEAP_SIZE": "128g",
-                "SPARK_THREADS": "16",
-                "MAIN_CLASS": "net.preibisch.bigstitcher.spark.SparkPairwiseStitching",
-            }
-        )
-
-        stitching_command = [
-            "bash",
-            "./bigstitcher_spark_scripts/run_classes.sh",
-            "--xml",
-            str(output_big_stitcher_resolved_xml),
-            "--downsampling",
-            f"{downsampled_scale},{downsampled_scale},{downsampled_scale}",
-            "--maxShiftZ",
-            str(max_shift_z),
-            "--maxShiftY",
-            str(max_shift_y),
-            "--maxShiftX",
-            str(max_shift_x),
-        ]
-
-        _ = subprocess.run(
-            stitching_command,
-            check=True,
-            cwd=curr_folder,
-            env=env,
-        )
-
-        # Updating java class to solver for global optimization
-        env.update({"MAIN_CLASS": "net.preibisch.bigstitcher.spark.Solver"})
-
-        global_opt_command = [
-            "bash",
-            "./bigstitcher_spark_scripts/run_classes.sh",
-            "--xml",
-            str(output_big_stitcher_resolved_xml),
-            "--sourcePoints",
-            "STITCHING",
-        ]
-
-        _ = subprocess.run(
-            global_opt_command,
-            check=True,
-            cwd=curr_folder,
-            env=env,
-        )
 
         # print(f"Voxel resolution: {voxel_resolution} - Estimating
         # transforms in res: {res_for_transforms} - Scale: {estimated_downsample}")
+
+        smartspim_stitching_params = get_stitching_dict(
+            specimen_id=smartspim_dataset_name,
+            dataset_xml_path=output_big_stitcher_xml,
+            downsample=estimated_downsample,
+        )
         end_time = time()
 
         output_big_stitcher_json = (
@@ -515,25 +392,31 @@ def main(
         data_processes.append(
             DataProcess(
                 name=ProcessName.IMAGE_TILE_ALIGNMENT,
-                software_version="e112363",
+                software_version="1.2.11",
                 start_date_time=start_time,
                 end_date_time=end_time,
                 input_location=str(smartspim_dataset_name),
                 output_location=str(output_big_stitcher_json),
                 outputs={"output_file": str(output_big_stitcher_json)},
                 code_url="",
-                code_version="1.2.7",
-                parameters={"stitching": stitching_command, "global_optimization": global_opt_command},
-                notes="Running stitching and global optimization separately",
+                code_version=__version__,
+                parameters=smartspim_stitching_params,
+                notes="Creation of stitching parameters",
             )
         )
 
         utils.generate_processing(
             data_processes=data_processes,
             dest_processing=metadata_folder,
-            processor_full_name="Camilo Laiton",
-            pipeline_version="3.0.0",
+            processor_full_name=__maintainers__[0],
+            pipeline_version=__pipeline_version__,
         )
+
+        with open(output_big_stitcher_json, "w") as f:
+            json.dump(smartspim_stitching_params, f, indent=4)
+
+        # Printing to get output on batch script
+        print(output_big_stitcher_json)
 
     else:
         print(f"An error happened while trying to write {output_json_file}")

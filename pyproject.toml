@@ -52,6 +52,10 @@ dev = [
     'furo'
 ]
 
+docs = [
+    'furo'
+]
+
 [project.urls]
 homepage = "https://github.com/AllenNeuralDynamics/aind-smartspim-stitch"
 documentation = "https://github.com/AllenNeuralDynamics/aind-smartspim-stitch"

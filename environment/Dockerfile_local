@@ -1,22 +1,65 @@
-FROM continuumio/miniconda3:23.9.0-0
+# Use a public base image
+FROM ubuntu:22.04
+
 LABEL maintainer="Camilo Laiton <camilo.laiton@alleninstitute.org>"
 
-ARG DEBIAN_FRONTEND=noninteractive
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV AWS_REGION=us-west-2
+ENV JAVA_OPTS="-Djava.awt.headless=true"
+ENV BIGSTITCHER_HOME=/home/BigStitcher-Spark
+ENV N5_AWS_FOLDER_HOME=/home/n5-aws-s3
+ENV CLASSPATH="$BIGSTITCHER_HOME/target/*:$N5_AWS_FOLDER_HOME/target/*"
 
-RUN apt-get update && apt-get upgrade -y --no-install-recommends curl && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install required packages
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        wget \
+        git \
+        curl \
+        gcc \
+        build-essential \
+        python3-dev \
+        libblosc-dev=1.21.1+ds2-2 \
+        maven=3.6.3-5 \
+        python3 \
+        python3-pip \
+        libc6 \
+        && rm -rf /var/lib/apt/lists/*
 
-RUN conda install -y -c conda-forge -c bioconda \
-        fiji \
-        openjdk && \
-    conda clean --all --yes
+# Download and set up Java
+WORKDIR /home
+RUN wget -q https://cdn.azul.com/zulu/bin/zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64.tar.gz && \
+    tar -xzf zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64.tar.gz && \
+    rm zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64.tar.gz
 
-RUN conda create -n smartspim_stitch python=3.9 --no-default-packages -y && \
-    conda clean --all --yes
+ENV JAVA_HOME="/home/zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64"
+ENV PATH="$JAVA_HOME/bin:$PATH"
+ENV LD_LIBRARY_PATH="$JAVA_HOME/jre/lib/amd64/server"
 
-ENV PATH="/opt/conda/envs/smartspim_stitch/bin:$PATH"
+# Install Miniconda
+RUN wget -qO Miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+    bash Miniconda.sh -b -p /opt/conda && \
+    rm Miniconda.sh
 
-RUN conda run -n smartspim_stitch pip install --no-cache-dir \
+# Add conda to PATH
+ENV PATH="/opt/conda/bin:$PATH"
+
+# Install additional conda packages with specific versions
+RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+
+# Remove default channels and use only conda-forge
+RUN conda config --remove-key channels && \
+    conda config --add channels conda-forge && \
+    conda config --set channel_priority strict
+
+# Install packages
+RUN conda install -y ca-certificates=2024.7.4 openssl=3.3.1 && \
+    conda clean -ya
+
+# Install Python packages
+RUN pip3 install --no-cache-dir \
     dask==2024.1.1 \
     dask-image==2023.8.1 \
     numpy==1.26.3 \
@@ -26,14 +69,21 @@ RUN conda run -n smartspim_stitch pip install --no-cache-dir \
     toml==0.10.2 \
     zarr==2.16.1 \
     natsort==8.4.0 \
-    aind-data-schema==1.0.0 \
-    matplotlib==3.9.2
+    matplotlib==3.9.2 \
+    aind-data-schema==1.4.0 \
+    numcodecs==0.15.1
 
-RUN curl -fsSL -o /tmp/code-server.tar.gz https://github.com/coder/code-server/releases/download/v4.9.0/code-server-4.9.0-linux-amd64.tar.gz && \
-    mkdir -p /.code-server && \
-    tar -xzf /tmp/code-server.tar.gz -C /.code-server --strip-components=1 && \
-    rm /tmp/code-server.tar.gz && \
+# Set up code-server
+WORKDIR /.code-server
+RUN wget -qO code-server.tar.gz https://github.com/coder/code-server/releases/download/v4.9.0/code-server-4.9.0-linux-amd64.tar.gz && \
+    tar -xvf code-server.tar.gz --strip-components=1 && \
+    rm code-server.tar.gz && \
     ln -s /.code-server/bin/code-server /usr/bin/code-server
 
+# Copy and run post-install script
 COPY postInstall /
-RUN /postInstall
+RUN chmod +x /postInstall && /bin/bash /postInstall
+
+# Set working directory
+ENV HOME=/root
+WORKDIR $HOME

@@ -8,6 +8,7 @@
 import os
 import pathlib
 import sys
+import importlib.util
 
 from pygit2 import Repository
 
@@ -37,14 +38,19 @@ exclude_patterns = []
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "furo"
+# Prefer the Furo theme if installed; otherwise fall back to a built-in theme
+if importlib.util.find_spec("furo") is not None:
+    html_theme = "furo"
+else:
+    html_theme = "alabaster"
 html_static_path = ["_static"]
 html_title = "aind-smartspim-stitching"
 html_favicon = "_static/favicon.ico"
-html_theme_options = {
-    "light_logo": "light-logo.svg",
-    "dark_logo": "dark-logo.svg",
-}
+if html_theme == "furo":
+    html_theme_options = {
+        "light_logo": "light-logo.svg",
+        "dark_logo": "dark-logo.svg",
+    }
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
 html_show_sphinx = False
