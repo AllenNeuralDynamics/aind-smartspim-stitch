@@ -19,4 +19,4 @@ __maintainer_emails__ = [
 ]
 __title__ = "aind-smartspim-stitch"
 __status__ = "Production"  # 'Development' 'Production', 'Beta'
-__pipeline_version__ = "3.0.1"
+__pipeline_version__ = "5.0.0"
