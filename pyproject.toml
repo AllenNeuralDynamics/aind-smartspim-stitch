@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "aind_smartspim_stitch"
 description = "Striping and stitching module for 3D teravoxel-sized microscopy images"
 license = {text = "MIT"}
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 authors = [
     {name = "David Feng", email="david.feng@alleninstitute.org"},
     {name = "Sharmishtaa Seshamani", email="sharmishtaas@alleninstitute.org"},
@@ -18,25 +18,21 @@ classifiers = [
 dynamic = ["version", "readme"]
 
 dependencies = [
-    'pandas',
-    'sphinx',
-    'tifffile < 2022.4.22',
+    'tifffile',
     'xarray_multiscale==1.1.0',
     'argschema==3.0.4',
     'mpi4py',
-    'bokeh==2.4.2',
-    'pint==0.20.1',
-    'dask[distributed]==2022.11.1',
+    'dask[distributed]==2024.1.1',
     'PyExifTool==0.5.5',
     'tqdm==4.64.1',
     'aind-ng-link@git+https://github.com/AllenNeuralDynamics/aind-ng-link.git',
     'pystripe@git+https://github.com/AllenNeuralDynamics/pystripe.git@feature/output_format',
     'ome-zarr@git+https://github.com/AllenNeuralDynamics/ome-zarr-py.git@feature/delayed-dask-poc',
     'aicsimageio@git+https://github.com/camilolaiton/aicsimageio.git@feature/zarrwriter-multiscales-daskjobs',
-    'aind-data-schema==0.13.52',
+    'aind-data-schema==1.4.0',
     'xmltodict==0.13.0',
-    'natsort==8.2.0',
-    'pims==0.6.1'
+    'natsort==8.4.0',
+    'pims'
 ]
 
 [project.optional-dependencies]
@@ -70,7 +66,7 @@ readme = {file = ["README.md"]}
 
 [tool.black]
 line-length = 105
-target_version = ['py36']
+target_version = ['py310']
 exclude = '''
 
 (
@@ -91,7 +87,7 @@ exclude = '''
 
 [tool.coverage.run]
 omit = ["*__init__*"]
-source = ["aind_smartspim_stitch", "utils", "zarr_converter", "tests"]
+source = ["aind_smartspim_stitch", "tests"]
 
 [tool.coverage.report]
 exclude_lines = ["if __name__ == .__main__.:"]

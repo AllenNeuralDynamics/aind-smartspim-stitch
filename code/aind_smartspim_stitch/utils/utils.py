@@ -499,38 +499,36 @@ def generate_data_description(
     process_name: str
         Name of the process. Default "stitched".
     """
-    # Deferred imports: aind_data_schema==0.13.52 uses this older module path
-    from aind_data_schema import DerivedDataDescription
-    from aind_data_schema.data_description import Institution, Modality, RawDataDescription
+    _logger = logging.getLogger(__name__)
+    try:
+        from aind_data_schema.core.data_description import DerivedDataDescription, RawDataDescription
+    except ImportError as exc:
+        _logger.warning("generate_data_description: aind_data_schema not available (%s). Skipping.", exc)
+        return
 
     with open(raw_data_description_path, "r") as f:
-        data = json.load(f)
+        raw = json.load(f)
 
-    del data["name"]
-    dt = datetime.now()
-    data["schema_version"] = "0.7.1"
-    data["modality"] = [Modality.SPIM]
-    data["experiment_type"] = "SmartSPIM"
-    institution = data["institution"]
-    if isinstance(data["institution"], dict) and "abbreviation" in data["institution"]:
-        institution = data["institution"]["abbreviation"]
-    data["institution"] = Institution[institution]
-    data["investigators"] = []
-    data = RawDataDescription(**data)
-    derived = DerivedDataDescription(
-        input_data_name=data.name,
-        process_name=process_name,
-        creation_date=dt.date(),
-        creation_time=dt.time(),
-        institution=data.institution,
-        funding_source=data.funding_source,
-        modality=data.modality,
-        experiment_type=data.experiment_type,
-        subject_id=data.subject_id,
-        investigators=data.investigators,
-    )
-    with open(dest_data_description, "w") as f:
-        f.write(derived.json(indent=3))
+    try:
+        raw_desc = RawDataDescription.model_validate(raw)
+        dt = datetime.now()
+        derived = DerivedDataDescription(
+            input_data_name=raw_desc.name,
+            process_name=process_name,
+            creation_time=dt,
+            institution=raw_desc.institution,
+            funding_source=raw_desc.funding_source,
+            modality=raw_desc.modality,
+            subject_id=raw_desc.subject_id,
+            investigators=raw_desc.investigators,
+            platform=raw_desc.platform,
+        )
+        with open(dest_data_description, "w") as f:
+            f.write(derived.model_dump_json(indent=3))
+    except Exception as exc:
+        _logger.warning(
+            "generate_data_description: failed to build derived description: %s. Skipping.", exc
+        )
 
 
 def copy_file(input_filename: PathLike, output_filename: PathLike):

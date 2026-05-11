@@ -123,9 +123,9 @@ class TestZarrConverter(unittest.TestCase):
         utils.create_folder(path_to_tiffs)
         _create_tiffs_files(path_to_tiffs)
 
-        # Using stitching hierarchical structure for reading multichannel
-        utils.create_folder(f"{self._tmp_dir.name}/tiffs_single_channel_2/x/y")
-        _create_tiffs_files(f"{self._tmp_dir.name}/tiffs_single_channel_2/x/y")
+        # Using stitching hierarchical structure: channel/col/row/images (4 levels)
+        utils.create_folder(f"{self._tmp_dir.name}/tiffs_single_channel_2/x/y/z")
+        _create_tiffs_files(f"{self._tmp_dir.name}/tiffs_single_channel_2/x/y/z")
 
         utils.create_folder(f"{self._tmp_dir.name}/converted")
 

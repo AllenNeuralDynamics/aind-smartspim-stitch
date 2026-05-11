@@ -111,6 +111,10 @@ class TestTerastitcher(unittest.TestCase):
 
         _create_sample_channel(self._multi_channel_path, n_channels=3)
 
+    @unittest.skipUnless(
+        os.environ.get("TERASTITCHER_PYSCRIPTS_PATH"),
+        "Set TERASTITCHER_PYSCRIPTS_PATH to the TeraStitcher pyscripts directory to run this test.",
+    )
     def test_single_channel_stitching(self):
         """
         Tests the single channel stitching
@@ -121,15 +125,8 @@ class TestTerastitcher(unittest.TestCase):
         default_config["verbose"] = False
         default_config["clean_output"] = False
         default_config["ome_zarr_params"]["physical_pixels"] = None
+        default_config["pyscripts_path"] = os.environ["TERASTITCHER_PYSCRIPTS_PATH"]
 
-        # TODO set pyscripts as env variables in the system when
-        # building to fix this hard coded?
-        # flake8: noqa: E501
-        default_config["pyscripts_path"] = (
-            "C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TeraStitcher-portable-1.11.10-win64/pyscripts"
-        )
-
-        # Paths
         input_data = str(self._single_channel_path)
 
         stitched_folder = terastitcher.execute_terastitcher(
@@ -142,6 +139,10 @@ class TestTerastitcher(unittest.TestCase):
 
         self.assertTrue(os.path.isdir(stitched_folder))
 
+    @unittest.skipUnless(
+        os.environ.get("TERASTITCHER_PYSCRIPTS_PATH"),
+        "Set TERASTITCHER_PYSCRIPTS_PATH to the TeraStitcher pyscripts directory to run this test.",
+    )
     def test_multi_channel_stitching(self):
         """
         Tests the multichannel stitching
@@ -152,11 +153,7 @@ class TestTerastitcher(unittest.TestCase):
         default_config["verbose"] = False
         default_config["clean_output"] = False
         default_config["ome_zarr_params"]["physical_pixels"] = None
-
-        # TODO set pyscripts as env variables in the system when building to fix this hard coded?
-        default_config["pyscripts_path"] = (
-            "C:/Users/camilo.laiton/Documents/Project1/Terastitcher/TeraStitcher-portable-1.11.10-win64/pyscripts"
-        )
+        default_config["pyscripts_path"] = os.environ["TERASTITCHER_PYSCRIPTS_PATH"]
 
         input_data = str(self._multi_channel_path)
         stitched_folder = terastitcher.execute_terastitcher(

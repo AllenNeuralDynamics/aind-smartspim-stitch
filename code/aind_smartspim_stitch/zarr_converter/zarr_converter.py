@@ -5,6 +5,7 @@ Module to convert stitched images to the OME-Zarr format
 import logging
 import multiprocessing
 import os
+import tempfile
 import time
 from pathlib import Path
 from typing import Dict, Hashable, List, Optional, Sequence, Tuple, Union
@@ -651,7 +652,8 @@ class ZarrConverter:
         self.input_data = input_data
         self.output_data = output_data
         self.physical_pixels = None
-        self.dask_folder = Path("/root/capsule/scratch")
+        _co_scratch = Path("/root/capsule/scratch")
+        self.dask_folder = _co_scratch if _co_scratch.exists() else Path(tempfile.gettempdir())
 
         if physical_pixels:
             self.physical_pixels = PhysicalPixelSizes(
@@ -881,6 +883,7 @@ class ZarrConverter:
             threads_per_worker=threads_per_worker,
             processes=True,
             memory_limit="auto",
+            local_directory=str(self.dask_folder),
         )
         client = Client(cluster)
 
@@ -891,7 +894,10 @@ class ZarrConverter:
         dask_report_file = f"{self.output_data}/dask_report.html"
 
         # Writing multiscale image
-        with performance_report(filename=dask_report_file):
+        _report = performance_report(filename=dask_report_file)
+        _report.__enter__()
+        _conversion_exc = None
+        try:
             for idx in range(n_channels):
                 # Sub image volume
                 channel_img = image[0][idx]
@@ -910,8 +916,9 @@ class ZarrConverter:
                 pyramid_data = [pad_array_n_d(pyramid) for pyramid in pyramid_data]
 
                 for pyramid in pyramid_data:
+                    channel_label = self.channels[idx] if self.channels else idx
                     print(f"""
-                        Channel {self.channels[idx]}
+                        Channel {channel_label}
                         Pyramid {pyramid}
                         - partitions: {pyramid.npartitions}
                         - chunkszie: {pyramid_data[0].chunksize}
@@ -937,8 +944,18 @@ class ZarrConverter:
                 if len(dask_jobs):
                     dask_jobs = dask.persist(*dask_jobs)
                     wait(dask_jobs)
+        except Exception as exc:
+            _conversion_exc = exc
+        finally:
+            try:
+                _report.__exit__(None, None, None)
+            except Exception:
+                pass  # performance_report cleanup is non-critical
 
         client.close()
+
+        if _conversion_exc is not None:
+            raise _conversion_exc
 
 
 def main():
