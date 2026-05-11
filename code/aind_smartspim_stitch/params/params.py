@@ -194,12 +194,10 @@ class ThresholdParameters(DefaultSchema):
 
     reliability_threshold = Float(
         required=False,
-        metadata={
-            "description": """
+        metadata={"description": """
             Reliability threshold applied to the computed
              displacements to select the most reliable ones
-            """
-        },
+            """},
         dump_default=0.7,
         validate=validate.Range(min=0, min_inclusive=False, max=1, max_inclusive=True),
     )
@@ -213,25 +211,21 @@ class MergeParameters(DefaultSchema):
     slice_extent = List(
         Int(),
         required=True,
-        metadata={
-            "description": """
+        metadata={"description": """
             Supposing the output image is saved in a tiled format,
             this is an array that contains the slice size of output
             tiles in order [slicewidth, sliceheight, slicedepth]
-            """
-        },
+            """},
         cli_as_single_argument=True,
         dump_default=[250, 250, 250],
     )
 
     volout_plugin = Str(
         required=False,
-        metadata={
-            "description": """
+        metadata={"description": """
             Tiling images output. For 2D 'TiledXY|2Dseries',
              for 3D 'TiledXY|3Dseries'
-            """
-        },
+            """},
         dump_default='"TiledXY|2Dseries"',
     )
 
@@ -257,12 +251,10 @@ class Visualization(DefaultSchema):
 
     mount_service = Str(
         required=True,
-        metadata={
-            "description": """
+        metadata={"description": """
             Set to s3 if the dataset will be saved
             in a Amazon Bucket, gs for a Google Bucket
-            """
-        },
+            """},
         dump_default="s3",
     )
 
@@ -289,22 +281,18 @@ class PipelineParams(ArgSchema):
 
     preprocessed_data = Str(
         required=True,
-        metadata={
-            "description": """
+        metadata={"description": """
             Path where the preprocessed data
             will be saved (this includes terastitcher output)
-            """
-        },
+            """},
     )
 
     metadata_folder = Str(
         required=True,
-        metadata={
-            "description": """
+        metadata={"description": """
             Path where the metadata is located
             for a smartspim dataset
-            """
-        },
+            """},
     )
 
     stitch_channel = Str(
@@ -321,12 +309,10 @@ class PipelineParams(ArgSchema):
 
     pyscripts_path = InputDir(
         required=False,
-        metadata={
-            "description": """
+        metadata={"description": """
             Path to stitched parallel scripts
             (parastitcher and paraconverter must be there).
-            """
-        },
+            """},
         dump_default="/home/TeraStitcher/src/utils/pyscripts",
     )
 
@@ -346,14 +332,12 @@ class PipelineParams(ArgSchema):
 
     clean_output = Boolean(
         required=False,
-        matadata={
-            "description": """
+        matadata={"description": """
             Set True if you want to delete intermediate
             output images (e.g. pystripe, terastitcher)
             and keep only OME-Zarr images.
             Set False otherwise.
-            """
-        },
+            """},
         dump_default=False,
     )
 
@@ -361,12 +345,10 @@ class PipelineParams(ArgSchema):
 
     info = Boolean(
         required=False,
-        metadata={
-            "description": """
+        metadata={"description": """
             Set True if you want to output the
             execution commands
-            """
-        },
+            """},
         dump_default=False,
     )
 

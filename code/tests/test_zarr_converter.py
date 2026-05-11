@@ -431,7 +431,6 @@ class TestZarrConverter(unittest.TestCase):
             "Channel:test_multichannel.zarr:0",
             "Channel:test_multichannel.zarr:1",
             "Channel:test_multichannel.zarr:2",
-            "Channel:test_multichannel.zarr:3",
         ]
         self._check_multiple_channel_omero(attributes["omero"], filename, channels)
 

@@ -254,14 +254,12 @@ def concatenate_dask_arrays(arr_1: ArrayLike, arr_2: ArrayLike, axis: int) -> Ar
             if shape_arr_1[shape_dim_idx] > shape_arr_2[shape_dim_idx] and (
                 shape_dim_idx - dims != axis
             ):
-                raise ValueError(
-                    f"""
+                raise ValueError(f"""
                     Array 1 {shape_arr_1} must have
                      a smaller shape than array 2 {shape_arr_2}
                      except for the axis dimension {shape_dim_idx}
                      {dims} {shape_dim_idx - dims} {axis}
-                    """
-                )
+                    """)
 
             if shape_arr_1[shape_dim_idx] != shape_arr_2[shape_dim_idx]:
                 slices.append(slice(0, shape_arr_1[shape_dim_idx]))
@@ -275,12 +273,10 @@ def concatenate_dask_arrays(arr_1: ArrayLike, arr_2: ArrayLike, axis: int) -> Ar
     try:
         res = concatenate([arr_1, arr_2], axis=axis)
     except ValueError:
-        raise ValueError(
-            f"""
+        raise ValueError(f"""
             Unable to cancat arrays - Shape 1:
              {shape_arr_1} shape 2: {shape_arr_2}
-            """
-        )
+            """)
 
     return res
 
@@ -463,12 +459,10 @@ def channel_parallel_reading(
 
     else:
         images_per_worker = n_images // workers
-        print(
-            f"""
+        print(f"""
             Setting workers to {workers} - {images_per_worker}
              - total images: {n_images}
-            """
-        )
+            """)
 
         # Getting 5 dim image TCZYX
         args = []
@@ -677,12 +671,59 @@ class ZarrConverter:
         self.channels: list[str] = channels
         self.channel_colors: list[int] = []
 
-        for channel_str in self.channels:
-            em_wav: int = int(channel_str.split("_")[-1])
-            em_hex: int = utils.wavelength_to_hex(em_wav)
-            self.channel_colors.append(em_hex)
+        if self.channels:
+            for channel_str in self.channels:
+                em_wav: int = int(channel_str.split("_")[-1])
+                em_hex: int = utils.wavelength_to_hex(em_wav)
+                self.channel_colors.append(em_hex)
 
         # get_blosc_codec(writer_config['codec'], writer_config['clevel'])
+
+    def read_channel_image(self, path: PathLike) -> dask.array.core.Array:
+        """
+        Reads all tiff images in a directory into a single lazy dask array.
+
+        Parameters
+        ------------------------
+        path: PathLike
+            Directory containing the tiff image files.
+
+        Returns
+        ------------------------
+        dask.array.core.Array
+            Stacked dask array of shape (n_images, *frame_shape).
+
+        Raises
+        ------------------------
+        ValueError
+            If no tiff images are found in the given path.
+        """
+        import glob
+
+        filename_pattern = str(Path(path) / "*.tif*")
+        files = natsorted(glob.glob(filename_pattern))
+        if not files:
+            raise ValueError(f"No images found in {path}")
+        arrays = [lazy_tiff_reader(f) for f in files]
+        return concatenate(arrays, axis=0)
+
+    def pad_array_n_d(self, arr: ArrayLike, dim: int = 5) -> ArrayLike:
+        """
+        Pads a dask array to be in a 5D shape. Delegates to the module-level function.
+
+        Parameters
+        ------------------------
+        arr: ArrayLike
+            Dask/numpy array that contains image data.
+        dim: int
+            Number of dimensions that the array will be padded to.
+
+        Returns
+        ------------------------
+        ArrayLike
+            Padded dask/numpy array.
+        """
+        return pad_array_n_d(arr, dim)
 
     def compute_pyramid(
         self,
@@ -795,19 +836,15 @@ class ZarrConverter:
         )
         end_time = time.time()
 
-        print(
-            f"""
+        print(f"""
             Image: {image} {image.npartitions}
             Time: {end_time - start_time}s
-            """
-        )
+            """)
         if not isinstance(image, dask.array.core.Array):
-            raise ValueError(
-                f"""
+            raise ValueError(f"""
                 There was an error reading
                 the images from: {self.input_data}
-                """
-            )
+                """)
 
         image = dask.optimize(image)[0]
 
@@ -873,14 +910,12 @@ class ZarrConverter:
                 pyramid_data = [pad_array_n_d(pyramid) for pyramid in pyramid_data]
 
                 for pyramid in pyramid_data:
-                    print(
-                        f"""
+                    print(f"""
                         Channel {self.channels[idx]}
                         Pyramid {pyramid}
                         - partitions: {pyramid.npartitions}
                         - chunkszie: {pyramid_data[0].chunksize}
-                        """
-                    )
+                        """)
 
                 image_name = self.channels[idx] + ".zarr" if self.channels else image_name
                 channel_names = [self.channels[idx]] if self.channels else None

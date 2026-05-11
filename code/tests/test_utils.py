@@ -122,6 +122,20 @@ class TestUtils(unittest.TestCase):
         utils.save_string_to_txt(string, path)
         self.assertTrue(os.path.isfile(path))
 
+    def test_wavelength_to_hex(self):
+        """
+        Tests that wavelength_to_hex returns the correct hex color for known wavelengths
+        """
+        # 488 nm (blue laser, below 490 threshold) → 0x59D5F8
+        self.assertEqual(utils.wavelength_to_hex(488), 0x59D5F8)
+        # 561 nm (green laser, above 560 threshold but below 565) → 0xBBFB01
+        self.assertEqual(utils.wavelength_to_hex(561), 0xBBFB01)
+        # 639 nm (red laser, above 620 threshold) → 0xF00050 (last value)
+        self.assertEqual(utils.wavelength_to_hex(639), 0xF00050)
+        # Boundary: exactly 460 → color below that is first entry, 460 is not < 460
+        # 459 is below the first key (460), so it returns the first hex value 0x690AFE
+        self.assertEqual(utils.wavelength_to_hex(459), 0x690AFE)
+
     def tearDown(self):
         """
         Tears down the testing environment

@@ -156,30 +156,36 @@ def execute_command_helper(
         raise subprocess.CalledProcessError(return_code, command)
 
 
-def execute_command(command: str, logger: logging.Logger, verbose: Optional[bool] = False):
+def execute_command(config: dict) -> None:
     """
-    Execute a shell command with a given configuration.
+    Execute a shell command with a given configuration dictionary.
 
     Parameters
     ------------------------
-    command: str
-        Command that we want to execute.
-
-    logger: logging.Logger
-        Logger object
-
-    verbose: Optional[bool]
-        Prints the command in the console
+    config: dict
+        Dictionary with keys:
+        - command: str — shell command to execute
+        - logger: logging.Logger — logger object
+        - verbose: bool — whether to print the command
+        - info: bool — if True, only log the command without running it
+        - exists_stdout: bool — if True, save output to stdout_log_file
+        - stdout_log_file: PathLike — path to the log file
 
     Raises
     ------------------------
     CalledProcessError:
         if the command could not be executed (Returned non-zero status).
-
     """
-    for out in execute_command_helper(command, verbose):
-        if len(out):
-            logger.info(out)
+    if config["info"]:
+        config["logger"].info(config["command"])
+    else:
+        for out in execute_command_helper(
+            config["command"], config["verbose"], config["stdout_log_file"]
+        ):
+            if len(out):
+                config["logger"].info(out)
+            if config["exists_stdout"]:
+                save_string_to_txt(out, config["stdout_log_file"], "a")
 
 
 def check_path_instance(obj: object) -> bool:
@@ -434,6 +440,97 @@ def generate_timestamp(time_format: str = "%Y-%m-%d_%H-%M-%S") -> str:
         moment in string format.
     """
     return datetime.now().strftime(time_format)
+
+
+def wavelength_to_hex(wavelength: int) -> int:
+    """
+    Converts a wavelength in nm to its approximate hex color representation.
+
+    Parameters
+    ------------------------
+    wavelength: int
+        Wavelength in nanometers.
+
+    Returns
+    ------------------------
+    int:
+        Hex color value for the given wavelength.
+    """
+    color_map = {
+        460: 0x690AFE,
+        470: 0x3F2EFE,
+        480: 0x4B90FE,
+        490: 0x59D5F8,
+        500: 0x5DF8D6,
+        520: 0x5AFEB8,
+        540: 0x58FEA1,
+        560: 0x51FF1E,
+        565: 0xBBFB01,
+        575: 0xE9EC02,
+        580: 0xF5C503,
+        590: 0xF39107,
+        600: 0xF15211,
+        620: 0xF0121E,
+        750: 0xF00050,
+    }
+    hex_val = next(iter(color_map.values()))
+    for ub, hex_val in color_map.items():
+        if wavelength < ub:
+            return hex_val
+    return hex_val
+
+
+def generate_data_description(
+    raw_data_description_path: PathLike,
+    dest_data_description: PathLike,
+    process_name: str = "stitched",
+) -> None:
+    """
+    Generates a derived data description JSON from a raw data description.
+
+    Parameters
+    ------------------------
+    raw_data_description_path: PathLike
+        Path to the raw data description JSON file.
+
+    dest_data_description: PathLike
+        Path where the derived data description JSON will be saved.
+
+    process_name: str
+        Name of the process. Default "stitched".
+    """
+    # Deferred imports: aind_data_schema==0.13.52 uses this older module path
+    from aind_data_schema import DerivedDataDescription
+    from aind_data_schema.data_description import Institution, Modality, RawDataDescription
+
+    with open(raw_data_description_path, "r") as f:
+        data = json.load(f)
+
+    del data["name"]
+    dt = datetime.now()
+    data["schema_version"] = "0.7.1"
+    data["modality"] = [Modality.SPIM]
+    data["experiment_type"] = "SmartSPIM"
+    institution = data["institution"]
+    if isinstance(data["institution"], dict) and "abbreviation" in data["institution"]:
+        institution = data["institution"]["abbreviation"]
+    data["institution"] = Institution[institution]
+    data["investigators"] = []
+    data = RawDataDescription(**data)
+    derived = DerivedDataDescription(
+        input_data_name=data.name,
+        process_name=process_name,
+        creation_date=dt.date(),
+        creation_time=dt.time(),
+        institution=data.institution,
+        funding_source=data.funding_source,
+        modality=data.modality,
+        experiment_type=data.experiment_type,
+        subject_id=data.subject_id,
+        investigators=data.investigators,
+    )
+    with open(dest_data_description, "w") as f:
+        f.write(derived.json(indent=3))
 
 
 def copy_file(input_filename: PathLike, output_filename: PathLike):

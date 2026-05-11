@@ -5,13 +5,13 @@ Tests for the stitching module
 import os
 import tempfile
 import unittest
-from code.aind_smartspim_stitch.params.params import get_default_config
 from pathlib import Path
 from typing import Optional, Tuple, Union
 
 import numpy as np
 import tifffile
-from aind_smartspim_stitch import terastitcher
+from aind_smartspim_stitch.algorithms import terastitcher
+from aind_smartspim_stitch.params.params import get_default_config
 from aind_smartspim_stitch.utils import utils
 
 # IO types
@@ -136,6 +136,7 @@ class TestTerastitcher(unittest.TestCase):
             input_data=input_data,
             output_folder=input_data,
             preprocessed_data=input_data,
+            metadata_folder=input_data,
             config_teras=default_config,
         )
 
@@ -162,6 +163,7 @@ class TestTerastitcher(unittest.TestCase):
             input_data=input_data,
             output_folder=input_data,
             preprocessed_data=input_data,
+            metadata_folder=input_data,
             config_teras=default_config,
         )
 

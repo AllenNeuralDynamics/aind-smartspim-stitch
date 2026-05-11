@@ -1,22 +1,22 @@
-"""top level run script"""
+"""
+Run capsule for TeraStitcher-based image stitching.
+"""
 
 import os
+from pathlib import Path
 
-from aind_smartspim_stitch import stitch
+from aind_smartspim_stitch.algorithms import terastitcher
 from aind_smartspim_stitch.params import get_yaml
 from aind_smartspim_stitch.utils import utils
 
 
 def run():
-    """Function to start image stitching with terastitcher"""
+    """Function to start image stitching with TeraStitcher"""
 
     # Absolute paths of common Code Ocean folders
     data_folder = os.path.abspath("../data")
     results_folder = os.path.abspath("../results")
-    # scratch_folder = os.path.abspath("../scratch")
 
-    # It is assumed that these files
-    # will be in the data folder
     required_input_elements = [
         f"{data_folder}/processing_manifest.json",
         f"{data_folder}/data_description.json",
@@ -46,11 +46,14 @@ def run():
         acquisition_config=acquisition_dict,
     )
 
+    # Set required path parameters for TeraStitcher
     smartspim_config["name"] = smartspim_dataset_name
+    smartspim_config["input_data"] = str(data_folder)
+    smartspim_config["output_data"] = str(results_folder)
+    smartspim_config["preprocessed_data"] = str(results_folder)
+    smartspim_config["metadata_folder"] = str(Path(results_folder) / "metadata")
 
-    stitch.main(
-        data_folder=data_folder, output_alignment_path=results_folder, smartspim_config=smartspim_config
-    )
+    terastitcher.main(smartspim_config=smartspim_config)
 
 
 if __name__ == "__main__":

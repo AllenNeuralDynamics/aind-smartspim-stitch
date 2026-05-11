@@ -14,6 +14,8 @@ from typing import List, Union
 import exiftool
 from tqdm import tqdm
 
+from .utils import utils
+
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s - %(levelname)s : %(message)s",
@@ -103,23 +105,6 @@ class SmartSPIMReader:
         return smartspim_datasets
 
 
-def save_string_to_txt(txt: str, filepath: PathLike, mode="w") -> None:
-    """
-    Saves a text in a file in the given mode.
-    Parameters
-    ------------------------
-    txt: str
-        String to be saved.
-    filepath: PathLike
-        Path where the file is located or will be saved.
-    mode: str
-        File open mode.
-    """
-
-    with open(filepath, mode) as file:
-        file.write(txt + "\n")
-
-
 def read_image_directory_structure(folder_dir) -> dict:
     """
     Creates a dictionary representation of all the images
@@ -189,7 +174,7 @@ def get_images_channel(channel_dict: dict) -> int:
         for row_name, images in rows.items():
             len_images = len(images)
 
-            if images == len_images:
+            if len(images) != len_images:
                 raise ValueError(f"Possible error in pos {col_name}/{row_name}")
 
             n_images += len_images
@@ -526,7 +511,7 @@ def main():
     # Saving datasets with errors
     join_lists = datasets_with_problems + check_paths
     txt = "\n".join(join_lists)
-    save_string_to_txt(txt, error_dataset_paths)
+    utils.save_string_to_txt(txt, error_dataset_paths)
 
 
 if __name__ == "__main__":
