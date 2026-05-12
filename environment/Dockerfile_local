@@ -1,7 +1,14 @@
 # Use a public base image
 FROM ubuntu:22.04
 
-LABEL maintainer="Camilo Laiton <camilo.laiton@alleninstitute.org>"
+# --------------------- #
+#      METADATA         #
+# --------------------- #
+LABEL maintainer="Camilo Laiton <camilo.laiton@alleninstitute.org>" \
+    org.opencontainers.image.title="Image Stitching" \
+    org.opencontainers.image.description="Container for image stitching" \
+    org.opencontainers.image.version="1.2.9" \
+    org.opencontainers.image.licenses="MIT"
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
