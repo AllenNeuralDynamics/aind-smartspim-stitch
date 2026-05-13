@@ -123,9 +123,9 @@ class TestZarrConverter(unittest.TestCase):
         utils.create_folder(path_to_tiffs)
         _create_tiffs_files(path_to_tiffs)
 
-        # Using stitching hierarchical structure for reading multichannel
-        utils.create_folder(f"{self._tmp_dir.name}/tiffs_single_channel_2/x/y")
-        _create_tiffs_files(f"{self._tmp_dir.name}/tiffs_single_channel_2/x/y")
+        # Using stitching hierarchical structure: channel/col/row/images (4 levels)
+        utils.create_folder(f"{self._tmp_dir.name}/tiffs_single_channel_2/x/y/z")
+        _create_tiffs_files(f"{self._tmp_dir.name}/tiffs_single_channel_2/x/y/z")
 
         utils.create_folder(f"{self._tmp_dir.name}/converted")
 
@@ -234,7 +234,7 @@ class TestZarrConverter(unittest.TestCase):
             ],
             "id": 1,
             "name": filename,
-            "rdefs": {"defaultT": 0, "defaultZ": 128, "model": "color"},
+            "rdefs": {"defaultT": 0, "defaultZ": 512, "model": "color"},
             "version": "0.4",
         }
 
@@ -280,7 +280,7 @@ class TestZarrConverter(unittest.TestCase):
             "channels": channels_metadata,
             "id": 1,
             "name": filename,
-            "rdefs": {"defaultT": 0, "defaultZ": 128, "model": "color"},
+            "rdefs": {"defaultT": 0, "defaultZ": 512, "model": "color"},
             "version": "0.4",
         }
         self.assertDictEqual(omero_metadata, expected_omero)
@@ -292,10 +292,10 @@ class TestZarrConverter(unittest.TestCase):
         expected_downsampling = {
             "args": "[false]",
             "description": """Downscaling implementation based on the
-             windowed mean of the original array""",
+                 windowed mean of the original array""",
             "kwargs": {},
             "method": "xarray_multiscale.reducers.windowed_mean",
-            "version": "0.2.2",
+            "version": "1.1.0",
         }
         self.assertDictEqual(downsampling_metadata, expected_downsampling)
 
@@ -431,7 +431,6 @@ class TestZarrConverter(unittest.TestCase):
             "Channel:test_multichannel.zarr:0",
             "Channel:test_multichannel.zarr:1",
             "Channel:test_multichannel.zarr:2",
-            "Channel:test_multichannel.zarr:3",
         ]
         self._check_multiple_channel_omero(attributes["omero"], filename, channels)
 

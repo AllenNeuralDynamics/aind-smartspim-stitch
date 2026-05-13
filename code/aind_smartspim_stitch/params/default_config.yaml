@@ -45,7 +45,8 @@ ome_zarr_params:
   - 2
   - 2
   pyramid_levels: 5
+generate_metadata: false
 visualization:
-  ng_base_url: "https://neuroglancer-demo.appspot.com"
+  ng_base_url: "https://aind-neuroglancer-sauujisjxq-uw.a.run.app"
   mount_service: "s3"
   bucket_path: "aind-open-data"

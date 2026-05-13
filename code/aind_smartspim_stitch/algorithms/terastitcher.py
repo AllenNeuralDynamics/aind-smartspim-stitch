@@ -22,11 +22,11 @@ from argschema import ArgSchemaParser
 from natsort import natsorted
 from ng_link import NgState
 
-from .__init__ import __version__
-from .params.params import PipelineParams
-from .utils import utils
-from .validate_datasets import validate_dataset
-from .zarr_converter.zarr_converter import ZarrConverter
+from .. import __version__
+from ..params.params import PipelineParams
+from ..utils import utils
+from ..validate_datasets import validate_dataset
+from ..zarr_converter.zarr_converter import ZarrConverter
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -239,21 +239,17 @@ class TeraStitcher:
             try:
                 del os.environ["USECUDA_X_NCC"]
             except KeyError:
-                warnings.warn(
-                    """
+                warnings.warn("""
                     environmental variable 'USECUDA_X_NCC' could
                     not be removed. Ignore this warning
                     if you're using CPU
-                    """
-                )
+                    """)
 
         if not self.__check_installation():
-            print(
-                f"""
+            print(f"""
                 Please, check your terastitcher
                 installation in the system {self.__platform}
-                """
-            )
+                """)
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "terastitcher")
 
         # If parastitcher or paraconverter paths are not found,
@@ -317,8 +313,8 @@ class TeraStitcher:
         """
 
         try:
-            devnull = open(os.devnull)
-            subprocess.Popen([tool_name], stdout=devnull, stderr=devnull).communicate()
+            with open(os.devnull) as devnull:
+                subprocess.Popen([tool_name], stdout=devnull, stderr=devnull).communicate()
         except OSError:
             return False
         return True
@@ -375,12 +371,10 @@ class TeraStitcher:
             found = False
 
         if not found:
-            self.logger.info(
-                f"""
+            self.logger.info(f"""
                 Please, check your python 3
                 installation in the system {self.__platform}
-                """
-            )
+                """)
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "python")
 
     def __check_teras_parallel_scripts(self) -> None:
@@ -460,12 +454,10 @@ class TeraStitcher:
             try:
                 hostfile = f"--hostfile {cpu_params['hostfile']}"
             except KeyError:
-                self.logger.info(
-                    """
+                self.logger.info("""
                     Hostfile was not found.
                     This could lead to execution problems.
-                    """
-                )
+                    """)
 
         # If we want to estimate the number of
         # processes used in any of the steps.
@@ -483,12 +475,10 @@ class TeraStitcher:
 
             elif step_name == "merge":
                 # TODO estimate in merge step
-                self.logger.info(
-                    """
+                self.logger.info("""
                     Aproximate number of processes for
                     the merge step is not implemented yet.
-                    """
-                )
+                    """)
 
         cmd = f"{mpi_command} {n_procs} {hostfile} {additional_params}"
         cmd += f"{self.__python_terminal} {tool}"
@@ -621,10 +611,8 @@ class TeraStitcher:
             config_params["image_depth"] < config_params["number_processes"]
             or config_params["subvoldim"] > config_params["image_depth"]
         ):
-            print(
-                """Please check the parameters for
-                aproximate number of processes in align step"""
-            )
+            print("""Please check the parameters for
+                aproximate number of processes in align step""")
             return 2
 
         # Partitioning depth for the tiles
@@ -1791,32 +1779,6 @@ class TeraStitcher:
             )
 
 
-def find_channels(path: PathLike, channel_regex: str = r"Ex_([0-9]*)_Em_([0-9]*)$"):
-    """
-    Find image channels of a dataset using a regular expression.
-
-    Parameters
-    ------------------------
-
-    path:PathLike
-        Dataset path
-
-    channel_regex:str
-        Regular expression for filtering folders in dataset path.
-
-
-    Returns
-    ------------------------
-
-    List[str]:
-        List with the image channels. Empty list if
-        it does not find any channels with the
-        given regular expression.
-
-    """
-    return [path for path in os.listdir(path) if re.search(channel_regex, path)]
-
-
 def execute_terastitcher(
     input_data: PathLike,
     output_folder: PathLike,
@@ -1887,18 +1849,16 @@ def execute_terastitcher(
 
     regexpression = config_teras["regex_channels"]
     regexpression = "({})".format(regexpression)
-    channels = find_channels(input_data, regexpression)
+    channels = utils.find_smartspim_channels(input_data, regexpression)
     stitch_channel = config_teras["stitch_channel"]
     len_channels = len(channels)
 
     if not len_channels:
-        raise ValueError(
-            f"""
+        raise ValueError(f"""
             Please, check the regular expression for
             obtaining channels: {channels} and the
             stitch_channel parameter: {stitch_channel}.
-            """
-        )
+            """)
 
     else:
         terastitcher_tool = TeraStitcher(

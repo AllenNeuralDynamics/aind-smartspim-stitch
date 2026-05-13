@@ -1,7 +1,14 @@
 # Use a public base image
 FROM ubuntu:22.04
 
-LABEL maintainer="Camilo Laiton <camilo.laiton@alleninstitute.org>"
+# --------------------- #
+#      METADATA         #
+# --------------------- #
+LABEL maintainer="Camilo Laiton <camilo.laiton@alleninstitute.org>" \
+    org.opencontainers.image.title="Image Stitching" \
+    org.opencontainers.image.description="Container for image stitching" \
+    org.opencontainers.image.version="1.2.9" \
+    org.opencontainers.image.licenses="MIT"
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
@@ -37,17 +44,13 @@ ENV JAVA_HOME="/home/zulu8.80.0.17-ca-fx-jdk8.0.422-linux_x64"
 ENV PATH="$JAVA_HOME/bin:$PATH"
 ENV LD_LIBRARY_PATH="$JAVA_HOME/jre/lib/amd64/server"
 
-# Install Miniconda
-RUN wget -qO Miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+# Install Miniconda (pinned to Python 3.12 to avoid conda-forge incompatibilities with 3.13)
+RUN wget -qO Miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-py312_24.11.1-0-Linux-x86_64.sh && \
     bash Miniconda.sh -b -p /opt/conda && \
     rm Miniconda.sh
 
 # Add conda to PATH
 ENV PATH="/opt/conda/bin:$PATH"
-
-# Install additional conda packages with specific versions
-RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
 
 # Remove default channels and use only conda-forge
 RUN conda config --remove-key channels && \
@@ -55,7 +58,7 @@ RUN conda config --remove-key channels && \
     conda config --set channel_priority strict
 
 # Install packages
-RUN conda install -y ca-certificates=2024.7.4 openssl=3.3.1 && \
+RUN conda install -y ca-certificates openssl && \
     conda clean -ya
 
 # Install Python packages

@@ -1,7 +1,8 @@
 """
-Smartspim BigStitcher Utility Module
-This module provides functions to convert JSON metadata files into XML format
-suitable for BigStitcher, a software for stitching large image datasets.
+BigStitcher XML builder for SmartSPIM datasets.
+
+Converts JSON tile-metadata files into BigDataViewer-compatible XML (SpimData format)
+for use with BigStitcher's Spark-based phase-correlation stitching.
 """
 
 import json
@@ -252,7 +253,7 @@ def add_attributes(
     for i, channel in enumerate(unique_channel_list):
         z = ET.SubElement(x, "Channel")
         y = ET.SubElement(z, "id")
-        y.text = f"{channel}"  # should this be
+        y.text = f"{channel}"
         y = ET.SubElement(z, "name")
         y.text = f"{channel}"
 
@@ -261,7 +262,7 @@ def add_attributes(
     for i, tile in enumerate(tiles):
         t_entry = ET.Element("Tile")
         id_entry = ET.Element("id")
-        id_entry.text = f"{i}"  # this was only reporting 0 last time... should be incrementing
+        id_entry.text = f"{i}"
         t_entry.append(id_entry)
         name_entry = ET.Element("name")
         name_entry.text = str(tile)
@@ -323,8 +324,8 @@ def add_view_setups(
         attr = ET.SubElement(vs, "attributes")
         x = ET.SubElement(attr, "illumination")
         x.text = "0"
-        x = ET.SubElement(attr, "channel")  # add channel information
-        x.text = f"{tile_channel_number[i]}"  # "0"
+        x = ET.SubElement(attr, "channel")
+        x.text = f"{tile_channel_number[i]}"
         x = ET.SubElement(attr, "tile")
         tile_count += 1
         x.text = f"{tile_count}"
@@ -436,9 +437,6 @@ def parse_json(json_path: str, s3_data_path: str, microns=False) -> ET.ElementTr
     ET.ElementTree
         An XML ElementTree representing the parsed data.
     """
-    # Nested helper functions are documented inline for clarity.
-
-    # Main logic of the function
     with open(json_path, "r") as f:
         json_dict = json.load(f)
 

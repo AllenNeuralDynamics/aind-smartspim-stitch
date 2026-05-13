@@ -5,6 +5,7 @@ Module to convert stitched images to the OME-Zarr format
 import logging
 import multiprocessing
 import os
+import tempfile
 import time
 from pathlib import Path
 from typing import Dict, Hashable, List, Optional, Sequence, Tuple, Union
@@ -254,14 +255,12 @@ def concatenate_dask_arrays(arr_1: ArrayLike, arr_2: ArrayLike, axis: int) -> Ar
             if shape_arr_1[shape_dim_idx] > shape_arr_2[shape_dim_idx] and (
                 shape_dim_idx - dims != axis
             ):
-                raise ValueError(
-                    f"""
+                raise ValueError(f"""
                     Array 1 {shape_arr_1} must have
                      a smaller shape than array 2 {shape_arr_2}
                      except for the axis dimension {shape_dim_idx}
                      {dims} {shape_dim_idx - dims} {axis}
-                    """
-                )
+                    """)
 
             if shape_arr_1[shape_dim_idx] != shape_arr_2[shape_dim_idx]:
                 slices.append(slice(0, shape_arr_1[shape_dim_idx]))
@@ -275,12 +274,10 @@ def concatenate_dask_arrays(arr_1: ArrayLike, arr_2: ArrayLike, axis: int) -> Ar
     try:
         res = concatenate([arr_1, arr_2], axis=axis)
     except ValueError:
-        raise ValueError(
-            f"""
+        raise ValueError(f"""
             Unable to cancat arrays - Shape 1:
              {shape_arr_1} shape 2: {shape_arr_2}
-            """
-        )
+            """)
 
     return res
 
@@ -463,12 +460,10 @@ def channel_parallel_reading(
 
     else:
         images_per_worker = n_images // workers
-        print(
-            f"""
+        print(f"""
             Setting workers to {workers} - {images_per_worker}
              - total images: {n_images}
-            """
-        )
+            """)
 
         # Getting 5 dim image TCZYX
         args = []
@@ -657,7 +652,8 @@ class ZarrConverter:
         self.input_data = input_data
         self.output_data = output_data
         self.physical_pixels = None
-        self.dask_folder = Path("/root/capsule/scratch")
+        _co_scratch = Path("/root/capsule/scratch")
+        self.dask_folder = _co_scratch if _co_scratch.exists() else Path(tempfile.gettempdir())
 
         if physical_pixels:
             self.physical_pixels = PhysicalPixelSizes(
@@ -677,12 +673,59 @@ class ZarrConverter:
         self.channels: list[str] = channels
         self.channel_colors: list[int] = []
 
-        for channel_str in self.channels:
-            em_wav: int = int(channel_str.split("_")[-1])
-            em_hex: int = utils.wavelength_to_hex(em_wav)
-            self.channel_colors.append(em_hex)
+        if self.channels:
+            for channel_str in self.channels:
+                em_wav: int = int(channel_str.split("_")[-1])
+                em_hex: int = utils.wavelength_to_hex(em_wav)
+                self.channel_colors.append(em_hex)
 
         # get_blosc_codec(writer_config['codec'], writer_config['clevel'])
+
+    def read_channel_image(self, path: PathLike) -> dask.array.core.Array:
+        """
+        Reads all tiff images in a directory into a single lazy dask array.
+
+        Parameters
+        ------------------------
+        path: PathLike
+            Directory containing the tiff image files.
+
+        Returns
+        ------------------------
+        dask.array.core.Array
+            Stacked dask array of shape (n_images, *frame_shape).
+
+        Raises
+        ------------------------
+        ValueError
+            If no tiff images are found in the given path.
+        """
+        import glob
+
+        filename_pattern = str(Path(path) / "*.tif*")
+        files = natsorted(glob.glob(filename_pattern))
+        if not files:
+            raise ValueError(f"No images found in {path}")
+        arrays = [lazy_tiff_reader(f) for f in files]
+        return concatenate(arrays, axis=0)
+
+    def pad_array_n_d(self, arr: ArrayLike, dim: int = 5) -> ArrayLike:
+        """
+        Pads a dask array to be in a 5D shape. Delegates to the module-level function.
+
+        Parameters
+        ------------------------
+        arr: ArrayLike
+            Dask/numpy array that contains image data.
+        dim: int
+            Number of dimensions that the array will be padded to.
+
+        Returns
+        ------------------------
+        ArrayLike
+            Padded dask/numpy array.
+        """
+        return pad_array_n_d(arr, dim)
 
     def compute_pyramid(
         self,
@@ -795,19 +838,15 @@ class ZarrConverter:
         )
         end_time = time.time()
 
-        print(
-            f"""
+        print(f"""
             Image: {image} {image.npartitions}
             Time: {end_time - start_time}s
-            """
-        )
+            """)
         if not isinstance(image, dask.array.core.Array):
-            raise ValueError(
-                f"""
+            raise ValueError(f"""
                 There was an error reading
                 the images from: {self.input_data}
-                """
-            )
+                """)
 
         image = dask.optimize(image)[0]
 
@@ -844,6 +883,7 @@ class ZarrConverter:
             threads_per_worker=threads_per_worker,
             processes=True,
             memory_limit="auto",
+            local_directory=str(self.dask_folder),
         )
         client = Client(cluster)
 
@@ -854,45 +894,98 @@ class ZarrConverter:
         dask_report_file = f"{self.output_data}/dask_report.html"
 
         # Writing multiscale image
-        with performance_report(filename=dask_report_file):
-            for idx in range(n_channels):
-                # Sub image volume
-                channel_img = image[0][idx]
-                print(f"Partitions before: {channel_img.npartitions} {channel_img.shape}")
-                channel_img = channel_img.rechunk((axis_chunksize, axis_chunksize, axis_chunksize))
-                print(f"Partitions after: {channel_img.npartitions} {channel_img.shape}")
+        _report = performance_report(filename=dask_report_file)
+        _report.__enter__()
+        _conversion_exc = None
+        try:
+            if self.channels:
+                # Named channels: write each channel to its own .zarr file
+                for idx in range(n_channels):
+                    channel_img = image[0][idx]
+                    print(f"Partitions before: {channel_img.npartitions} {channel_img.shape}")
+                    channel_img = channel_img.rechunk(
+                        (axis_chunksize, axis_chunksize, axis_chunksize)
+                    )
+                    print(f"Partitions after: {channel_img.npartitions} {channel_img.shape}")
 
-                pyramid_data = self.compute_pyramid(
-                    data=dask.optimize(channel_img)[0],
-                    n_lvls=writer_config["pyramid_levels"],
-                    scale_axis=scale_axis,
-                    chunks=channel_img.chunksize,
-                )
+                    pyramid_data = self.compute_pyramid(
+                        data=dask.optimize(channel_img)[0],
+                        n_lvls=writer_config["pyramid_levels"],
+                        scale_axis=scale_axis,
+                        chunks=channel_img.chunksize,
+                    )
+                    pyramid_data = [pad_array_n_d(pyramid) for pyramid in pyramid_data]
 
-                # Getting 5D
-                pyramid_data = [pad_array_n_d(pyramid) for pyramid in pyramid_data]
-
-                for pyramid in pyramid_data:
-                    print(
-                        f"""
+                    for pyramid in pyramid_data:
+                        print(f"""
                         Channel {self.channels[idx]}
                         Pyramid {pyramid}
                         - partitions: {pyramid.npartitions}
                         - chunkszie: {pyramid_data[0].chunksize}
-                        """
+                        """)
+
+                    ch_image_name = self.channels[idx] + ".zarr"
+                    ch_colors = [self.channel_colors[idx]] if self.channel_colors else None
+
+                    dask_jobs = self.writer.write_multiscale(
+                        pyramid=pyramid_data,
+                        image_name=ch_image_name,
+                        chunks=pyramid_data[0].chunksize,
+                        physical_pixel_sizes=self.physical_pixels,
+                        channel_names=[self.channels[idx]],
+                        channel_colors=ch_colors,
+                        scale_factor=scale_axis,
+                        storage_options=self.opts,
+                        compute_dask=False,
+                        **self.get_pyramid_metadata(),
                     )
 
-                image_name = self.channels[idx] + ".zarr" if self.channels else image_name
-                channel_names = [self.channels[idx]] if self.channels else None
-                channel_colors = [self.channel_colors[idx]] if self.channel_colors else None
+                    if len(dask_jobs):
+                        dask_jobs = dask.persist(*dask_jobs)
+                        wait(dask_jobs)
+            else:
+                # Unnamed channels: write all channels together into one zarr.
+                # Rechunk and build pyramid per channel, then concatenate.
+                channel_pyramids = []
+                for idx in range(n_channels):
+                    channel_img = image[0][idx]
+                    print(f"Partitions before: {channel_img.npartitions} {channel_img.shape}")
+                    channel_img = channel_img.rechunk(
+                        (axis_chunksize, axis_chunksize, axis_chunksize)
+                    )
+                    print(f"Partitions after: {channel_img.npartitions} {channel_img.shape}")
+
+                    pyramid_data = self.compute_pyramid(
+                        data=dask.optimize(channel_img)[0],
+                        n_lvls=writer_config["pyramid_levels"],
+                        scale_axis=scale_axis,
+                        chunks=channel_img.chunksize,
+                    )
+                    pyramid_data = [pad_array_n_d(pyramid) for pyramid in pyramid_data]
+                    channel_pyramids.append(pyramid_data)
+
+                # Merge per-level: concatenate all channels along axis=1 (C dim)
+                n_levels = len(channel_pyramids[0])
+                merged_pyramid = [
+                    concatenate([channel_pyramids[c][lvl] for c in range(n_channels)], axis=1)
+                    for lvl in range(n_levels)
+                ]
+
+                for pyramid in merged_pyramid:
+                    print(f"""
+                        All channels merged
+                        Pyramid {pyramid}
+                        - partitions: {pyramid.npartitions}
+                        - chunkszie: {merged_pyramid[0].chunksize}
+                        """)
 
                 dask_jobs = self.writer.write_multiscale(
-                    pyramid=pyramid_data,
+                    pyramid=merged_pyramid,
                     image_name=image_name,
-                    chunks=pyramid_data[0].chunksize,
+                    chunks=merged_pyramid[0].chunksize,
                     physical_pixel_sizes=self.physical_pixels,
-                    channel_names=channel_names,
-                    channel_colors=channel_colors,
+                    channel_names=None,
+                    channel_colors=None,
                     scale_factor=scale_axis,
                     storage_options=self.opts,
                     compute_dask=False,
@@ -902,8 +995,21 @@ class ZarrConverter:
                 if len(dask_jobs):
                     dask_jobs = dask.persist(*dask_jobs)
                     wait(dask_jobs)
+        except Exception as exc:
+            _conversion_exc = exc
+        finally:
+            try:
+                _report.__exit__(None, None, None)
+            except Exception:
+                pass  # performance_report cleanup is non-critical
+            try:
+                client.close()
+                cluster.close()
+            except Exception:
+                pass  # cluster cleanup is non-critical
 
-        client.close()
+        if _conversion_exc is not None:
+            raise _conversion_exc
 
 
 def main():

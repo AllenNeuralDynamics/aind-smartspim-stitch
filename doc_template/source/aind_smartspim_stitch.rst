@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
+   aind_smartspim_stitch.algorithms
    aind_smartspim_stitch.utils
    aind_smartspim_stitch.zarr_converter
 
@@ -21,18 +22,10 @@ aind\_smartspim\_stitch.params module
    :undoc-members:
    :show-inheritance:
 
-aind\_smartspim\_stitch.path\_parser module
--------------------------------------------
+aind\_smartspim\_stitch.validate\_datasets module
+-------------------------------------------------
 
-.. automodule:: aind_smartspim_stitch.path_parser
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-aind\_smartspim\_stitch.terastitcher module
--------------------------------------------
-
-.. automodule:: aind_smartspim_stitch.terastitcher
+.. automodule:: aind_smartspim_stitch.validate_datasets
    :members:
    :undoc-members:
    :show-inheritance:
