@@ -1002,8 +1002,11 @@ class ZarrConverter:
                 _report.__exit__(None, None, None)
             except Exception:
                 pass  # performance_report cleanup is non-critical
-
-        client.close()
+            try:
+                client.close()
+                cluster.close()
+            except Exception:
+                pass  # cluster cleanup is non-critical
 
         if _conversion_exc is not None:
             raise _conversion_exc
