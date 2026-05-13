@@ -898,43 +898,94 @@ class ZarrConverter:
         _report.__enter__()
         _conversion_exc = None
         try:
-            for idx in range(n_channels):
-                # Sub image volume
-                channel_img = image[0][idx]
-                print(f"Partitions before: {channel_img.npartitions} {channel_img.shape}")
-                channel_img = channel_img.rechunk((axis_chunksize, axis_chunksize, axis_chunksize))
-                print(f"Partitions after: {channel_img.npartitions} {channel_img.shape}")
+            if self.channels:
+                # Named channels: write each channel to its own .zarr file
+                for idx in range(n_channels):
+                    channel_img = image[0][idx]
+                    print(f"Partitions before: {channel_img.npartitions} {channel_img.shape}")
+                    channel_img = channel_img.rechunk(
+                        (axis_chunksize, axis_chunksize, axis_chunksize)
+                    )
+                    print(f"Partitions after: {channel_img.npartitions} {channel_img.shape}")
 
-                pyramid_data = self.compute_pyramid(
-                    data=dask.optimize(channel_img)[0],
-                    n_lvls=writer_config["pyramid_levels"],
-                    scale_axis=scale_axis,
-                    chunks=channel_img.chunksize,
-                )
+                    pyramid_data = self.compute_pyramid(
+                        data=dask.optimize(channel_img)[0],
+                        n_lvls=writer_config["pyramid_levels"],
+                        scale_axis=scale_axis,
+                        chunks=channel_img.chunksize,
+                    )
+                    pyramid_data = [pad_array_n_d(pyramid) for pyramid in pyramid_data]
 
-                # Getting 5D
-                pyramid_data = [pad_array_n_d(pyramid) for pyramid in pyramid_data]
-
-                for pyramid in pyramid_data:
-                    channel_label = self.channels[idx] if self.channels else idx
-                    print(f"""
-                        Channel {channel_label}
+                    for pyramid in pyramid_data:
+                        print(f"""
+                        Channel {self.channels[idx]}
                         Pyramid {pyramid}
                         - partitions: {pyramid.npartitions}
                         - chunkszie: {pyramid_data[0].chunksize}
                         """)
 
-                image_name = self.channels[idx] + ".zarr" if self.channels else image_name
-                channel_names = [self.channels[idx]] if self.channels else None
-                channel_colors = [self.channel_colors[idx]] if self.channel_colors else None
+                    ch_image_name = self.channels[idx] + ".zarr"
+                    ch_colors = [self.channel_colors[idx]] if self.channel_colors else None
+
+                    dask_jobs = self.writer.write_multiscale(
+                        pyramid=pyramid_data,
+                        image_name=ch_image_name,
+                        chunks=pyramid_data[0].chunksize,
+                        physical_pixel_sizes=self.physical_pixels,
+                        channel_names=[self.channels[idx]],
+                        channel_colors=ch_colors,
+                        scale_factor=scale_axis,
+                        storage_options=self.opts,
+                        compute_dask=False,
+                        **self.get_pyramid_metadata(),
+                    )
+
+                    if len(dask_jobs):
+                        dask_jobs = dask.persist(*dask_jobs)
+                        wait(dask_jobs)
+            else:
+                # Unnamed channels: write all channels together into one zarr.
+                # Rechunk and build pyramid per channel, then concatenate.
+                channel_pyramids = []
+                for idx in range(n_channels):
+                    channel_img = image[0][idx]
+                    print(f"Partitions before: {channel_img.npartitions} {channel_img.shape}")
+                    channel_img = channel_img.rechunk(
+                        (axis_chunksize, axis_chunksize, axis_chunksize)
+                    )
+                    print(f"Partitions after: {channel_img.npartitions} {channel_img.shape}")
+
+                    pyramid_data = self.compute_pyramid(
+                        data=dask.optimize(channel_img)[0],
+                        n_lvls=writer_config["pyramid_levels"],
+                        scale_axis=scale_axis,
+                        chunks=channel_img.chunksize,
+                    )
+                    pyramid_data = [pad_array_n_d(pyramid) for pyramid in pyramid_data]
+                    channel_pyramids.append(pyramid_data)
+
+                # Merge per-level: concatenate all channels along axis=1 (C dim)
+                n_levels = len(channel_pyramids[0])
+                merged_pyramid = [
+                    concatenate([channel_pyramids[c][lvl] for c in range(n_channels)], axis=1)
+                    for lvl in range(n_levels)
+                ]
+
+                for pyramid in merged_pyramid:
+                    print(f"""
+                        All channels merged
+                        Pyramid {pyramid}
+                        - partitions: {pyramid.npartitions}
+                        - chunkszie: {merged_pyramid[0].chunksize}
+                        """)
 
                 dask_jobs = self.writer.write_multiscale(
-                    pyramid=pyramid_data,
+                    pyramid=merged_pyramid,
                     image_name=image_name,
-                    chunks=pyramid_data[0].chunksize,
+                    chunks=merged_pyramid[0].chunksize,
                     physical_pixel_sizes=self.physical_pixels,
-                    channel_names=channel_names,
-                    channel_colors=channel_colors,
+                    channel_names=None,
+                    channel_colors=None,
                     scale_factor=scale_axis,
                     storage_options=self.opts,
                     compute_dask=False,

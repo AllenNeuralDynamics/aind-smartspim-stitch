@@ -234,7 +234,7 @@ class TestZarrConverter(unittest.TestCase):
             ],
             "id": 1,
             "name": filename,
-            "rdefs": {"defaultT": 0, "defaultZ": 128, "model": "color"},
+            "rdefs": {"defaultT": 0, "defaultZ": 512, "model": "color"},
             "version": "0.4",
         }
 
@@ -280,7 +280,7 @@ class TestZarrConverter(unittest.TestCase):
             "channels": channels_metadata,
             "id": 1,
             "name": filename,
-            "rdefs": {"defaultT": 0, "defaultZ": 128, "model": "color"},
+            "rdefs": {"defaultT": 0, "defaultZ": 512, "model": "color"},
             "version": "0.4",
         }
         self.assertDictEqual(omero_metadata, expected_omero)
@@ -292,10 +292,10 @@ class TestZarrConverter(unittest.TestCase):
         expected_downsampling = {
             "args": "[false]",
             "description": """Downscaling implementation based on the
-             windowed mean of the original array""",
+                 windowed mean of the original array""",
             "kwargs": {},
             "method": "xarray_multiscale.reducers.windowed_mean",
-            "version": "0.2.2",
+            "version": "1.1.0",
         }
         self.assertDictEqual(downsampling_metadata, expected_downsampling)
 
