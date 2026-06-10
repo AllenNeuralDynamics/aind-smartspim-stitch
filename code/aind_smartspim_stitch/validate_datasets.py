@@ -212,7 +212,7 @@ def validate_rows(
     n_images = len(row_images)
 
     for n_image in range(n_images):
-        print(f"Validating: {col_name}/{row_names[n_image]}")
+        logger.debug(f"Validating: {col_name}/{row_names[n_image]}")
         image_paths = [
             str(Path(channel_path).joinpath(f"{col_name}/{row_names[n_image]}/{image_path}"))
             for image_path in row_images[n_image]
@@ -369,7 +369,7 @@ def validate_metadata(channel_path: str, channel_dict: dict, file_format: str, b
 
     for col_name, rows in channel_dict.items():
         for row_name, images in rows.items():
-            print(f"Validating: {col_name}/{row_name}")
+            logger.debug(f"Validating: {col_name}/{row_name}")
             start_date = datetime.now()
             image_paths = [
                 str(Path(channel_path).joinpath(f"{col_name}/{row_name}/{image_path}"))
@@ -388,7 +388,7 @@ def validate_metadata(channel_path: str, channel_dict: dict, file_format: str, b
                     raise ValueError(msg)
             end_date = datetime.now()
 
-            print(f"Time to validate stack of tiles: {end_date - start_date}")
+            logger.debug(f"Time to validate stack of tiles: {end_date - start_date}")
 
     return True
 
