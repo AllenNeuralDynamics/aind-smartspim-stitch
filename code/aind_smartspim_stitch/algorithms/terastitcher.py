@@ -28,17 +28,6 @@ from ..utils import utils
 from ..validate_datasets import validate_dataset
 from ..zarr_converter.zarr_converter import ZarrConverter
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(levelname)s : %(message)s",
-    datefmt="%Y-%m-%d %H:%M",
-    handlers=[
-        logging.StreamHandler(),
-        # logging.FileHandler("test.log", "a"),
-    ],
-)
-logging.disable("DEBUG")
-
 PathLike = Union[str, Path]
 
 

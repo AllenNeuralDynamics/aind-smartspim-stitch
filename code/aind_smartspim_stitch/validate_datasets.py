@@ -16,18 +16,7 @@ from tqdm import tqdm
 
 from .utils import utils
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(levelname)s : %(message)s",
-    datefmt="%Y-%m-%d %H:%M",
-    handlers=[
-        logging.StreamHandler(),
-        # logging.FileHandler("test.log", "a"),
-    ],
-)
-logging.disable("DEBUG")
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 PathLike = Union[Path, str]
 
