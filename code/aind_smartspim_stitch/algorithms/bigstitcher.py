@@ -7,6 +7,7 @@ global optimization to resolve the full tile graph.
 """
 
 import json
+import logging
 import math
 import os
 import subprocess
@@ -21,6 +22,8 @@ from natsort import natsorted
 from .. import __maintainers__, __pipeline_version__
 from ..utils import utils
 from . import bigstitcher_xml_builder
+
+logger = logging.getLogger(__name__)
 
 
 def create_tile_metadata(
@@ -147,7 +150,7 @@ def create_smartspim_tile_metadata(
 
     except Exception as e:
         output_json_file = None
-        print(f"Error writing json: {e}")
+        logger.error(f"Error writing json: {e}")
 
     return output_json_file
 
@@ -343,7 +346,7 @@ def main(
         )
         downsampled_scale = estimated_downsample * 2 if estimated_downsample else 1
 
-        print("Estimated downsample: ", downsampled_scale)
+        logger.debug(f"Estimated downsample: {downsampled_scale}")
         max_shift_z, max_shift_y, max_shift_x = get_max_shifts(
             shape=(20, 1600, 2000), overlap=0.1, pyramid_level=downsampled_scale
         )
@@ -352,7 +355,7 @@ def main(
         # bigstitcher_spark_scripts/ lives
         curr_folder = Path(os.path.realpath(__file__)).parent.parent
 
-        print(f"Current file path: {curr_folder}")
+        logger.debug(f"Current file path: {curr_folder}")
 
         # Assuming machine with 128G and 16 cores
         env.update(
@@ -435,7 +438,7 @@ def main(
         )
 
     else:
-        print(f"An error happened while trying to write {output_json_file}")
+        logger.error(f"An error happened while trying to write {output_json_file}")
 
 
 if __name__ == "__main__":

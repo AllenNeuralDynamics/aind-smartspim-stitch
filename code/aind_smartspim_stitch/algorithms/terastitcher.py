@@ -28,19 +28,9 @@ from ..utils import utils
 from ..validate_datasets import validate_dataset
 from ..zarr_converter.zarr_converter import ZarrConverter
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(levelname)s : %(message)s",
-    datefmt="%Y-%m-%d %H:%M",
-    handlers=[
-        logging.StreamHandler(),
-        # logging.FileHandler("test.log", "a"),
-    ],
-)
-logging.disable("DEBUG")
-
 PathLike = Union[str, Path]
 
+logger = logging.getLogger(__name__)
 
 def generate_new_channel_displ_xml(
     informative_channel_xml,
@@ -83,6 +73,7 @@ def generate_new_channel_displ_xml(
     if informative_channel_name:
         # Getting the channel name
         informative_channel_name = informative_channel_name.group()
+        logger.debug(f"Informative channel name: {informative_channel_name}")
 
         with open(informative_channel_xml, "r", encoding=encoding) as xml_reader:
             xml_file = xml_reader.read()
@@ -225,7 +216,7 @@ class TeraStitcher:
         self.__check_python()
 
         if computation not in ["cpu", "gpu"]:
-            print("Setting computation to cpu")
+            logger.warning("Setting computation to cpu")
             self.__computation = "cpu"
 
         if computation == "gpu":
@@ -239,14 +230,14 @@ class TeraStitcher:
             try:
                 del os.environ["USECUDA_X_NCC"]
             except KeyError:
-                warnings.warn("""
+                logger.warning("""
                     environmental variable 'USECUDA_X_NCC' could
                     not be removed. Ignore this warning
                     if you're using CPU
                     """)
 
         if not self.__check_installation():
-            print(f"""
+            logger.error(f"""
                 Please, check your terastitcher
                 installation in the system {self.__platform}
                 """)
@@ -280,7 +271,7 @@ class TeraStitcher:
                 process_name="stitched",
             )
 
-            print(f"Looking for metadata in {self.__metadata_folder}")
+            self.logger.info(f"Looking for metadata in {self.__metadata_folder}")
             copied_metadata = utils.copy_available_metadata(
                 input_path=self.__metadata_folder,
                 output_path=self.__output_jsons_path,
@@ -289,7 +280,7 @@ class TeraStitcher:
                     "processing.json",  # This is generated with all the steps
                 ],
             )
-            print(f"Copied metadata: {copied_metadata}")
+            self.logger.info(f"Copied metadata: {copied_metadata}")
 
     def __check_installation(self, tool_name: str = "terastitcher") -> bool:
         """
@@ -611,8 +602,8 @@ class TeraStitcher:
             config_params["image_depth"] < config_params["number_processes"]
             or config_params["subvoldim"] > config_params["image_depth"]
         ):
-            print("""Please check the parameters for
-                aproximate number of processes in align step""")
+            logger.warning("""Please check the parameters for
+                approximate number of processes in align step""")
             return 2
 
         # Partitioning depth for the tiles
@@ -1902,7 +1893,7 @@ def main(smartspim_config: dict) -> str:
         preprocessed_data = os.path.abspath(args["preprocessed_data"])
         metadata_folder = os.path.abspath(args["metadata_folder"])
 
-        print(
+        logger.info(
             f"Input data: {input_data} \nOutput data: {output_folder} \nPreprocessed data: {preprocessed_data}"
         )
 

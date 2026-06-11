@@ -74,7 +74,8 @@ RUN pip3 install --no-cache-dir \
     natsort==8.4.0 \
     matplotlib==3.9.2 \
     aind-data-schema==1.4.0 \
-    numcodecs==0.15.1
+    numcodecs==0.15.1 \
+    log-schema==0.2.10.dev1
 
 # Set up code-server
 WORKDIR /.code-server
