@@ -903,9 +903,7 @@ class ZarrConverter:
                 for idx in range(n_channels):
                     channel_img = image[0][idx]
                     print(f"Partitions before: {channel_img.npartitions} {channel_img.shape}")
-                    channel_img = channel_img.rechunk(
-                        (axis_chunksize, axis_chunksize, axis_chunksize)
-                    )
+                    channel_img = channel_img.rechunk((axis_chunksize, axis_chunksize, axis_chunksize))
                     print(f"Partitions after: {channel_img.npartitions} {channel_img.shape}")
 
                     pyramid_data = self.compute_pyramid(
@@ -950,9 +948,7 @@ class ZarrConverter:
                 for idx in range(n_channels):
                     channel_img = image[0][idx]
                     print(f"Partitions before: {channel_img.npartitions} {channel_img.shape}")
-                    channel_img = channel_img.rechunk(
-                        (axis_chunksize, axis_chunksize, axis_chunksize)
-                    )
+                    channel_img = channel_img.rechunk((axis_chunksize, axis_chunksize, axis_chunksize))
                     print(f"Partitions after: {channel_img.npartitions} {channel_img.shape}")
 
                     pyramid_data = self.compute_pyramid(

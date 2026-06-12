@@ -10,15 +10,18 @@ import platform
 import re
 import shutil
 import subprocess
+import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import psutil
-from aind_data_schema.base import AindCoreModel
-from aind_data_schema.core.processing import DataProcess, PipelineProcess, Processing
+from aind_data_schema.components.identifiers import Code
+from aind_data_schema.core.data_description import DerivedDataDescription, RawDataDescription
+from aind_data_schema.core.processing import DataProcess, Processing, ResourceTimestamped, ResourceUsage
+from aind_data_schema_models.units import MemoryUnit
 
 # IO types
 PathLike = Union[str, Path]
@@ -352,11 +355,95 @@ def save_string_to_txt(txt: str, filepath: PathLike, mode="w") -> None:
         file.write(txt + "\n")
 
 
+class ResourceMonitor:
+    """
+    Background sampler for CPU and RAM usage during a processing step.
+
+    Samples are collected on a separate thread at a fixed interval and can be
+    turned into an `aind_data_schema.core.processing.ResourceUsage` once the
+    step is finished.
+    """
+
+    def __init__(self, interval_seconds: Optional[float] = 1.0):
+        """
+        Initializes the ResourceMonitor.
+
+        Parameters
+        ----------
+        interval_seconds: Optional[float]
+            Time interval in seconds between resource usage samples. Default is 1 second.
+        """
+        self._interval = interval_seconds
+        self._cpu_usage = []
+        self._ram_usage = []
+        self._stop_event = threading.Event()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+
+    def _run(self) -> None:
+        """Background thread method for sampling CPU and RAM usage."""
+
+        while not self._stop_event.is_set():
+            now = datetime.now(timezone.utc)
+            self._cpu_usage.append(
+                ResourceTimestamped(timestamp=now, usage=psutil.cpu_percent(interval=None))
+            )
+            self._ram_usage.append(
+                ResourceTimestamped(timestamp=now, usage=psutil.virtual_memory().percent)
+            )
+            self._stop_event.wait(self._interval)
+
+    def start(self) -> "ResourceMonitor":
+        """Starts the background sampling thread."""
+        psutil.cpu_percent(interval=None)  # discard first call, which always reads 0
+        self._thread.start()
+        return self
+
+    def stop(self) -> None:
+        """Stops the background sampling thread."""
+        self._stop_event.set()
+        self._thread.join(timeout=self._interval + 1)
+
+    def __enter__(self) -> "ResourceMonitor":
+        """Context manager entry point to start resource monitoring."""
+        return self.start()
+
+    def __exit__(self, *exc_info) -> None:
+        """Context manager exit point to stop resource monitoring."""
+        self.stop()
+
+    def to_resource_usage(self, cpu_cores: Optional[int] = None) -> ResourceUsage:
+        """
+        Builds an `aind_data_schema.core.processing.ResourceUsage` from the
+        samples collected so far, plus static host information.
+
+        Parameters
+        ----------
+        cpu_cores: Optional[int]
+            Number of CPU cores available to the process.
+
+        Returns
+        -------
+        ResourceUsage
+            Resource usage record for a `DataProcess`.
+        """
+
+        return ResourceUsage(
+            os=platform.system(),
+            architecture=platform.machine(),
+            cpu_cores=cpu_cores,
+            system_memory=round(psutil.virtual_memory().total / (1024**3), 2),
+            system_memory_unit=MemoryUnit.GB,
+            cpu_usage=self._cpu_usage,
+            ram_usage=self._ram_usage,
+        )
+
+
 def generate_processing(
     data_processes: List[DataProcess],
     dest_processing: str,
-    processor_full_name: str,
+    pipeline_name: str,
     pipeline_version: str,
+    pipeline_url: str,
 ):
     """
     Generates data description for the output folder.
@@ -364,32 +451,36 @@ def generate_processing(
     Parameters
     ------------------------
 
-    data_processes: List[dict]
-        List with the processes aplied in the pipeline.
+    data_processes: List[DataProcess]
+        List with the processes applied in the pipeline.
 
     dest_processing: PathLike
         Path where the processing file will be placed.
 
-    processor_full_name: str
-        Person in charged of running the pipeline
-        for this data asset
+    pipeline_name: str
+        Name of the overall pipeline this processing
+        step belongs to.
 
     pipeline_version: str
-        Terastitcher pipeline version
+        Version of the overall pipeline.
+
+    pipeline_url: str
+        URL of the overall pipeline's repository.
 
     """
     # flake8: noqa: E501
-    processing_pipeline = PipelineProcess(
-        data_processes=data_processes,
-        processor_full_name=processor_full_name,
-        pipeline_version=pipeline_version,
-        pipeline_url="https://github.com/AllenNeuralDynamics/aind-smartspim-pipeline",
-        note="Metadata for the stitching step, it does not include stitching compute time.",
-    )
+    pipelines = [
+        Code(
+            url=pipeline_url,
+            name=pipeline_name,
+            version=pipeline_version,
+        )
+    ]
 
-    processing = Processing(
-        processing_pipeline=processing_pipeline,
-        notes="This processing only contains metadata about fusion \
+    processing = Processing.create_with_sequential_process_graph(
+        data_processes=data_processes,
+        pipelines=pipelines,
+        notes="This processing only contains metadata about stitching \
             and needs to be compiled with other steps at the end",
     )
 
@@ -500,11 +591,6 @@ def generate_data_description(
         Name of the process. Default "stitched".
     """
     _logger = logging.getLogger(__name__)
-    try:
-        from aind_data_schema.core.data_description import DerivedDataDescription, RawDataDescription
-    except ImportError as exc:
-        _logger.warning("generate_data_description: aind_data_schema not available (%s). Skipping.", exc)
-        return
 
     with open(raw_data_description_path, "r") as f:
         raw = json.load(f)
