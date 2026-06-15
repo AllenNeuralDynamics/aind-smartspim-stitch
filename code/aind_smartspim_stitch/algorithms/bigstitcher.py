@@ -11,15 +11,16 @@ import logging
 import math
 import os
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
-from time import time
 from typing import List, Optional, Tuple
 
 import dask.array as da
-from aind_data_schema.core.processing import DataProcess, ProcessName
+from aind_data_schema.components.identifiers import Code
+from aind_data_schema.core.processing import DataProcess, ProcessName, ProcessStage
 from natsort import natsorted
 
-from .. import __maintainers__, __pipeline_version__
+from .. import __maintainers__, __pipeline_name__, __pipeline_version__, __title__, __url__, __version__
 from ..utils import utils
 from . import bigstitcher_xml_builder
 
@@ -314,7 +315,9 @@ def main(
     if not BIGSTITCHER_PATH.exists():
         raise ValueError("Please, set the BIGSTITCHER_PATH env value.")
 
-    start_time = time()
+    start_time = datetime.now(timezone.utc)
+    resource_monitor = utils.ResourceMonitor(interval_seconds=30.0).start()
+
     metadata_folder = results_folder.joinpath("metadata")
     utils.create_folder(str(metadata_folder))
 
@@ -407,7 +410,8 @@ def main(
             env=env,
         )
 
-        end_time = time()
+        resource_monitor.stop()
+        end_time = datetime.now(timezone.utc)
 
         output_big_stitcher_json = (
             f"{results_folder}/{smartspim_dataset_name}_stitch_channel_{stitching_channel}_params.json"
@@ -416,16 +420,29 @@ def main(
         data_processes = []
         data_processes.append(
             DataProcess(
-                name=ProcessName.IMAGE_TILE_ALIGNMENT,
-                software_version="e112363",
+                process_type=ProcessName.IMAGE_TILE_ALIGNMENT,
+                name=f"BigStitcher phase correlation + global optimization - {stitching_channel}",
+                stage=ProcessStage.PROCESSING,
+                code=Code(
+                    url=__url__,
+                    name=__title__,
+                    version=__version__,
+                ),
+                experimenters=__maintainers__,
+                pipeline_name=__pipeline_name__,
                 start_date_time=start_time,
                 end_date_time=end_time,
-                input_location=str(smartspim_dataset_name),
-                output_location=str(output_big_stitcher_json),
-                outputs={"output_file": str(output_big_stitcher_json)},
-                code_url="",
-                code_version="1.2.7",
-                parameters={"stitching": stitching_command, "global_optimization": global_opt_command},
+                output_path=str(output_big_stitcher_json),
+                output_parameters={
+                    "input_location": str(smartspim_dataset_name),
+                    "output_file": str(output_big_stitcher_json),
+                    "stitching": stitching_command,
+                    "global_optimization": global_opt_command,
+                    "duration_seconds": (end_time - start_time).total_seconds(),
+                },
+                resources=resource_monitor.to_resource_usage(
+                    cpu_cores=int(utils.get_code_ocean_cpu_limit())
+                ),
                 notes="Running stitching and global optimization separately",
             )
         )
@@ -433,11 +450,13 @@ def main(
         utils.generate_processing(
             data_processes=data_processes,
             dest_processing=metadata_folder,
-            processor_full_name=__maintainers__[0],
+            pipeline_name=__pipeline_name__,
             pipeline_version=__pipeline_version__,
+            pipeline_url="https://github.com/AllenNeuralDynamics/aind-smartspim-pipeline",
         )
 
     else:
+        resource_monitor.stop()
         logger.error(f"An error happened while trying to write {output_json_file}")
 
 

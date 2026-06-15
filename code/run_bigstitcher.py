@@ -7,11 +7,10 @@ import os
 import time
 from pathlib import Path
 
-from schlog import setup_logging
-
 from aind_smartspim_stitch import __pipeline_name__, __title__, __version__
 from aind_smartspim_stitch.algorithms import bigstitcher
 from aind_smartspim_stitch.utils import utils
+from schlog import setup_logging
 
 logger = logging.getLogger(__name__)
 

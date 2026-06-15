@@ -73,7 +73,8 @@ RUN pip3 install --no-cache-dir \
     zarr==2.16.1 \
     natsort==8.4.0 \
     matplotlib==3.9.2 \
-    aind-data-schema==1.4.0 \
+    aind-data-schema==2.8.0 \
+    "aind-data-schema-models>=5.7.1,<6" \
     numcodecs==0.15.1 \
     log-schema==0.2.10.dev1
 
