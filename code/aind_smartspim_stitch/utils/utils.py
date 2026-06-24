@@ -19,9 +19,9 @@ from typing import Any, List, Optional, Tuple, Union
 import matplotlib.pyplot as plt
 import psutil
 from aind_data_schema.components.identifiers import Code
-from aind_data_schema.core.data_description import DerivedDataDescription, RawDataDescription
+from aind_data_schema.core.data_description import DataDescription
 from aind_data_schema.core.processing import DataProcess, Processing, ResourceTimestamped, ResourceUsage
-from aind_data_schema_models.units import MemoryUnit
+from aind_data_schema_models.units import MemoryUnit, UnitlessUnit
 
 # IO types
 PathLike = Union[str, Path]
@@ -435,6 +435,7 @@ class ResourceMonitor:
             system_memory_unit=MemoryUnit.GB,
             cpu_usage=self._cpu_usage,
             ram_usage=self._ram_usage,
+            usage_unit=UnitlessUnit.PERCENT,
         )
 
 
@@ -596,19 +597,8 @@ def generate_data_description(
         raw = json.load(f)
 
     try:
-        raw_desc = RawDataDescription.model_validate(raw)
-        dt = datetime.now()
-        derived = DerivedDataDescription(
-            input_data_name=raw_desc.name,
-            process_name=process_name,
-            creation_time=dt,
-            institution=raw_desc.institution,
-            funding_source=raw_desc.funding_source,
-            modality=raw_desc.modality,
-            subject_id=raw_desc.subject_id,
-            investigators=raw_desc.investigators,
-            platform=raw_desc.platform,
-        )
+        raw_desc = DataDescription.model_validate(raw)
+        derived = DataDescription.from_data_description(raw_desc, process_name=process_name)
         with open(dest_data_description, "w") as f:
             f.write(derived.model_dump_json(indent=3))
     except Exception as exc:
