@@ -435,6 +435,7 @@ class ResourceMonitor:
             system_memory_unit=MemoryUnit.GB,
             cpu_usage=self._cpu_usage,
             ram_usage=self._ram_usage,
+            ram_unit=MemoryUnit.GB,
             usage_unit=UnitlessUnit.PERCENT,
         )
 
