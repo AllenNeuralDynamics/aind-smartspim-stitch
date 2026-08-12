@@ -18,10 +18,25 @@ from typing import Any, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import psutil
-from aind_data_schema.components.identifiers import Code
-from aind_data_schema.core.data_description import DataDescription
+from aind_data_schema.base import DataCoreModel
+from aind_data_schema.components.identifiers import Code, Person
+
+# These imports register the core models as DataCoreModel subclasses,
+# which copy_available_metadata relies on to discover metadata files
+from aind_data_schema.core.acquisition import Acquisition  # noqa: F401
+from aind_data_schema.core.data_description import DataDescription, Funding
+from aind_data_schema.core.instrument import Instrument  # noqa: F401
+from aind_data_schema.core.procedures import Procedures  # noqa: F401
 from aind_data_schema.core.processing import DataProcess, Processing, ResourceTimestamped, ResourceUsage
+from aind_data_schema.core.quality_control import QualityControl  # noqa: F401
+from aind_data_schema.core.subject import Subject  # noqa: F401
+from aind_data_schema_models.data_name_patterns import DataLevel
+from aind_data_schema_models.modalities import Modality
+from aind_data_schema_models.organizations import Organization
 from aind_data_schema_models.units import MemoryUnit, UnitlessUnit
+from pydantic import ValidationError
+
+from aind_smartspim_stitch.utils import metadata_compat
 
 # IO types
 PathLike = Union[str, Path]
@@ -573,6 +588,72 @@ def wavelength_to_hex(wavelength: int) -> int:
     return hex_val
 
 
+def _build_raw_dd_from_v1(data: dict) -> DataDescription:
+    """
+    Reconstructs a v2 RAW ``DataDescription`` from a legacy v1
+    data_description dict.
+
+    Reads the v1 file as a plain dict and maps its fields onto the v2 schema
+    (institution/funding registries -> Organization enums, fundee string ->
+    list of Person, investigators PIDName -> Person, modality -> modalities).
+    """
+    _logger = logging.getLogger(__name__)
+
+    # institution: v1 carries a dict with an "abbreviation"
+    try:
+        institution = Organization.from_abbreviation(data["institution"]["abbreviation"])
+    except Exception:
+        _logger.warning("Could not resolve institution; defaulting to Allen Institute")
+        institution = Organization.AI
+
+    # investigators: v1 PIDName dicts -> v2 Person (name only)
+    investigators = [
+        Person(name=inv["name"]) for inv in data.get("investigators", []) if inv.get("name")
+    ]
+    if not investigators:
+        investigators = [Person(name="Unknown")]
+
+    # funding_source: registry dict -> Organization enum, fundee str -> [Person]
+    funding_sources = []
+    try:
+        for fund in data.get("funding_source", []):
+            fundee = fund.get("fundee")
+            if isinstance(fundee, str) and fundee:
+                fundee = [Person(name=n.strip()) for n in fundee.split(",")]
+            elif not isinstance(fundee, list):
+                fundee = None
+
+            funding_sources.append(
+                Funding(
+                    funder=Organization.from_abbreviation(fund["funder"]["abbreviation"]),
+                    grant_number=fund.get("grant_number"),
+                    fundee=fundee,
+                )
+            )
+    except Exception as e:
+        _logger.warning("Error parsing funding_source into the v2 schema: %s", e)
+        funding_sources = []
+
+    if not funding_sources:
+        funding_sources = [Funding(funder=Organization.AI)]
+
+    creation_time = data.get("creation_time") or datetime.now(timezone.utc)
+
+    return DataDescription(
+        data_level=DataLevel.RAW,
+        name=data["name"],
+        creation_time=creation_time,
+        institution=institution,
+        funding_source=funding_sources,
+        investigators=investigators,
+        modalities=[Modality.SPIM],
+        project_name=data["project_name"],
+        subject_id=data["subject_id"],
+        group=data.get("group"),
+        restrictions=data.get("restrictions"),
+    )
+
+
 def generate_data_description(
     raw_data_description_path: PathLike,
     dest_data_description: PathLike,
@@ -580,6 +661,9 @@ def generate_data_description(
 ) -> None:
     """
     Generates a derived data description JSON from a raw data description.
+
+    Accepts both v2 (validated directly) and legacy v1 (reconstructed)
+    raw data_description.json inputs.
 
     Parameters
     ------------------------
@@ -599,13 +683,15 @@ def generate_data_description(
 
     try:
         raw_desc = DataDescription.model_validate(raw)
-        derived = DataDescription.from_data_description(raw_desc, process_name=process_name)
-        with open(dest_data_description, "w") as f:
-            f.write(derived.model_dump_json(indent=3))
-    except Exception as exc:
+    except ValidationError:
         _logger.warning(
-            "generate_data_description: failed to build derived description: %s. Skipping.", exc
+            "Raw data_description is not valid v2; reconstructing from v1 fields"
         )
+        raw_desc = _build_raw_dd_from_v1(raw)
+
+    derived = DataDescription.from_data_description(raw_desc, process_name=process_name)
+    with open(dest_data_description, "w") as f:
+        f.write(derived.model_dump_json(indent=3))
 
 
 def copy_file(input_filename: PathLike, output_filename: PathLike):
@@ -661,7 +747,7 @@ def copy_available_metadata(
     """
 
     # We get all the valid filenames from the aind core model
-    metadata_to_find = [cls.default_filename() for cls in AindCoreModel.__subclasses__()]
+    metadata_to_find = [cls.default_filename() for cls in DataCoreModel.__subclasses__()]
 
     # Making sure the paths are pathlib objects
     input_path = Path(input_path)
@@ -1087,13 +1173,7 @@ def set_up_pipeline_parameters(pipeline_config: dict, default_config: dict, acqu
 
     # Grabbing a tile with metadata from acquisition - we assume all dataset
     # was acquired with the same resolution
-    tile_coord_transforms = acquisition_config["tiles"][0]["coordinate_transformations"]
-
-    scale_transform = [x["scale"] for x in tile_coord_transforms if x["type"] == "scale"][0]
-
-    x = float(scale_transform[0])
-    y = float(scale_transform[1])
-    z = float(scale_transform[2])
+    x, y, z = metadata_compat.get_voxel_resolution(acquisition_config)
 
     default_config["import_data"]["vxl1"] = x
     default_config["import_data"]["vxl2"] = y
@@ -1152,12 +1232,4 @@ def get_resolution(acquisition_config: dict) -> Tuple[float]:
 
     # Grabbing a tile with metadata from acquisition - we assume all dataset
     # was acquired with the same resolution
-    tile_coord_transforms = acquisition_config["tiles"][0]["coordinate_transformations"]
-
-    scale_transform = [x["scale"] for x in tile_coord_transforms if x["type"] == "scale"][0]
-
-    x = float(scale_transform[0])
-    y = float(scale_transform[1])
-    z = float(scale_transform[2])
-
-    return x, y, z
+    return metadata_compat.get_voxel_resolution(acquisition_config)

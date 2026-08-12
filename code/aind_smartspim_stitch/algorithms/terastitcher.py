@@ -11,7 +11,6 @@ import platform
 import re
 import subprocess
 import sys
-import warnings
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional, Union
@@ -1986,7 +1985,7 @@ class TeraStitcher:
             # Saving metadata process
             utils.generate_processing(
                 data_processes=self.data_processes["steps"],
-                dest_processing=str(self.__output_folder.joinpath("metadata/processing.json")),
+                dest_processing=str(self.__output_folder.joinpath("metadata")),
                 pipeline_name=__pipeline_name__,
                 pipeline_version=__pipeline_version__,
                 pipeline_url="https://github.com/AllenNeuralDynamics/aind-smartspim-pipeline",
