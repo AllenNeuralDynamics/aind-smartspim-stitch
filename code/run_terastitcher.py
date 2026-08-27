@@ -114,13 +114,14 @@ def run():
                 "duration_seconds": duration_seconds,
             },
         )
-    except Exception:
+    except Exception as e:
         duration_seconds = round(time.monotonic() - start_time, 3)
         logger.error(
             "TeraStitcher stitching failed",
             exc_info=True,
             extra={
                 "event_type": "stage_failure",
+                "error": f"{type(e).__name__}: {e}",
                 "dataset_name": dataset_name,
                 "duration_seconds": duration_seconds,
             },
