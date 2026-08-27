@@ -9,7 +9,7 @@ from pathlib import Path
 
 from aind_smartspim_stitch import __pipeline_name__, __title__, __version__
 from aind_smartspim_stitch.algorithms import bigstitcher
-from aind_smartspim_stitch.utils import utils
+from aind_smartspim_stitch.utils import metadata_compat, utils
 from log_schema import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,15 @@ def run():
     dataset_name = None
 
     try:
+        logger.info(
+            "BigStitcher stitching started",
+            extra={
+                "event_type": "stage_start",
+                "data_folder": str(data_folder),
+                "results_folder": str(results_folder),
+            },
+        )
+
         required_input_elements = [
             f"{data_folder}/processing_manifest.json",
             f"{data_folder}/data_description.json",
@@ -51,7 +60,16 @@ def run():
             data_description_path="data_description.json",
             acquisition_path="acquisition.json",
         )
-        dataset_name = smartspim_dataset_name
+        dataset_name = metadata_compat.get_raw_dataset_name(smartspim_dataset_name)
+
+        logger.info(
+            f"Processing derived asset {smartspim_dataset_name}",
+            extra={
+                "event_type": "dataset_resolved",
+                "dataset_name": dataset_name,
+                "asset_name": smartspim_dataset_name,
+            },
+        )
 
         voxel_resolution = utils.get_resolution(acquisition_dict)
         stitching_channel = pipeline_config["pipeline_processing"]["stitching"]["channel"]
@@ -61,13 +79,12 @@ def run():
         output_json_file = results_folder.joinpath(f"{smartspim_dataset_name}_tile_metadata.json")
 
         logger.info(
-            "BigStitcher stitching started",
+            f"Stitching channel {stitching_channel} resolved",
             extra={
-                "event_type": "stage_start",
                 "dataset_name": dataset_name,
-                "stitching_channel": stitching_channel,
+                "asset_name": smartspim_dataset_name,
+                "channel": stitching_channel,
                 "stitching_channel_path": str(stitching_channel_path),
-                "results_folder": str(results_folder),
                 "output_json_file": str(output_json_file),
             },
         )

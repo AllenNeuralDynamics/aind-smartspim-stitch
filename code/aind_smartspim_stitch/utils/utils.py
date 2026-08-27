@@ -201,7 +201,9 @@ def execute_command(config: dict) -> None:
             config["command"], config["verbose"], config["stdout_log_file"]
         ):
             if len(out):
-                config["logger"].info(out)
+                # Tool stdout (TeraStitcher) is DEBUG: one record per line is
+                # too noisy for Grafana at INFO
+                config["logger"].debug(out)
             if config["exists_stdout"]:
                 save_string_to_txt(out, config["stdout_log_file"], "a")
 

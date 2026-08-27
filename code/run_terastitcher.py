@@ -10,7 +10,7 @@ from pathlib import Path
 from aind_smartspim_stitch import __pipeline_name__, __title__, __version__
 from aind_smartspim_stitch.algorithms import terastitcher
 from aind_smartspim_stitch.params import get_yaml
-from aind_smartspim_stitch.utils import utils
+from aind_smartspim_stitch.utils import metadata_compat, utils
 from log_schema import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -37,6 +37,15 @@ def run():
     dataset_name = None
 
     try:
+        logger.info(
+            "TeraStitcher stitching started",
+            extra={
+                "event_type": "stage_start",
+                "data_folder": str(data_folder),
+                "results_folder": str(results_folder),
+            },
+        )
+
         required_input_elements = [
             f"{data_folder}/processing_manifest.json",
             f"{data_folder}/data_description.json",
@@ -54,7 +63,17 @@ def run():
             data_description_path="data_description.json",
             acquisition_path="acquisition.json",
         )
-        dataset_name = smartspim_dataset_name
+        dataset_name = metadata_compat.get_raw_dataset_name(smartspim_dataset_name)
+
+        logger.info(
+            f"Processing derived asset {smartspim_dataset_name}",
+            extra={
+                "event_type": "dataset_resolved",
+                "dataset_name": dataset_name,
+                "asset_name": smartspim_dataset_name,
+            },
+        )
+
         pipeline_config = pipeline_config["pipeline_processing"]
 
         default_config = get_yaml(
@@ -75,10 +94,10 @@ def run():
         smartspim_config["metadata_folder"] = str(Path(results_folder) / "metadata")
 
         logger.info(
-            "TeraStitcher stitching started",
+            "TeraStitcher configuration resolved",
             extra={
-                "event_type": "stage_start",
                 "dataset_name": dataset_name,
+                "asset_name": smartspim_dataset_name,
                 "input_data": smartspim_config["input_data"],
                 "output_data": smartspim_config["output_data"],
             },
