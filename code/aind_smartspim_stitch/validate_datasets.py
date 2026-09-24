@@ -335,7 +335,9 @@ def validate_metadata_parallel(
     return True
 
 
-def validate_metadata(channel_path: str, channel_dict: dict, file_format: str, bit_depth: int) -> bool:
+def validate_metadata(
+    channel_path: str, channel_dict: dict, file_format: str, bit_depth: int
+) -> bool:
     """
     Validates image metadata of tiles per channel
     in parallel

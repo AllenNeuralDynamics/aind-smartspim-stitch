@@ -20,7 +20,14 @@ from aind_data_schema.components.identifiers import Code
 from aind_data_schema.core.processing import DataProcess, ProcessName, ProcessStage
 from natsort import natsorted
 
-from .. import __maintainers__, __pipeline_name__, __pipeline_version__, __title__, __url__, __version__
+from .. import (
+    __maintainers__,
+    __pipeline_name__,
+    __pipeline_version__,
+    __title__,
+    __url__,
+    __version__,
+)
 from ..utils import utils
 from . import bigstitcher_xml_builder
 
@@ -156,7 +163,9 @@ def create_smartspim_tile_metadata(
     return output_json_file
 
 
-def get_stitching_dict(specimen_id: str, dataset_xml_path: str, downsample: Optional[int] = 2) -> dict:
+def get_stitching_dict(
+    specimen_id: str, dataset_xml_path: str, downsample: Optional[int] = 2
+) -> dict:
     """
     A function that writes a stitching dictionary that will be used for
     creating a json file that gives parameters to bigstitcher stitching run
@@ -333,7 +342,9 @@ def main(
         stitching_channel = stitching_channel_path.name
 
         # Use S3 path for the XML image loader when provided; fall back to local path
-        xml_data_path = s3_path_to_data if s3_path_to_data is not None else str(stitching_channel_path)
+        xml_data_path = (
+            s3_path_to_data if s3_path_to_data is not None else str(stitching_channel_path)
+        )
         tree = bigstitcher_xml_builder.parse_json(output_json, xml_data_path, microns=True)
 
         output_big_stitcher_xml = (
@@ -413,9 +424,7 @@ def main(
         resource_monitor.stop()
         end_time = datetime.now(timezone.utc)
 
-        output_big_stitcher_json = (
-            f"{results_folder}/{smartspim_dataset_name}_stitch_channel_{stitching_channel}_params.json"
-        )
+        output_big_stitcher_json = f"{results_folder}/{smartspim_dataset_name}_stitch_channel_{stitching_channel}_params.json"
 
         data_processes = []
         data_processes.append(

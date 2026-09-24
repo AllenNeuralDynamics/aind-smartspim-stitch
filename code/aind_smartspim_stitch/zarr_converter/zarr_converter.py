@@ -214,7 +214,9 @@ def fix_image_diff_dims(
             return new_arr
 
         n_pad = tuple(tuple((0, dim)) for dim in zeros_dim)
-        new_arr = pad(new_arr, pad_width=n_pad, mode="constant", constant_values=0).rechunk(chunksize)
+        new_arr = pad(new_arr, pad_width=n_pad, mode="constant", constant_values=0).rechunk(
+            chunksize
+        )
 
     return new_arr
 
@@ -899,7 +901,9 @@ class ZarrConverter:
         _conversion_exc = None
         try:
             if self.channels:
-                self._write_named_channels(image, n_channels, writer_config, scale_axis, axis_chunksize)
+                self._write_named_channels(
+                    image, n_channels, writer_config, scale_axis, axis_chunksize
+                )
             else:
                 self._write_unnamed_channels(
                     image, image_name, n_channels, writer_config, scale_axis, axis_chunksize

@@ -16,6 +16,7 @@ import zarr
 from aind_smartspim_stitch.utils import utils
 from aind_smartspim_stitch.zarr_converter.zarr_converter import ZarrConverter
 from parameterized import parameterized
+
 from tests import params
 
 PathLike = Union[str, Path]
@@ -95,7 +96,9 @@ def _create_zarr_file(
     channels: Optional[List[str]]
         List with the channel names
     """
-    test_writer = ZarrConverter(path_to_files, output_path, {"codec": "zstd", "clevel": 1}, channels)
+    test_writer = ZarrConverter(
+        path_to_files, output_path, {"codec": "zstd", "clevel": 1}, channels
+    )
 
     config = {
         "codec": "zstd",
@@ -240,7 +243,9 @@ class TestZarrConverter(unittest.TestCase):
 
         self.assertDictEqual(omero_metadata, expected_omero)
 
-    def _check_multiple_channel_omero(self, omero_metadata: dict, filename: str, channels: List[str]):
+    def _check_multiple_channel_omero(
+        self, omero_metadata: dict, filename: str, channels: List[str]
+    ):
         """
         Checks the multi channel omero metadata
 

@@ -39,12 +39,12 @@ def _create_images(
     """
 
     for idx in range(3):
-        name = f"00{idx*2}000"
+        name = f"00{idx * 2}000"
         new_path = path.joinpath(name)
         utils.create_folder(new_path)
 
         for inner_idx in range(3):
-            inner_folder = f"{name}_00{inner_idx*2}000"
+            inner_folder = f"{name}_00{inner_idx * 2}000"
             inner_path = new_path.joinpath(inner_folder)
             utils.create_folder(inner_path)
 

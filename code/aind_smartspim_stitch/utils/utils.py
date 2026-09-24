@@ -27,15 +27,21 @@ from aind_data_schema.core.acquisition import Acquisition  # noqa: F401
 from aind_data_schema.core.data_description import DataDescription, Funding
 from aind_data_schema.core.instrument import Instrument  # noqa: F401
 from aind_data_schema.core.procedures import Procedures  # noqa: F401
-from aind_data_schema.core.processing import DataProcess, Processing, ResourceTimestamped, ResourceUsage
+from aind_data_schema.core.processing import (
+    DataProcess,
+    Processing,
+    ResourceTimestamped,
+    ResourceUsage,
+)
 from aind_data_schema.core.quality_control import QualityControl  # noqa: F401
 from aind_data_schema.core.subject import Subject  # noqa: F401
 from aind_data_schema_models.data_name_patterns import DataLevel
 from aind_data_schema_models.modalities import Modality
 from aind_data_schema_models.organizations import Organization
 from aind_data_schema_models.units import MemoryUnit, UnitlessUnit
-from aind_smartspim_stitch.utils import metadata_compat
 from pydantic import ValidationError
+
+from aind_smartspim_stitch.utils import metadata_compat
 
 # IO types
 PathLike = Union[str, Path]
@@ -67,7 +73,7 @@ def get_code_ocean_cpu_limit():
 
         container_cpus = cfs_quota_us // cfs_period_us
 
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         container_cpus = 0
 
     # For physical machine, the `cfs_quota_us` could be '-1'
@@ -710,11 +716,13 @@ def copy_file(input_filename: PathLike, output_filename: PathLike):
         shutil.copy(input_filename, output_filename)
 
     except shutil.SameFileError:
-        raise shutil.SameFileError(f"The filename {input_filename} already exists in the output path.")
+        raise shutil.SameFileError(
+            f"The filename {input_filename} already exists in the output path."
+        )
 
     except PermissionError:
         raise PermissionError(
-            f"Not able to copy the file. Please, check the permissions in the output path."
+            "Not able to copy the file. Please, check the permissions in the output path."
         )
 
 
@@ -793,7 +801,7 @@ def create_align_folder_structure(output_alignment_path: PathLike, channel_name:
         create_folder(dest_dir=output_alignment_path)
 
     output_alignment_path = output_alignment_path.joinpath(f"stitch_{channel_name}")
-    metadata_folder = output_alignment_path.joinpath(f"metadata")
+    metadata_folder = output_alignment_path.joinpath("metadata")
 
     create_folder(metadata_folder)
 
@@ -1144,7 +1152,9 @@ def get_data_config(
     return derivatives_dict, smartspim_dataset, acquisition_dict
 
 
-def set_up_pipeline_parameters(pipeline_config: dict, default_config: dict, acquisition_config: dict):
+def set_up_pipeline_parameters(
+    pipeline_config: dict, default_config: dict, acquisition_config: dict
+):
     """
     Sets up smartspim stitching parameters that come from the
     pipeline configuration

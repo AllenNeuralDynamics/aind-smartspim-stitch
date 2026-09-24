@@ -10,6 +10,7 @@ from typing import Optional, Union
 
 from aind_smartspim_stitch.utils import utils
 from parameterized import parameterized
+
 from tests import params
 
 # IO types

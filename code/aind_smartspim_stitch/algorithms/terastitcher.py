@@ -22,7 +22,14 @@ from argschema import ArgSchemaParser
 from natsort import natsorted
 from ng_link import NgState
 
-from .. import __maintainers__, __pipeline_name__, __pipeline_version__, __title__, __url__, __version__
+from .. import (
+    __maintainers__,
+    __pipeline_name__,
+    __pipeline_version__,
+    __title__,
+    __url__,
+    __version__,
+)
 from ..params.params import PipelineParams
 from ..utils import utils
 from ..validate_datasets import validate_dataset
@@ -276,7 +283,9 @@ class TeraStitcher:
             data_description_path = self.__output_jsons_path.joinpath("data_description.json")
 
             utils.generate_data_description(
-                raw_data_description_path=str(self.__metadata_folder.joinpath("data_description.json")),
+                raw_data_description_path=str(
+                    self.__metadata_folder.joinpath("data_description.json")
+                ),
                 dest_data_description=str(data_description_path),
                 process_name="stitched",
             )
@@ -448,7 +457,9 @@ class TeraStitcher:
 
         # Additional params provided in the configuration
         if len(cpu_params["additional_params"]) and self.__platform != "Windows":
-            additional_params = utils.helper_additional_params_command(cpu_params["additional_params"])
+            additional_params = utils.helper_additional_params_command(
+                cpu_params["additional_params"]
+            )
 
         # Windows does not require a hostfile to work
         if self.__platform != "Windows":
@@ -537,7 +548,9 @@ class TeraStitcher:
         if len(params["additional_params"]):
             additional_params = utils.helper_additional_params_command(params["additional_params"])
 
-        cmd = f"terastitcher --import {volume_input} {output_folder} {parameters} {additional_params}"
+        cmd = (
+            f"terastitcher --import {volume_input} {output_folder} {parameters} {additional_params}"
+        )
 
         output_json = self.metadata_path.joinpath(f"import_params_{channel}.json")
         utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
@@ -658,7 +671,9 @@ class TeraStitcher:
         parallel_command = ""
 
         if self.__parallel:
-            parallel_command = self.__build_parallel_command(params, "align", self.__parastitcher_path)
+            parallel_command = self.__build_parallel_command(
+                params, "align", self.__parastitcher_path
+            )
 
         else:
             # Sequential execution or gpu execution if USECUDA_X_NCC flag is 1
@@ -775,7 +790,9 @@ class TeraStitcher:
         }
 
         if self.__parallel:
-            parallel_command = self.__build_parallel_command(params, "merge", self.__paraconverter_path)
+            parallel_command = self.__build_parallel_command(
+                params, "merge", self.__paraconverter_path
+            )
 
         else:
             # Sequential execution or gpu execution if USECUDA_X_NCC flag is 1
@@ -816,7 +833,9 @@ class TeraStitcher:
         parallel_command = ""
 
         if self.__parallel:
-            parallel_command = self.__build_parallel_command(params, "merge", self.__paraconverter_path)
+            parallel_command = self.__build_parallel_command(
+                params, "merge", self.__paraconverter_path
+            )
 
         else:
             # Sequential execution or gpu execution if USECUDA_X_NCC flag is 1
@@ -869,7 +888,9 @@ class TeraStitcher:
         parallel_command = ""
 
         if self.__parallel:
-            parallel_command = self.__build_parallel_command(params, "merge", self.__paraconverter_path)
+            parallel_command = self.__build_parallel_command(
+                params, "merge", self.__paraconverter_path
+            )
 
         else:
             # Sequential execution or gpu execution if USECUDA_X_NCC flag is 1
@@ -1091,7 +1112,9 @@ class TeraStitcher:
                 params_copy["sigma1"] = params_copy["sigma1"][idx]
                 params_copy["sigma2"] = params_copy["sigma2"][idx]
 
-                exec_config["command"] = self.__preprocessing_tool_cmd(tool_name, params_copy, False)
+                exec_config["command"] = self.__preprocessing_tool_cmd(
+                    tool_name, params_copy, False
+                )
 
                 start_date_time = datetime.now(timezone.utc)
                 resource_monitor = utils.ResourceMonitor(
@@ -1221,7 +1244,9 @@ class TeraStitcher:
                 pipeline_name=__pipeline_name__,
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                output_path=str(self.xmls_path.joinpath(f"xml_displcomp_{informative_channel}.xml")),
+                output_path=str(
+                    self.xmls_path.joinpath(f"xml_displcomp_{informative_channel}.xml")
+                ),
                 output_parameters={
                     "tool": self.data_processes["tools"]["terastitcher"],
                     "input_location": str(
@@ -1264,7 +1289,9 @@ class TeraStitcher:
                 pipeline_name=__pipeline_name__,
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                output_path=str(self.xmls_path.joinpath(f"xml_displproj_{informative_channel}.xml")),
+                output_path=str(
+                    self.xmls_path.joinpath(f"xml_displproj_{informative_channel}.xml")
+                ),
                 output_parameters={
                     "tool": self.data_processes["tools"]["terastitcher"],
                     "input_location": str(
@@ -1308,7 +1335,9 @@ class TeraStitcher:
                 pipeline_name=__pipeline_name__,
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                output_path=str(self.xmls_path.joinpath(f"xml_displthres_{informative_channel}.xml")),
+                output_path=str(
+                    self.xmls_path.joinpath(f"xml_displthres_{informative_channel}.xml")
+                ),
                 output_parameters={
                     "tool": self.data_processes["tools"]["terastitcher"],
                     "input_location": str(
@@ -1823,7 +1852,9 @@ class TeraStitcher:
             # 'clist':'0'
         }
 
-        exec_config["command"] = self.merge_multivolume_separated_channels_cmd(merge_config, channel)
+        exec_config["command"] = self.merge_multivolume_separated_channels_cmd(
+            merge_config, channel
+        )
 
         start_date_time = datetime.now(timezone.utc)
         resource_monitor = utils.ResourceMonitor(

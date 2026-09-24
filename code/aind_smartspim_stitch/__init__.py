@@ -9,7 +9,7 @@ __author_emails__ = [
 ]
 __license__ = "MIT"
 __description__ = (
-    "Repository for computing image transformations to " "fuse stacks of images in OMEZarr format"
+    "Repository for computing image transformations to fuse stacks of images in OMEZarr format"
 )
 __url__ = "https://github.com/AllenNeuralDynamics/aind-smartspim-stitch"
 

@@ -3,6 +3,7 @@
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
 [![Programming Languages](https://img.shields.io/github/languages/count/AllenNeuralDynamics/aind-smartspim-stitch)](https://github.com/AllenNeuralDynamics/aind-smartspim-stitch)
 ![Code Style](https://img.shields.io/badge/code%20style-black-black)
+![support](https://img.shields.io/badge/support-supported-brightgreen)
 
 Tile stitching module for teravoxel-scale SmartSPIM light-sheet microscopy datasets. Wraps two stitching backends.
 

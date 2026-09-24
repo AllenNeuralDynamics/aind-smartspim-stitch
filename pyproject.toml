@@ -26,8 +26,7 @@ dependencies = [
     'PyExifTool==0.5.5',
     'tqdm==4.64.1',
     'aind-ng-link@git+https://github.com/AllenNeuralDynamics/aind-ng-link.git',
-    'pystripe@git+https://github.com/AllenNeuralDynamics/pystripe.git@feature/output_format',
-    'ome-zarr@git+https://github.com/AllenNeuralDynamics/ome-zarr-py.git@feature/delayed-dask-poc',
+    'ome-zarr==0.8.2',
     'aicsimageio@git+https://github.com/camilolaiton/aicsimageio.git@feature/zarrwriter-multiscales-daskjobs',
     'aind-data-schema==2.8.0',
     'aind-data-schema-models>=5.7.1,<6',
@@ -40,11 +39,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    'black',
+    'ruff',
     'coverage',
-    'flake8',
     'interrogate',
-    'isort',
     'Sphinx',
     'pygit2',
     'parameterized',
@@ -67,27 +64,6 @@ where = ["code"]
 version = {attr = "aind_smartspim_stitch.__version__"}
 readme = {file = ["README.md"]}
 
-[tool.black]
-line-length = 105
-target_version = ['py310']
-exclude = '''
-
-(
-  /(
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
-    | \.hg
-    | \.mypy_cache
-    | \.tox
-    | \.venv
-    | _build
-    | build
-    | dist
-  )/
-  | .gitignore
-)
-'''
-
 [tool.coverage.run]
 omit = ["*__init__*"]
 source = ["aind_smartspim_stitch"]
@@ -96,9 +72,18 @@ source = ["aind_smartspim_stitch"]
 exclude_lines = ["if __name__ == .__main__.:"]
 fail_under = 30
 
-[tool.isort]
-profile = "black"
-line_length = 105
+[tool.ruff]
+line-length = 100
+extend-exclude = ["*.ipynb", ".venv", "*.egg-info", "build", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+# ruff format enforces line-length structurally; E501 only fires on tokens it
+# cannot split (URLs, long string literals), so the two rules conflict.
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = ["F401"]
 
 [tool.interrogate]
 exclude = ["setup.py", "docs", "build"]
