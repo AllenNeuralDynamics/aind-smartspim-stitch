@@ -4,8 +4,11 @@ Tests for the BigStitcher algorithm module
 
 import unittest
 
-from aind_smartspim_stitch.algorithms.bigstitcher import (get_estimated_downsample, get_max_shifts,
-                                                          get_stitching_dict)
+from aind_smartspim_stitch.algorithms.bigstitcher import (
+    get_estimated_downsample,
+    get_max_shifts,
+    get_stitching_dict,
+)
 
 
 class TestGetEstimatedDownsample(unittest.TestCase):

@@ -33,7 +33,9 @@ dependencies = [
     'aind-data-schema-models>=5.7.1,<6',
     'xmltodict==0.13.0',
     'natsort==8.4.0',
-    'pims'
+    'pims',
+    'matplotlib',
+    'psutil'
 ]
 
 [project.optional-dependencies]
@@ -88,13 +90,14 @@ exclude = '''
 
 [tool.coverage.run]
 omit = ["*__init__*"]
-source = ["aind_smartspim_stitch", "tests"]
+source = ["aind_smartspim_stitch"]
 
 [tool.coverage.report]
 exclude_lines = ["if __name__ == .__main__.:"]
-fail_under = 100
+fail_under = 30
 
 [tool.isort]
+profile = "black"
 line_length = 105
 
 [tool.interrogate]

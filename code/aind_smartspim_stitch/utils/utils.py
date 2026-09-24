@@ -34,9 +34,8 @@ from aind_data_schema_models.data_name_patterns import DataLevel
 from aind_data_schema_models.modalities import Modality
 from aind_data_schema_models.organizations import Organization
 from aind_data_schema_models.units import MemoryUnit, UnitlessUnit
-from pydantic import ValidationError
-
 from aind_smartspim_stitch.utils import metadata_compat
+from pydantic import ValidationError
 
 # IO types
 PathLike = Union[str, Path]
@@ -686,9 +685,7 @@ def generate_data_description(
     try:
         raw_desc = DataDescription.model_validate(raw)
     except ValidationError:
-        _logger.warning(
-            "Raw data_description is not valid v2; reconstructing from v1 fields"
-        )
+        _logger.warning("Raw data_description is not valid v2; reconstructing from v1 fields")
         raw_desc = _build_raw_dd_from_v1(raw)
 
     derived = DataDescription.from_data_description(raw_desc, process_name=process_name)
