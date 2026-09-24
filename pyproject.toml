@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "aind_smartspim_stitch"
 description = "Striping and stitching module for 3D teravoxel-sized microscopy images"
 license = {text = "MIT"}
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     {name = "David Feng", email="david.feng@alleninstitute.org"},
     {name = "Sharmishtaa Seshamani", email="sharmishtaas@alleninstitute.org"},
@@ -18,23 +18,19 @@ classifiers = [
 dynamic = ["version", "readme"]
 
 dependencies = [
-    'tifffile',
-    'xarray_multiscale==1.1.0',
-    'argschema==3.0.4',
-    'mpi4py',
-    'dask[distributed]==2024.1.1',
-    'PyExifTool==0.5.5',
-    'tqdm==4.64.1',
-    'aind-ng-link@git+https://github.com/AllenNeuralDynamics/aind-ng-link.git',
-    'ome-zarr==0.8.2',
-    'aicsimageio@git+https://github.com/camilolaiton/aicsimageio.git@feature/zarrwriter-multiscales-daskjobs',
+    'dask==2024.1.1',
+    'dask-image==2023.8.1',
+    'numpy==1.26.3',
+    'psutil==5.9.5',
+    'regex==2023.10.3',
+    'toml==0.10.2',
+    'zarr==2.16.1',
+    'natsort==8.4.0',
+    'matplotlib==3.9.2',
     'aind-data-schema==2.8.0',
     'aind-data-schema-models>=5.7.1,<6',
-    'xmltodict==0.13.0',
-    'natsort==8.4.0',
-    'pims',
-    'matplotlib',
-    'psutil'
+    'numcodecs==0.15.1',
+    'log-schema==0.2.10.dev1'
 ]
 
 [project.optional-dependencies]
