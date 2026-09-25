@@ -10,15 +10,38 @@ import platform
 import re
 import shutil
 import subprocess
+import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import psutil
-from aind_data_schema.base import AindCoreModel
-from aind_data_schema.core.processing import DataProcess, PipelineProcess, Processing
+from aind_data_schema.base import DataCoreModel
+from aind_data_schema.components.identifiers import Code, Person
+
+# These imports register the core models as DataCoreModel subclasses,
+# which copy_available_metadata relies on to discover metadata files
+from aind_data_schema.core.acquisition import Acquisition  # noqa: F401
+from aind_data_schema.core.data_description import DataDescription, Funding
+from aind_data_schema.core.instrument import Instrument  # noqa: F401
+from aind_data_schema.core.procedures import Procedures  # noqa: F401
+from aind_data_schema.core.processing import (
+    DataProcess,
+    Processing,
+    ResourceTimestamped,
+    ResourceUsage,
+)
+from aind_data_schema.core.quality_control import QualityControl  # noqa: F401
+from aind_data_schema.core.subject import Subject  # noqa: F401
+from aind_data_schema_models.data_name_patterns import DataLevel
+from aind_data_schema_models.modalities import Modality
+from aind_data_schema_models.organizations import Organization
+from aind_data_schema_models.units import MemoryUnit, UnitlessUnit
+from pydantic import ValidationError
+
+from aind_smartspim_stitch.utils import metadata_compat
 
 # IO types
 PathLike = Union[str, Path]
@@ -50,7 +73,7 @@ def get_code_ocean_cpu_limit():
 
         container_cpus = cfs_quota_us // cfs_period_us
 
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         container_cpus = 0
 
     # For physical machine, the `cfs_quota_us` could be '-1'
@@ -156,30 +179,38 @@ def execute_command_helper(
         raise subprocess.CalledProcessError(return_code, command)
 
 
-def execute_command(command: str, logger: logging.Logger, verbose: Optional[bool] = False):
+def execute_command(config: dict) -> None:
     """
-    Execute a shell command with a given configuration.
+    Execute a shell command with a given configuration dictionary.
 
     Parameters
     ------------------------
-    command: str
-        Command that we want to execute.
-
-    logger: logging.Logger
-        Logger object
-
-    verbose: Optional[bool]
-        Prints the command in the console
+    config: dict
+        Dictionary with keys:
+        - command: str — shell command to execute
+        - logger: logging.Logger — logger object
+        - verbose: bool — whether to print the command
+        - info: bool — if True, only log the command without running it
+        - exists_stdout: bool — if True, save output to stdout_log_file
+        - stdout_log_file: PathLike — path to the log file
 
     Raises
     ------------------------
     CalledProcessError:
         if the command could not be executed (Returned non-zero status).
-
     """
-    for out in execute_command_helper(command, verbose):
-        if len(out):
-            logger.info(out)
+    if config["info"]:
+        config["logger"].info(config["command"])
+    else:
+        for out in execute_command_helper(
+            config["command"], config["verbose"], config["stdout_log_file"]
+        ):
+            if len(out):
+                # Tool stdout (TeraStitcher) is DEBUG: one record per line is
+                # too noisy for Grafana at INFO
+                config["logger"].debug(out)
+            if config["exists_stdout"]:
+                save_string_to_txt(out, config["stdout_log_file"], "a")
 
 
 def check_path_instance(obj: object) -> bool:
@@ -346,11 +377,97 @@ def save_string_to_txt(txt: str, filepath: PathLike, mode="w") -> None:
         file.write(txt + "\n")
 
 
+class ResourceMonitor:
+    """
+    Background sampler for CPU and RAM usage during a processing step.
+
+    Samples are collected on a separate thread at a fixed interval and can be
+    turned into an `aind_data_schema.core.processing.ResourceUsage` once the
+    step is finished.
+    """
+
+    def __init__(self, interval_seconds: Optional[float] = 1.0):
+        """
+        Initializes the ResourceMonitor.
+
+        Parameters
+        ----------
+        interval_seconds: Optional[float]
+            Time interval in seconds between resource usage samples. Default is 1 second.
+        """
+        self._interval = interval_seconds
+        self._cpu_usage = []
+        self._ram_usage = []
+        self._stop_event = threading.Event()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+
+    def _run(self) -> None:
+        """Background thread method for sampling CPU and RAM usage."""
+
+        while not self._stop_event.is_set():
+            now = datetime.now(timezone.utc)
+            self._cpu_usage.append(
+                ResourceTimestamped(timestamp=now, usage=psutil.cpu_percent(interval=None))
+            )
+            self._ram_usage.append(
+                ResourceTimestamped(timestamp=now, usage=psutil.virtual_memory().percent)
+            )
+            self._stop_event.wait(self._interval)
+
+    def start(self) -> "ResourceMonitor":
+        """Starts the background sampling thread."""
+        psutil.cpu_percent(interval=None)  # discard first call, which always reads 0
+        self._thread.start()
+        return self
+
+    def stop(self) -> None:
+        """Stops the background sampling thread."""
+        self._stop_event.set()
+        self._thread.join(timeout=self._interval + 1)
+
+    def __enter__(self) -> "ResourceMonitor":
+        """Context manager entry point to start resource monitoring."""
+        return self.start()
+
+    def __exit__(self, *exc_info) -> None:
+        """Context manager exit point to stop resource monitoring."""
+        self.stop()
+
+    def to_resource_usage(self, cpu_cores: Optional[int] = None) -> ResourceUsage:
+        """
+        Builds an `aind_data_schema.core.processing.ResourceUsage` from the
+        samples collected so far, plus static host information.
+
+        Parameters
+        ----------
+        cpu_cores: Optional[int]
+            Number of CPU cores available to the process.
+
+        Returns
+        -------
+        ResourceUsage
+            Resource usage record for a `DataProcess`.
+        """
+
+        return ResourceUsage(
+            os=platform.system(),
+            architecture=platform.machine(),
+            cpu_cores=cpu_cores,
+            system_memory=round(psutil.virtual_memory().total / (1024**3), 2),
+            system_memory_unit=MemoryUnit.GB,
+            cpu_usage=self._cpu_usage,
+            ram_usage=self._ram_usage,
+            ram_unit=MemoryUnit.GB,
+            usage_unit=UnitlessUnit.PERCENT,
+        )
+
+
 def generate_processing(
     data_processes: List[DataProcess],
     dest_processing: str,
-    processor_full_name: str,
+    pipeline_name: str,
     pipeline_version: str,
+    pipeline_url: str,
 ):
     """
     Generates data description for the output folder.
@@ -358,32 +475,36 @@ def generate_processing(
     Parameters
     ------------------------
 
-    data_processes: List[dict]
-        List with the processes aplied in the pipeline.
+    data_processes: List[DataProcess]
+        List with the processes applied in the pipeline.
 
     dest_processing: PathLike
         Path where the processing file will be placed.
 
-    processor_full_name: str
-        Person in charged of running the pipeline
-        for this data asset
+    pipeline_name: str
+        Name of the overall pipeline this processing
+        step belongs to.
 
     pipeline_version: str
-        Terastitcher pipeline version
+        Version of the overall pipeline.
+
+    pipeline_url: str
+        URL of the overall pipeline's repository.
 
     """
     # flake8: noqa: E501
-    processing_pipeline = PipelineProcess(
-        data_processes=data_processes,
-        processor_full_name=processor_full_name,
-        pipeline_version=pipeline_version,
-        pipeline_url="https://github.com/AllenNeuralDynamics/aind-smartspim-pipeline",
-        note="Metadata for the stitching step, it does not include stitching compute time.",
-    )
+    pipelines = [
+        Code(
+            url=pipeline_url,
+            name=pipeline_name,
+            version=pipeline_version,
+        )
+    ]
 
-    processing = Processing(
-        processing_pipeline=processing_pipeline,
-        notes="This processing only contains metadata about fusion \
+    processing = Processing.create_with_sequential_process_graph(
+        data_processes=data_processes,
+        pipelines=pipelines,
+        notes="This processing only contains metadata about stitching \
             and needs to be compiled with other steps at the end",
     )
 
@@ -436,6 +557,148 @@ def generate_timestamp(time_format: str = "%Y-%m-%d_%H-%M-%S") -> str:
     return datetime.now().strftime(time_format)
 
 
+def wavelength_to_hex(wavelength: int) -> int:
+    """
+    Converts a wavelength in nm to its approximate hex color representation.
+
+    Parameters
+    ------------------------
+    wavelength: int
+        Wavelength in nanometers.
+
+    Returns
+    ------------------------
+    int:
+        Hex color value for the given wavelength.
+    """
+    color_map = {
+        460: 0x690AFE,
+        470: 0x3F2EFE,
+        480: 0x4B90FE,
+        490: 0x59D5F8,
+        500: 0x5DF8D6,
+        520: 0x5AFEB8,
+        540: 0x58FEA1,
+        560: 0x51FF1E,
+        565: 0xBBFB01,
+        575: 0xE9EC02,
+        580: 0xF5C503,
+        590: 0xF39107,
+        600: 0xF15211,
+        620: 0xF0121E,
+        750: 0xF00050,
+    }
+    hex_val = next(iter(color_map.values()))
+    for ub, hex_val in color_map.items():
+        if wavelength < ub:
+            return hex_val
+    return hex_val
+
+
+def _build_raw_dd_from_v1(data: dict) -> DataDescription:
+    """
+    Reconstructs a v2 RAW ``DataDescription`` from a legacy v1
+    data_description dict.
+
+    Reads the v1 file as a plain dict and maps its fields onto the v2 schema
+    (institution/funding registries -> Organization enums, fundee string ->
+    list of Person, investigators PIDName -> Person, modality -> modalities).
+    """
+    _logger = logging.getLogger(__name__)
+
+    # institution: v1 carries a dict with an "abbreviation"
+    try:
+        institution = Organization.from_abbreviation(data["institution"]["abbreviation"])
+    except Exception:
+        _logger.warning("Could not resolve institution; defaulting to Allen Institute")
+        institution = Organization.AI
+
+    # investigators: v1 PIDName dicts -> v2 Person (name only)
+    investigators = [
+        Person(name=inv["name"]) for inv in data.get("investigators", []) if inv.get("name")
+    ]
+    if not investigators:
+        investigators = [Person(name="Unknown")]
+
+    # funding_source: registry dict -> Organization enum, fundee str -> [Person]
+    funding_sources = []
+    try:
+        for fund in data.get("funding_source", []):
+            fundee = fund.get("fundee")
+            if isinstance(fundee, str) and fundee:
+                fundee = [Person(name=n.strip()) for n in fundee.split(",")]
+            elif not isinstance(fundee, list):
+                fundee = None
+
+            funding_sources.append(
+                Funding(
+                    funder=Organization.from_abbreviation(fund["funder"]["abbreviation"]),
+                    grant_number=fund.get("grant_number"),
+                    fundee=fundee,
+                )
+            )
+    except Exception as e:
+        _logger.warning("Error parsing funding_source into the v2 schema: %s", e)
+        funding_sources = []
+
+    if not funding_sources:
+        funding_sources = [Funding(funder=Organization.AI)]
+
+    creation_time = data.get("creation_time") or datetime.now(timezone.utc)
+
+    return DataDescription(
+        data_level=DataLevel.RAW,
+        name=data["name"],
+        creation_time=creation_time,
+        institution=institution,
+        funding_source=funding_sources,
+        investigators=investigators,
+        modalities=[Modality.SPIM],
+        project_name=data["project_name"],
+        subject_id=data["subject_id"],
+        group=data.get("group"),
+        restrictions=data.get("restrictions"),
+    )
+
+
+def generate_data_description(
+    raw_data_description_path: PathLike,
+    dest_data_description: PathLike,
+    process_name: str = "stitched",
+) -> None:
+    """
+    Generates a derived data description JSON from a raw data description.
+
+    Accepts both v2 (validated directly) and legacy v1 (reconstructed)
+    raw data_description.json inputs.
+
+    Parameters
+    ------------------------
+    raw_data_description_path: PathLike
+        Path to the raw data description JSON file.
+
+    dest_data_description: PathLike
+        Path where the derived data description JSON will be saved.
+
+    process_name: str
+        Name of the process. Default "stitched".
+    """
+    _logger = logging.getLogger(__name__)
+
+    with open(raw_data_description_path, "r") as f:
+        raw = json.load(f)
+
+    try:
+        raw_desc = DataDescription.model_validate(raw)
+    except ValidationError:
+        _logger.warning("Raw data_description is not valid v2; reconstructing from v1 fields")
+        raw_desc = _build_raw_dd_from_v1(raw)
+
+    derived = DataDescription.from_data_description(raw_desc, process_name=process_name)
+    with open(dest_data_description, "w") as f:
+        f.write(derived.model_dump_json(indent=3))
+
+
 def copy_file(input_filename: PathLike, output_filename: PathLike):
     """
     Copies a file to an output path
@@ -453,11 +716,13 @@ def copy_file(input_filename: PathLike, output_filename: PathLike):
         shutil.copy(input_filename, output_filename)
 
     except shutil.SameFileError:
-        raise shutil.SameFileError(f"The filename {input_filename} already exists in the output path.")
+        raise shutil.SameFileError(
+            f"The filename {input_filename} already exists in the output path."
+        )
 
     except PermissionError:
         raise PermissionError(
-            f"Not able to copy the file. Please, check the permissions in the output path."
+            "Not able to copy the file. Please, check the permissions in the output path."
         )
 
 
@@ -489,7 +754,7 @@ def copy_available_metadata(
     """
 
     # We get all the valid filenames from the aind core model
-    metadata_to_find = [cls.default_filename() for cls in AindCoreModel.__subclasses__()]
+    metadata_to_find = [cls.default_filename() for cls in DataCoreModel.__subclasses__()]
 
     # Making sure the paths are pathlib objects
     input_path = Path(input_path)
@@ -536,7 +801,7 @@ def create_align_folder_structure(output_alignment_path: PathLike, channel_name:
         create_folder(dest_dir=output_alignment_path)
 
     output_alignment_path = output_alignment_path.joinpath(f"stitch_{channel_name}")
-    metadata_folder = output_alignment_path.joinpath(f"metadata")
+    metadata_folder = output_alignment_path.joinpath("metadata")
 
     create_folder(metadata_folder)
 
@@ -887,7 +1152,9 @@ def get_data_config(
     return derivatives_dict, smartspim_dataset, acquisition_dict
 
 
-def set_up_pipeline_parameters(pipeline_config: dict, default_config: dict, acquisition_config: dict):
+def set_up_pipeline_parameters(
+    pipeline_config: dict, default_config: dict, acquisition_config: dict
+):
     """
     Sets up smartspim stitching parameters that come from the
     pipeline configuration
@@ -915,13 +1182,7 @@ def set_up_pipeline_parameters(pipeline_config: dict, default_config: dict, acqu
 
     # Grabbing a tile with metadata from acquisition - we assume all dataset
     # was acquired with the same resolution
-    tile_coord_transforms = acquisition_config["tiles"][0]["coordinate_transformations"]
-
-    scale_transform = [x["scale"] for x in tile_coord_transforms if x["type"] == "scale"][0]
-
-    x = float(scale_transform[0])
-    y = float(scale_transform[1])
-    z = float(scale_transform[2])
+    x, y, z = metadata_compat.get_voxel_resolution(acquisition_config)
 
     default_config["import_data"]["vxl1"] = x
     default_config["import_data"]["vxl2"] = y
@@ -980,12 +1241,4 @@ def get_resolution(acquisition_config: dict) -> Tuple[float]:
 
     # Grabbing a tile with metadata from acquisition - we assume all dataset
     # was acquired with the same resolution
-    tile_coord_transforms = acquisition_config["tiles"][0]["coordinate_transformations"]
-
-    scale_transform = [x["scale"] for x in tile_coord_transforms if x["type"] == "scale"][0]
-
-    x = float(scale_transform[0])
-    y = float(scale_transform[1])
-    z = float(scale_transform[2])
-
-    return x, y, z
+    return metadata_compat.get_voxel_resolution(acquisition_config)

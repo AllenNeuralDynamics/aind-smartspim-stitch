@@ -14,7 +14,7 @@ jobs:
           pkg_name=$(grep -P 'version = \{attr = .*\}' pyproject.toml | grep -oP '\w+.__version__')
           init_file="./code/${pkg_name//.__version__}/__init__.py"
           new_tag=$(grep -Po '__version__ = "\K.*?(?=")' $init_file)
-          echo "::set-output name=version::$new_tag"
+          echo "version=$new_tag" >> "$GITHUB_OUTPUT"
       - name: Bump tag
         uses: mathieudutour/github-tag-action@v6.0
         with:

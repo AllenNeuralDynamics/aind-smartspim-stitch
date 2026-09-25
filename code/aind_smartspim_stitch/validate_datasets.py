@@ -14,18 +14,9 @@ from typing import List, Union
 import exiftool
 from tqdm import tqdm
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(levelname)s : %(message)s",
-    datefmt="%Y-%m-%d %H:%M",
-    handlers=[
-        logging.StreamHandler(),
-        # logging.FileHandler("test.log", "a"),
-    ],
-)
-logging.disable("DEBUG")
+from .utils import utils
+
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 PathLike = Union[Path, str]
 
@@ -103,23 +94,6 @@ class SmartSPIMReader:
         return smartspim_datasets
 
 
-def save_string_to_txt(txt: str, filepath: PathLike, mode="w") -> None:
-    """
-    Saves a text in a file in the given mode.
-    Parameters
-    ------------------------
-    txt: str
-        String to be saved.
-    filepath: PathLike
-        Path where the file is located or will be saved.
-    mode: str
-        File open mode.
-    """
-
-    with open(filepath, mode) as file:
-        file.write(txt + "\n")
-
-
 def read_image_directory_structure(folder_dir) -> dict:
     """
     Creates a dictionary representation of all the images
@@ -189,7 +163,7 @@ def get_images_channel(channel_dict: dict) -> int:
         for row_name, images in rows.items():
             len_images = len(images)
 
-            if images == len_images:
+            if len(images) != len_images:
                 raise ValueError(f"Possible error in pos {col_name}/{row_name}")
 
             n_images += len_images
@@ -238,7 +212,7 @@ def validate_rows(
     n_images = len(row_images)
 
     for n_image in range(n_images):
-        print(f"Validating: {col_name}/{row_names[n_image]}")
+        logger.debug(f"Validating: {col_name}/{row_names[n_image]}")
         image_paths = [
             str(Path(channel_path).joinpath(f"{col_name}/{row_names[n_image]}/{image_path}"))
             for image_path in row_images[n_image]
@@ -361,7 +335,9 @@ def validate_metadata_parallel(
     return True
 
 
-def validate_metadata(channel_path: str, channel_dict: dict, file_format: str, bit_depth: int) -> bool:
+def validate_metadata(
+    channel_path: str, channel_dict: dict, file_format: str, bit_depth: int
+) -> bool:
     """
     Validates image metadata of tiles per channel
     in parallel
@@ -395,7 +371,7 @@ def validate_metadata(channel_path: str, channel_dict: dict, file_format: str, b
 
     for col_name, rows in channel_dict.items():
         for row_name, images in rows.items():
-            print(f"Validating: {col_name}/{row_name}")
+            logger.debug(f"Validating: {col_name}/{row_name}")
             start_date = datetime.now()
             image_paths = [
                 str(Path(channel_path).joinpath(f"{col_name}/{row_name}/{image_path}"))
@@ -414,7 +390,7 @@ def validate_metadata(channel_path: str, channel_dict: dict, file_format: str, b
                     raise ValueError(msg)
             end_date = datetime.now()
 
-            print(f"Time to validate stack of tiles: {end_date - start_date}")
+            logger.debug(f"Time to validate stack of tiles: {end_date - start_date}")
 
     return True
 
@@ -526,7 +502,7 @@ def main():
     # Saving datasets with errors
     join_lists = datasets_with_problems + check_paths
     txt = "\n".join(join_lists)
-    save_string_to_txt(txt, error_dataset_paths)
+    utils.save_string_to_txt(txt, error_dataset_paths)
 
 
 if __name__ == "__main__":

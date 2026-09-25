@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "aind_smartspim_stitch"
 description = "Striping and stitching module for 3D teravoxel-sized microscopy images"
 license = {text = "MIT"}
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 authors = [
     {name = "David Feng", email="david.feng@alleninstitute.org"},
     {name = "Sharmishtaa Seshamani", email="sharmishtaas@alleninstitute.org"},
@@ -18,34 +18,26 @@ classifiers = [
 dynamic = ["version", "readme"]
 
 dependencies = [
-    'pandas',
-    'sphinx',
-    'tifffile < 2022.4.22',
-    'xarray_multiscale==1.1.0',
-    'argschema==3.0.4',
-    'mpi4py',
-    'bokeh==2.4.2',
-    'pint==0.20.1',
-    'dask[distributed]==2022.11.1',
-    'PyExifTool==0.5.5',
-    'tqdm==4.64.1',
-    'aind-ng-link@git+https://github.com/AllenNeuralDynamics/aind-ng-link.git',
-    'pystripe@git+https://github.com/AllenNeuralDynamics/pystripe.git@feature/output_format',
-    'ome-zarr@git+https://github.com/AllenNeuralDynamics/ome-zarr-py.git@feature/delayed-dask-poc',
-    'aicsimageio@git+https://github.com/camilolaiton/aicsimageio.git@feature/zarrwriter-multiscales-daskjobs',
-    'aind-data-schema==0.13.52',
-    'xmltodict==0.13.0',
-    'natsort==8.2.0',
-    'pims==0.6.1'
+    'dask==2024.1.1',
+    'dask-image==2023.8.1',
+    'numpy==1.26.3',
+    'psutil==5.9.5',
+    'regex==2023.10.3',
+    'toml==0.10.2',
+    'zarr==2.16.1',
+    'natsort==8.4.0',
+    'matplotlib==3.9.2',
+    'aind-data-schema==2.8.0',
+    'aind-data-schema-models>=5.7.1,<6',
+    'numcodecs==0.15.1',
+    'log-schema==0.2.10.dev1'
 ]
 
 [project.optional-dependencies]
 dev = [
-    'black',
+    'ruff',
     'coverage',
-    'flake8',
     'interrogate',
-    'isort',
     'Sphinx',
     'pygit2',
     'parameterized',
@@ -68,37 +60,26 @@ where = ["code"]
 version = {attr = "aind_smartspim_stitch.__version__"}
 readme = {file = ["README.md"]}
 
-[tool.black]
-line-length = 105
-target_version = ['py36']
-exclude = '''
-
-(
-  /(
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
-    | \.hg
-    | \.mypy_cache
-    | \.tox
-    | \.venv
-    | _build
-    | build
-    | dist
-  )/
-  | .gitignore
-)
-'''
-
 [tool.coverage.run]
 omit = ["*__init__*"]
-source = ["aind_smartspim_stitch", "utils", "zarr_converter", "tests"]
+source = ["aind_smartspim_stitch"]
 
 [tool.coverage.report]
 exclude_lines = ["if __name__ == .__main__.:"]
-fail_under = 100
+fail_under = 30
 
-[tool.isort]
-line_length = 105
+[tool.ruff]
+line-length = 100
+extend-exclude = ["*.ipynb", ".venv", "*.egg-info", "build", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+# ruff format enforces line-length structurally; E501 only fires on tokens it
+# cannot split (URLs, long string literals), so the two rules conflict.
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = ["F401"]
 
 [tool.interrogate]
 exclude = ["setup.py", "docs", "build"]

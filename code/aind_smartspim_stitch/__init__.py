@@ -2,14 +2,14 @@
 Init file
 """
 
-__version__ = "1.2.8"
+__version__ = "1.2.9"
 __authors__ = ["Camilo Laiton"]
 __author_emails__ = [
     "camilo.laiton@alleninstitute.org",
 ]
 __license__ = "MIT"
 __description__ = (
-    "Repository for computing image transformations to " "fuse stacks of images in OMEZarr format"
+    "Repository for computing image transformations to fuse stacks of images in OMEZarr format"
 )
 __url__ = "https://github.com/AllenNeuralDynamics/aind-smartspim-stitch"
 
@@ -19,4 +19,5 @@ __maintainer_emails__ = [
 ]
 __title__ = "aind-smartspim-stitch"
 __status__ = "Production"  # 'Development' 'Production', 'Beta'
-__pipeline_version__ = "5.0.0"
+__pipeline_version__ = "6.0.0"
+__pipeline_name__ = "SmartSPIM Pipeline"

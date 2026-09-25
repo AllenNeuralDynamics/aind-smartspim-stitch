@@ -2,4 +2,4 @@
 set -e
 
 # Run the first step
-python run_capsule.py "$@"
+python run_bigstitcher.py "$@"

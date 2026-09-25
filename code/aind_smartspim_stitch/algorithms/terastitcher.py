@@ -11,35 +11,42 @@ import platform
 import re
 import subprocess
 import sys
-import warnings
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional, Union
 
 import xmltodict
-from aind_data_schema.core.processing import DataProcess, ProcessName
+from aind_data_schema.components.identifiers import Code
+from aind_data_schema.core.processing import DataProcess, ProcessName, ProcessStage
 from argschema import ArgSchemaParser
 from natsort import natsorted
 from ng_link import NgState
 
-from .__init__ import __version__
-from .params.params import PipelineParams
-from .utils import utils
-from .validate_datasets import validate_dataset
-from .zarr_converter.zarr_converter import ZarrConverter
-
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(levelname)s : %(message)s",
-    datefmt="%Y-%m-%d %H:%M",
-    handlers=[
-        logging.StreamHandler(),
-        # logging.FileHandler("test.log", "a"),
-    ],
+from .. import (
+    __maintainers__,
+    __pipeline_name__,
+    __pipeline_version__,
+    __title__,
+    __url__,
+    __version__,
 )
-logging.disable("DEBUG")
+from ..params.params import PipelineParams
+from ..utils import utils
+from ..validate_datasets import validate_dataset
+from ..zarr_converter.zarr_converter import ZarrConverter
 
 PathLike = Union[str, Path]
+
+# Interval used by `utils.ResourceMonitor` for every stitching step
+RESOURCE_MONITOR_INTERVAL_SECONDS = 5.0
+
+
+def _code() -> Code:
+    """Builds the `Code` reference for this repository, attached to every `DataProcess`"""
+    return Code(url=__url__, name=__title__, version=__version__)
+
+
+logger = logging.getLogger(__name__)
 
 
 def generate_new_channel_displ_xml(
@@ -83,6 +90,7 @@ def generate_new_channel_displ_xml(
     if informative_channel_name:
         # Getting the channel name
         informative_channel_name = informative_channel_name.group()
+        logger.debug(f"Informative channel name: {informative_channel_name}")
 
         with open(informative_channel_xml, "r", encoding=encoding) as xml_reader:
             xml_file = xml_reader.read()
@@ -225,7 +233,7 @@ class TeraStitcher:
         self.__check_python()
 
         if computation not in ["cpu", "gpu"]:
-            print("Setting computation to cpu")
+            logger.warning("Setting computation to cpu")
             self.__computation = "cpu"
 
         if computation == "gpu":
@@ -239,21 +247,17 @@ class TeraStitcher:
             try:
                 del os.environ["USECUDA_X_NCC"]
             except KeyError:
-                warnings.warn(
-                    """
+                logger.warning("""
                     environmental variable 'USECUDA_X_NCC' could
                     not be removed. Ignore this warning
                     if you're using CPU
-                    """
-                )
+                    """)
 
         if not self.__check_installation():
-            print(
-                f"""
+            logger.error(f"""
                 Please, check your terastitcher
                 installation in the system {self.__platform}
-                """
-            )
+                """)
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "terastitcher")
 
         # If parastitcher or paraconverter paths are not found,
@@ -279,12 +283,14 @@ class TeraStitcher:
             data_description_path = self.__output_jsons_path.joinpath("data_description.json")
 
             utils.generate_data_description(
-                raw_data_description_path=str(self.__metadata_folder.joinpath("data_description.json")),
+                raw_data_description_path=str(
+                    self.__metadata_folder.joinpath("data_description.json")
+                ),
                 dest_data_description=str(data_description_path),
                 process_name="stitched",
             )
 
-            print(f"Looking for metadata in {self.__metadata_folder}")
+            self.logger.info(f"Looking for metadata in {self.__metadata_folder}")
             copied_metadata = utils.copy_available_metadata(
                 input_path=self.__metadata_folder,
                 output_path=self.__output_jsons_path,
@@ -293,7 +299,7 @@ class TeraStitcher:
                     "processing.json",  # This is generated with all the steps
                 ],
             )
-            print(f"Copied metadata: {copied_metadata}")
+            self.logger.info(f"Copied metadata: {copied_metadata}")
 
     def __check_installation(self, tool_name: str = "terastitcher") -> bool:
         """
@@ -317,8 +323,8 @@ class TeraStitcher:
         """
 
         try:
-            devnull = open(os.devnull)
-            subprocess.Popen([tool_name], stdout=devnull, stderr=devnull).communicate()
+            with open(os.devnull) as devnull:
+                subprocess.Popen([tool_name], stdout=devnull, stderr=devnull).communicate()
         except OSError:
             return False
         return True
@@ -375,12 +381,10 @@ class TeraStitcher:
             found = False
 
         if not found:
-            self.logger.info(
-                f"""
+            self.logger.info(f"""
                 Please, check your python 3
                 installation in the system {self.__platform}
-                """
-            )
+                """)
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "python")
 
     def __check_teras_parallel_scripts(self) -> None:
@@ -453,19 +457,19 @@ class TeraStitcher:
 
         # Additional params provided in the configuration
         if len(cpu_params["additional_params"]) and self.__platform != "Windows":
-            additional_params = utils.helper_additional_params_command(cpu_params["additional_params"])
+            additional_params = utils.helper_additional_params_command(
+                cpu_params["additional_params"]
+            )
 
         # Windows does not require a hostfile to work
         if self.__platform != "Windows":
             try:
                 hostfile = f"--hostfile {cpu_params['hostfile']}"
             except KeyError:
-                self.logger.info(
-                    """
+                self.logger.info("""
                     Hostfile was not found.
                     This could lead to execution problems.
-                    """
-                )
+                    """)
 
         # If we want to estimate the number of
         # processes used in any of the steps.
@@ -483,12 +487,10 @@ class TeraStitcher:
 
             elif step_name == "merge":
                 # TODO estimate in merge step
-                self.logger.info(
-                    """
+                self.logger.info("""
                     Aproximate number of processes for
                     the merge step is not implemented yet.
-                    """
-                )
+                    """)
 
         cmd = f"{mpi_command} {n_procs} {hostfile} {additional_params}"
         cmd += f"{self.__python_terminal} {tool}"
@@ -546,7 +548,9 @@ class TeraStitcher:
         if len(params["additional_params"]):
             additional_params = utils.helper_additional_params_command(params["additional_params"])
 
-        cmd = f"terastitcher --import {volume_input} {output_folder} {parameters} {additional_params}"
+        cmd = (
+            f"terastitcher --import {volume_input} {output_folder} {parameters} {additional_params}"
+        )
 
         output_json = self.metadata_path.joinpath(f"import_params_{channel}.json")
         utils.save_dict_as_json(f"{output_json}", params, self.__verbose)
@@ -621,10 +625,8 @@ class TeraStitcher:
             config_params["image_depth"] < config_params["number_processes"]
             or config_params["subvoldim"] > config_params["image_depth"]
         ):
-            print(
-                """Please check the parameters for
-                aproximate number of processes in align step"""
-            )
+            logger.warning("""Please check the parameters for
+                approximate number of processes in align step""")
             return 2
 
         # Partitioning depth for the tiles
@@ -669,7 +671,9 @@ class TeraStitcher:
         parallel_command = ""
 
         if self.__parallel:
-            parallel_command = self.__build_parallel_command(params, "align", self.__parastitcher_path)
+            parallel_command = self.__build_parallel_command(
+                params, "align", self.__parastitcher_path
+            )
 
         else:
             # Sequential execution or gpu execution if USECUDA_X_NCC flag is 1
@@ -786,7 +790,9 @@ class TeraStitcher:
         }
 
         if self.__parallel:
-            parallel_command = self.__build_parallel_command(params, "merge", self.__paraconverter_path)
+            parallel_command = self.__build_parallel_command(
+                params, "merge", self.__paraconverter_path
+            )
 
         else:
             # Sequential execution or gpu execution if USECUDA_X_NCC flag is 1
@@ -827,7 +833,9 @@ class TeraStitcher:
         parallel_command = ""
 
         if self.__parallel:
-            parallel_command = self.__build_parallel_command(params, "merge", self.__paraconverter_path)
+            parallel_command = self.__build_parallel_command(
+                params, "merge", self.__paraconverter_path
+            )
 
         else:
             # Sequential execution or gpu execution if USECUDA_X_NCC flag is 1
@@ -880,7 +888,9 @@ class TeraStitcher:
         parallel_command = ""
 
         if self.__parallel:
-            parallel_command = self.__build_parallel_command(params, "merge", self.__paraconverter_path)
+            parallel_command = self.__build_parallel_command(
+                params, "merge", self.__paraconverter_path
+            )
 
         else:
             # Sequential execution or gpu execution if USECUDA_X_NCC flag is 1
@@ -1102,26 +1112,40 @@ class TeraStitcher:
                 params_copy["sigma1"] = params_copy["sigma1"][idx]
                 params_copy["sigma2"] = params_copy["sigma2"][idx]
 
-                exec_config["command"] = self.__preprocessing_tool_cmd(tool_name, params_copy, False)
+                exec_config["command"] = self.__preprocessing_tool_cmd(
+                    tool_name, params_copy, False
+                )
 
-                start_date_time = datetime.now()
+                start_date_time = datetime.now(timezone.utc)
+                resource_monitor = utils.ResourceMonitor(
+                    interval_seconds=RESOURCE_MONITOR_INTERVAL_SECONDS
+                ).start()
                 utils.execute_command(exec_config)
-                end_date_time = datetime.now()
+                resource_monitor.stop()
+                end_date_time = datetime.now(timezone.utc)
 
                 # Adding pipeline metadata
                 self.data_processes["steps"].append(
                     DataProcess(
-                        name=ProcessName.IMAGE_DESTRIPING,  # "Image destriping"
-                        version=self.data_processes["tools"]["pystripe"]["version"],
+                        process_type=ProcessName.IMAGE_DESTRIPING,
+                        name=f"Destriping - {channels[idx]}",
+                        stage=ProcessStage.PROCESSING,
+                        code=_code(),
+                        experimenters=__maintainers__,
+                        pipeline_name=__pipeline_name__,
                         start_date_time=start_date_time,
                         end_date_time=end_date_time,
-                        input_location=params_copy["input"],
-                        output_location=params_copy["output"],
-                        code_url=self.data_processes["tools"]["pystripe"]["codeURL"],
-                        parameters={
+                        output_path=str(params_copy["output"]),
+                        output_parameters={
+                            "tool": self.data_processes["tools"]["pystripe"],
+                            "input_location": str(params_copy["input"]),
                             "sigma1": params_copy["sigma1"],
                             "sigma2": params_copy["sigma2"],
+                            "duration_seconds": (end_date_time - start_date_time).total_seconds(),
                         },
+                        resources=resource_monitor.to_resource_usage(
+                            cpu_cores=int(utils.get_code_ocean_cpu_limit())
+                        ),
                         notes=f"Destriping channel {channels[idx]}",
                     )
                 )
@@ -1166,20 +1190,34 @@ class TeraStitcher:
 
         self.logger.info("Import step for informative channel...")
 
-        start_date_time = datetime.now()
+        start_date_time = datetime.now(timezone.utc)
+        resource_monitor = utils.ResourceMonitor(
+            interval_seconds=RESOURCE_MONITOR_INTERVAL_SECONDS
+        ).start()
         utils.execute_command(exec_config)
-        end_date_time = datetime.now()
+        resource_monitor.stop()
+        end_date_time = datetime.now(timezone.utc)
 
         self.data_processes["steps"].append(
             DataProcess(
-                name=ProcessName.IMAGE_IMPORTING,  # "Image importing"
-                version=self.data_processes["tools"]["terastitcher"]["version"],
+                process_type=ProcessName.IMAGE_IMPORTING,
+                name=f"Import (informative channel) - {informative_channel}",
+                stage=ProcessStage.PROCESSING,
+                code=_code(),
+                experimenters=__maintainers__,
+                pipeline_name=__pipeline_name__,
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(self.__input_data.joinpath(informative_channel)),
-                output_location=str(self.xmls_path.joinpath(f"xml_import_{informative_channel}.xml")),
-                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
-                parameters=config["import_data"],
+                output_path=str(self.xmls_path.joinpath(f"xml_import_{informative_channel}.xml")),
+                output_parameters={
+                    "tool": self.data_processes["tools"]["terastitcher"],
+                    "input_location": str(self.__input_data.joinpath(informative_channel)),
+                    "parameters": config["import_data"],
+                    "duration_seconds": (end_date_time - start_date_time).total_seconds(),
+                },
+                resources=resource_monitor.to_resource_usage(
+                    cpu_cores=int(utils.get_code_ocean_cpu_limit())
+                ),
                 notes=f"Importing data from channel {informative_channel}",
             )
         )
@@ -1188,20 +1226,38 @@ class TeraStitcher:
         self.logger.info("Align step...")
         exec_config["command"] = self.align_step_cmd(config["align"], informative_channel)
 
-        start_date_time = datetime.now()
+        start_date_time = datetime.now(timezone.utc)
+        resource_monitor = utils.ResourceMonitor(
+            interval_seconds=RESOURCE_MONITOR_INTERVAL_SECONDS
+        ).start()
         utils.execute_command(exec_config)
-        end_date_time = datetime.now()
+        resource_monitor.stop()
+        end_date_time = datetime.now(timezone.utc)
 
         self.data_processes["steps"].append(
             DataProcess(
-                name=ProcessName.IMAGE_ATLAS_ALIGNMENT,  # "Image tile alignment"
-                version=self.data_processes["tools"]["terastitcher"]["version"],
+                process_type=ProcessName.IMAGE_ATLAS_ALIGNMENT,
+                name=f"Pairwise alignment (NCC, informative) - {informative_channel}",
+                stage=ProcessStage.PROCESSING,
+                code=_code(),
+                experimenters=__maintainers__,
+                pipeline_name=__pipeline_name__,
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(self.xmls_path.joinpath(f"xml_import_{informative_channel}.xml")),
-                output_location=str(self.xmls_path.joinpath(f"xml_displcomp_{informative_channel}.xml")),
-                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
-                parameters=config["align"],
+                output_path=str(
+                    self.xmls_path.joinpath(f"xml_displcomp_{informative_channel}.xml")
+                ),
+                output_parameters={
+                    "tool": self.data_processes["tools"]["terastitcher"],
+                    "input_location": str(
+                        self.xmls_path.joinpath(f"xml_import_{informative_channel}.xml")
+                    ),
+                    "parameters": config["align"],
+                    "duration_seconds": (end_date_time - start_date_time).total_seconds(),
+                },
+                resources=resource_monitor.to_resource_usage(
+                    cpu_cores=int(utils.get_code_ocean_cpu_limit())
+                ),
                 notes=f"Aligning pairwise-stacks using NCC algorithm channel {informative_channel}",
             )
         )
@@ -1215,20 +1271,37 @@ class TeraStitcher:
             informative_channel,
         )
 
-        start_date_time = datetime.now()
+        start_date_time = datetime.now(timezone.utc)
+        resource_monitor = utils.ResourceMonitor(
+            interval_seconds=RESOURCE_MONITOR_INTERVAL_SECONDS
+        ).start()
         utils.execute_command(exec_config)
-        end_date_time = datetime.now()
+        resource_monitor.stop()
+        end_date_time = datetime.now(timezone.utc)
 
         self.data_processes["steps"].append(
             DataProcess(
-                name=ProcessName.IMAGE_TILE_PROJECTION,  # "Image tile projection"
-                version=self.data_processes["tools"]["terastitcher"]["version"],
+                process_type=ProcessName.IMAGE_TILE_PROJECTION,
+                name=f"Tile projection (informative) - {informative_channel}",
+                stage=ProcessStage.PROCESSING,
+                code=_code(),
+                experimenters=__maintainers__,
+                pipeline_name=__pipeline_name__,
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(self.xmls_path.joinpath(f"xml_displcomp_{informative_channel}.xml")),
-                output_location=str(self.xmls_path.joinpath(f"xml_displproj_{informative_channel}.xml")),
-                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
-                parameters={},
+                output_path=str(
+                    self.xmls_path.joinpath(f"xml_displproj_{informative_channel}.xml")
+                ),
+                output_parameters={
+                    "tool": self.data_processes["tools"]["terastitcher"],
+                    "input_location": str(
+                        self.xmls_path.joinpath(f"xml_displcomp_{informative_channel}.xml")
+                    ),
+                    "duration_seconds": (end_date_time - start_date_time).total_seconds(),
+                },
+                resources=resource_monitor.to_resource_usage(
+                    cpu_cores=int(utils.get_code_ocean_cpu_limit())
+                ),
                 notes=f"Projection in channel {informative_channel}",
             )
         )
@@ -1244,22 +1317,38 @@ class TeraStitcher:
             threshold_cnf,
         )
 
-        start_date_time = datetime.now()
+        start_date_time = datetime.now(timezone.utc)
+        resource_monitor = utils.ResourceMonitor(
+            interval_seconds=RESOURCE_MONITOR_INTERVAL_SECONDS
+        ).start()
         utils.execute_command(exec_config)
-        end_date_time = datetime.now()
+        resource_monitor.stop()
+        end_date_time = datetime.now(timezone.utc)
 
         self.data_processes["steps"].append(
             DataProcess(
-                name=ProcessName.IMAGE_THRESHOLDING,  # "Image thresholding"
-                version=self.data_processes["tools"]["terastitcher"]["version"],
+                process_type=ProcessName.IMAGE_THRESHOLDING,
+                name=f"Thresholding (informative) - {informative_channel}",
+                stage=ProcessStage.PROCESSING,
+                code=_code(),
+                experimenters=__maintainers__,
+                pipeline_name=__pipeline_name__,
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(self.xmls_path.joinpath(f"xml_displproj_{informative_channel}.xml")),
-                output_location=str(
+                output_path=str(
                     self.xmls_path.joinpath(f"xml_displthres_{informative_channel}.xml")
                 ),
-                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
-                parameters=config["threshold"],
+                output_parameters={
+                    "tool": self.data_processes["tools"]["terastitcher"],
+                    "input_location": str(
+                        self.xmls_path.joinpath(f"xml_displproj_{informative_channel}.xml")
+                    ),
+                    "parameters": config["threshold"],
+                    "duration_seconds": (end_date_time - start_date_time).total_seconds(),
+                },
+                resources=resource_monitor.to_resource_usage(
+                    cpu_cores=int(utils.get_code_ocean_cpu_limit())
+                ),
                 notes=f"Thresholding in channel {informative_channel}",
             )
         )
@@ -1274,20 +1363,35 @@ class TeraStitcher:
             informative_channel,
         )
 
-        start_date_time = datetime.now()
+        start_date_time = datetime.now(timezone.utc)
+        resource_monitor = utils.ResourceMonitor(
+            interval_seconds=RESOURCE_MONITOR_INTERVAL_SECONDS
+        ).start()
         utils.execute_command(exec_config)
-        end_date_time = datetime.now()
+        resource_monitor.stop()
+        end_date_time = datetime.now(timezone.utc)
 
         self.data_processes["steps"].append(
             DataProcess(
-                name=ProcessName.IMAGE_TILE_ALIGNMENT,  # "Image tile alignment"
-                version=self.data_processes["tools"]["terastitcher"]["version"],
+                process_type=ProcessName.IMAGE_TILE_ALIGNMENT,
+                name=f"Tile placement (informative) - {informative_channel}",
+                stage=ProcessStage.PROCESSING,
+                code=_code(),
+                experimenters=__maintainers__,
+                pipeline_name=__pipeline_name__,
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(self.xmls_path.joinpath(f"xml_displthres_{informative_channel}.xml")),
-                output_location=f"{fuse_xmls}/xml_merging_{informative_channel}.xml",
-                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
-                parameters={},
+                output_path=merge_xml_informative,
+                output_parameters={
+                    "tool": self.data_processes["tools"]["terastitcher"],
+                    "input_location": str(
+                        self.xmls_path.joinpath(f"xml_displthres_{informative_channel}.xml")
+                    ),
+                    "duration_seconds": (end_date_time - start_date_time).total_seconds(),
+                },
+                resources=resource_monitor.to_resource_usage(
+                    cpu_cores=int(utils.get_code_ocean_cpu_limit())
+                ),
                 notes=f"Placing tiles to the most optimal position channel {informative_channel}",
             )
         )
@@ -1399,21 +1503,35 @@ class TeraStitcher:
             )
             self.logger.info(f"Import step for {channels[idx]} channel...")
 
-            start_date_time = datetime.now()
+            start_date_time = datetime.now(timezone.utc)
+            resource_monitor = utils.ResourceMonitor(
+                interval_seconds=RESOURCE_MONITOR_INTERVAL_SECONDS
+            ).start()
             utils.execute_command(exec_config)
-            end_date_time = datetime.now()
+            resource_monitor.stop()
+            end_date_time = datetime.now(timezone.utc)
 
             # Adding import step as data process metadata
             self.data_processes["steps"].append(
                 DataProcess(
-                    name=ProcessName.IMAGE_IMPORTING,  # "Image importing"
-                    version=self.data_processes["tools"]["terastitcher"]["version"],
+                    process_type=ProcessName.IMAGE_IMPORTING,
+                    name=f"Import - {channels[idx]}",
+                    stage=ProcessStage.PROCESSING,
+                    code=_code(),
+                    experimenters=__maintainers__,
+                    pipeline_name=__pipeline_name__,
                     start_date_time=start_date_time,
                     end_date_time=end_date_time,
-                    input_location=str(self.__input_data.joinpath(channels[idx])),
-                    output_location=str(self.xmls_path.joinpath(f"xml_import_{channels[idx]}.xml")),
-                    code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
-                    parameters=config["import_data"],
+                    output_path=str(self.xmls_path.joinpath(f"xml_import_{channels[idx]}.xml")),
+                    output_parameters={
+                        "tool": self.data_processes["tools"]["terastitcher"],
+                        "input_location": str(self.__input_data.joinpath(channels[idx])),
+                        "parameters": config["import_data"],
+                        "duration_seconds": (end_date_time - start_date_time).total_seconds(),
+                    },
+                    resources=resource_monitor.to_resource_usage(
+                        cpu_cores=int(utils.get_code_ocean_cpu_limit())
+                    ),
                     notes=f"Importing data from channel {channels[idx]}",
                 )
             )
@@ -1472,20 +1590,34 @@ class TeraStitcher:
                 merge_config, channel_name
             )
 
-            start_date_time = datetime.now()
+            start_date_time = datetime.now(timezone.utc)
+            resource_monitor = utils.ResourceMonitor(
+                interval_seconds=RESOURCE_MONITOR_INTERVAL_SECONDS
+            ).start()
             utils.execute_command(exec_config)
-            end_date_time = datetime.now()
+            resource_monitor.stop()
+            end_date_time = datetime.now(timezone.utc)
 
             self.data_processes["steps"].append(
                 DataProcess(
-                    name=ProcessName.IMAGE_TILE_FUSING,  # "Image tile fusing"
-                    version=self.data_processes["tools"]["terastitcher"]["version"],
+                    process_type=ProcessName.IMAGE_TILE_FUSING,
+                    name=f"Multivolume fusion - {channel_name}",
+                    stage=ProcessStage.PROCESSING,
+                    code=_code(),
+                    experimenters=__maintainers__,
+                    pipeline_name=__pipeline_name__,
                     start_date_time=start_date_time,
                     end_date_time=end_date_time,
-                    input_location=str(merge_xml),
-                    output_location=str(self.__stitched_folder),
-                    code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
-                    parameters=merge_config,
+                    output_path=str(self.__stitched_folder),
+                    output_parameters={
+                        "tool": self.data_processes["tools"]["terastitcher"],
+                        "input_location": str(merge_xml),
+                        "parameters": merge_config,
+                        "duration_seconds": (end_date_time - start_date_time).total_seconds(),
+                    },
+                    resources=resource_monitor.to_resource_usage(
+                        cpu_cores=int(utils.get_code_ocean_cpu_limit())
+                    ),
                     notes=f"Fusing multichannel volume - Channel {channel_name}",
                 )
             )
@@ -1510,21 +1642,35 @@ class TeraStitcher:
         exec_config["command"] = self.import_step_cmd(config["import_data"].copy(), channel)
         self.logger.info("Import step...")
 
-        start_date_time = datetime.now()
+        start_date_time = datetime.now(timezone.utc)
+        resource_monitor = utils.ResourceMonitor(
+            interval_seconds=RESOURCE_MONITOR_INTERVAL_SECONDS
+        ).start()
         utils.execute_command(exec_config)
-        end_date_time = datetime.now()
+        resource_monitor.stop()
+        end_date_time = datetime.now(timezone.utc)
 
         # Adding pipeline metadata
         self.data_processes["steps"].append(
             DataProcess(
-                name=ProcessName.IMAGE_IMPORTING,  # "Image importing"
-                version=self.data_processes["tools"]["terastitcher"]["version"],
+                process_type=ProcessName.IMAGE_IMPORTING,
+                name=f"Import - {channel}",
+                stage=ProcessStage.PROCESSING,
+                code=_code(),
+                experimenters=__maintainers__,
+                pipeline_name=__pipeline_name__,
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(self.__input_data.joinpath(channel)),
-                output_location=str(self.xmls_path.joinpath(f"xml_import_{channel}.xml")),
-                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
-                parameters=config["import_data"],
+                output_path=str(self.xmls_path.joinpath(f"xml_import_{channel}.xml")),
+                output_parameters={
+                    "tool": self.data_processes["tools"]["terastitcher"],
+                    "input_location": str(self.__input_data.joinpath(channel)),
+                    "parameters": config["import_data"],
+                    "duration_seconds": (end_date_time - start_date_time).total_seconds(),
+                },
+                resources=resource_monitor.to_resource_usage(
+                    cpu_cores=int(utils.get_code_ocean_cpu_limit())
+                ),
                 notes=f"Importing data from channel {channel}",
             )
         )
@@ -1533,21 +1679,35 @@ class TeraStitcher:
         self.logger.info("Align step...")
         exec_config["command"] = self.align_step_cmd(config["align"], channel)
 
-        start_date_time = datetime.now()
+        start_date_time = datetime.now(timezone.utc)
+        resource_monitor = utils.ResourceMonitor(
+            interval_seconds=RESOURCE_MONITOR_INTERVAL_SECONDS
+        ).start()
         utils.execute_command(exec_config)
-        end_date_time = datetime.now()
+        resource_monitor.stop()
+        end_date_time = datetime.now(timezone.utc)
 
         # Adding pipeline metadata
         self.data_processes["steps"].append(
             DataProcess(
-                name=ProcessName.IMAGE_TILE_ALIGNMENT,  # "Image tile alignment"
-                version=self.data_processes["tools"]["terastitcher"]["version"],
+                process_type=ProcessName.IMAGE_TILE_ALIGNMENT,
+                name=f"Pairwise alignment (NCC) - {channel}",
+                stage=ProcessStage.PROCESSING,
+                code=_code(),
+                experimenters=__maintainers__,
+                pipeline_name=__pipeline_name__,
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(self.xmls_path.joinpath(f"xml_import_{channel}.xml")),
-                output_location=str(self.xmls_path.joinpath(f"xml_displcomp_{channel}.xml")),
-                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
-                parameters=config["align"],
+                output_path=str(self.xmls_path.joinpath(f"xml_displcomp_{channel}.xml")),
+                output_parameters={
+                    "tool": self.data_processes["tools"]["terastitcher"],
+                    "input_location": str(self.xmls_path.joinpath(f"xml_import_{channel}.xml")),
+                    "parameters": config["align"],
+                    "duration_seconds": (end_date_time - start_date_time).total_seconds(),
+                },
+                resources=resource_monitor.to_resource_usage(
+                    cpu_cores=int(utils.get_code_ocean_cpu_limit())
+                ),
                 notes=f"Aligning pairwise-stacks using NCC algorithm channel {channel}",
             )
         )
@@ -1561,21 +1721,34 @@ class TeraStitcher:
             channel,
         )
 
-        start_date_time = datetime.now()
+        start_date_time = datetime.now(timezone.utc)
+        resource_monitor = utils.ResourceMonitor(
+            interval_seconds=RESOURCE_MONITOR_INTERVAL_SECONDS
+        ).start()
         utils.execute_command(exec_config)
-        end_date_time = datetime.now()
+        resource_monitor.stop()
+        end_date_time = datetime.now(timezone.utc)
 
         # Adding pipeline metadata
         self.data_processes["steps"].append(
             DataProcess(
-                name=ProcessName.IMAGE_TILE_PROJECTION,  # "Image tile projection",
-                version=self.data_processes["tools"]["terastitcher"]["version"],
+                process_type=ProcessName.IMAGE_TILE_PROJECTION,
+                name=f"Tile projection - {channel}",
+                stage=ProcessStage.PROCESSING,
+                code=_code(),
+                experimenters=__maintainers__,
+                pipeline_name=__pipeline_name__,
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(self.xmls_path.joinpath(f"xml_displcomp_{channel}.xml")),
-                output_location=str(self.xmls_path.joinpath(f"xml_displproj_{channel}.xml")),
-                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
-                parameters={},
+                output_path=str(self.xmls_path.joinpath(f"xml_displproj_{channel}.xml")),
+                output_parameters={
+                    "tool": self.data_processes["tools"]["terastitcher"],
+                    "input_location": str(self.xmls_path.joinpath(f"xml_displcomp_{channel}.xml")),
+                    "duration_seconds": (end_date_time - start_date_time).total_seconds(),
+                },
+                resources=resource_monitor.to_resource_usage(
+                    cpu_cores=int(utils.get_code_ocean_cpu_limit())
+                ),
                 notes=f"Projection in channel {channel}",
             )
         )
@@ -1591,20 +1764,34 @@ class TeraStitcher:
             threshold_cnf,
         )
 
-        start_date_time = datetime.now()
+        start_date_time = datetime.now(timezone.utc)
+        resource_monitor = utils.ResourceMonitor(
+            interval_seconds=RESOURCE_MONITOR_INTERVAL_SECONDS
+        ).start()
         utils.execute_command(exec_config)
-        end_date_time = datetime.now()
+        resource_monitor.stop()
+        end_date_time = datetime.now(timezone.utc)
 
         self.data_processes["steps"].append(
             DataProcess(
-                name=ProcessName.IMAGE_THRESHOLDING,  # "Image thresholding",
-                version=self.data_processes["tools"]["terastitcher"]["version"],
+                process_type=ProcessName.IMAGE_THRESHOLDING,
+                name=f"Thresholding - {channel}",
+                stage=ProcessStage.PROCESSING,
+                code=_code(),
+                experimenters=__maintainers__,
+                pipeline_name=__pipeline_name__,
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(self.xmls_path.joinpath(f"xml_displproj_{channel}.xml")),
-                output_location=str(self.xmls_path.joinpath(f"xml_displthres_{channel}.xml")),
-                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
-                parameters=config["threshold"],
+                output_path=str(self.xmls_path.joinpath(f"xml_displthres_{channel}.xml")),
+                output_parameters={
+                    "tool": self.data_processes["tools"]["terastitcher"],
+                    "input_location": str(self.xmls_path.joinpath(f"xml_displproj_{channel}.xml")),
+                    "parameters": config["threshold"],
+                    "duration_seconds": (end_date_time - start_date_time).total_seconds(),
+                },
+                resources=resource_monitor.to_resource_usage(
+                    cpu_cores=int(utils.get_code_ocean_cpu_limit())
+                ),
                 notes=f"Thresholding in channel {channel}",
             )
         )
@@ -1618,20 +1805,33 @@ class TeraStitcher:
             channel,
         )
 
-        start_date_time = datetime.now()
+        start_date_time = datetime.now(timezone.utc)
+        resource_monitor = utils.ResourceMonitor(
+            interval_seconds=RESOURCE_MONITOR_INTERVAL_SECONDS
+        ).start()
         utils.execute_command(exec_config)
-        end_date_time = datetime.now()
+        resource_monitor.stop()
+        end_date_time = datetime.now(timezone.utc)
 
         self.data_processes["steps"].append(
             DataProcess(
-                name=ProcessName.IMAGE_TILE_ALIGNMENT,  # "Image tile alignment"
-                version=self.data_processes["tools"]["terastitcher"]["version"],
+                process_type=ProcessName.IMAGE_TILE_ALIGNMENT,
+                name=f"Tile placement - {channel}",
+                stage=ProcessStage.PROCESSING,
+                code=_code(),
+                experimenters=__maintainers__,
+                pipeline_name=__pipeline_name__,
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(self.xmls_path.joinpath(f"xml_displthres_{channel}.xml")),
-                output_location=str(self.xmls_path.joinpath(f"xml_merging_{channel}.xml")),
-                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
-                parameters={},
+                output_path=str(self.xmls_path.joinpath(f"xml_merging_{channel}.xml")),
+                output_parameters={
+                    "tool": self.data_processes["tools"]["terastitcher"],
+                    "input_location": str(self.xmls_path.joinpath(f"xml_displthres_{channel}.xml")),
+                    "duration_seconds": (end_date_time - start_date_time).total_seconds(),
+                },
+                resources=resource_monitor.to_resource_usage(
+                    cpu_cores=int(utils.get_code_ocean_cpu_limit())
+                ),
                 notes=f"Placing tiles to the most optimal position channel {channel}",
             )
         )
@@ -1652,22 +1852,38 @@ class TeraStitcher:
             # 'clist':'0'
         }
 
-        exec_config["command"] = self.merge_multivolume_separated_channels_cmd(merge_config, channel)
+        exec_config["command"] = self.merge_multivolume_separated_channels_cmd(
+            merge_config, channel
+        )
 
-        start_date_time = datetime.now()
+        start_date_time = datetime.now(timezone.utc)
+        resource_monitor = utils.ResourceMonitor(
+            interval_seconds=RESOURCE_MONITOR_INTERVAL_SECONDS
+        ).start()
         utils.execute_command(exec_config)
-        end_date_time = datetime.now()
+        resource_monitor.stop()
+        end_date_time = datetime.now(timezone.utc)
 
         self.data_processes["steps"].append(
             DataProcess(
-                name=ProcessName.IMAGE_TILE_FUSING,  # "Image tile fusing"
-                version=self.data_processes["tools"]["terastitcher"]["version"],
+                process_type=ProcessName.IMAGE_TILE_FUSING,
+                name=f"Volume merge - {channel}",
+                stage=ProcessStage.PROCESSING,
+                code=_code(),
+                experimenters=__maintainers__,
+                pipeline_name=__pipeline_name__,
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(self.xmls_path.joinpath(f"xml_merging_{channel}.xml")),
-                output_location=str(self.__stitched_folder),
-                code_url=self.data_processes["tools"]["terastitcher"]["codeURL"],
-                parameters=config["merge"],
+                output_path=str(self.__stitched_folder),
+                output_parameters={
+                    "tool": self.data_processes["tools"]["terastitcher"],
+                    "input_location": str(self.xmls_path.joinpath(f"xml_merging_{channel}.xml")),
+                    "parameters": config["merge"],
+                    "duration_seconds": (end_date_time - start_date_time).total_seconds(),
+                },
+                resources=resource_monitor.to_resource_usage(
+                    cpu_cores=int(utils.get_code_ocean_cpu_limit())
+                ),
                 notes=f"Merging volume with channel {channel}",
             )
         )
@@ -1738,7 +1954,10 @@ class TeraStitcher:
 
         self.logger.info("Converting to OME-Zarr...")
 
-        start_date_time = datetime.now()
+        start_date_time = datetime.now(timezone.utc)
+        resource_monitor = utils.ResourceMonitor(
+            interval_seconds=RESOURCE_MONITOR_INTERVAL_SECONDS
+        ).start()
 
         # setting physical pixels from import parameters
         voxel_sizes = list(config["import_data"].values())
@@ -1754,7 +1973,8 @@ class TeraStitcher:
         config["ome_zarr_params"]["cpus"] = config["merge"]["cpu_params"]["number_processes"]
 
         self.convert_to_ome_zarr(config["ome_zarr_params"], channels)
-        end_date_time = datetime.now()
+        resource_monitor.stop()
+        end_date_time = datetime.now(timezone.utc)
 
         ng_config = config["ome_zarr_params"].copy()
 
@@ -1766,16 +1986,26 @@ class TeraStitcher:
 
         self.data_processes["steps"].append(
             DataProcess(
-                name=ProcessName.FILE_CONVERSION,  # "File format conversion",
-                version=self.data_processes["tools"]["aicsimageio"]["version"],
+                process_type=ProcessName.FILE_FORMAT_CONVERSION,
+                name=f"OME-Zarr conversion - {', '.join(channels)}",
+                stage=ProcessStage.PROCESSING,
+                code=_code(),
+                experimenters=__maintainers__,
+                pipeline_name=__pipeline_name__,
                 start_date_time=start_date_time,
                 end_date_time=end_date_time,
-                input_location=str(self.__stitched_folder),
-                output_location=str(self.__output_folder),
-                code_url=self.data_processes["tools"]["aicsimageio"]["codeURL"],
-                parameters=config["ome_zarr_params"],
+                output_path=str(self.__output_folder),
+                output_parameters={
+                    "tool": self.data_processes["tools"]["aicsimageio"],
+                    "input_location": str(self.__stitched_folder),
+                    "parameters": config["ome_zarr_params"],
+                    "ng_link": ng_link,
+                    "duration_seconds": (end_date_time - start_date_time).total_seconds(),
+                },
+                resources=resource_monitor.to_resource_usage(
+                    cpu_cores=int(utils.get_code_ocean_cpu_limit())
+                ),
                 notes="OME Zarr conversion",
-                outputs={"ng_link": ng_link},
             )
         )
 
@@ -1785,36 +2015,12 @@ class TeraStitcher:
         if self.__generate_metadata:
             # Saving metadata process
             utils.generate_processing(
-                self.data_processes["steps"],
-                str(self.__output_folder.joinpath("metadata/processing.json")),
-                __version__,
+                data_processes=self.data_processes["steps"],
+                dest_processing=str(self.__output_folder.joinpath("metadata")),
+                pipeline_name=__pipeline_name__,
+                pipeline_version=__pipeline_version__,
+                pipeline_url="https://github.com/AllenNeuralDynamics/aind-smartspim-pipeline",
             )
-
-
-def find_channels(path: PathLike, channel_regex: str = r"Ex_([0-9]*)_Em_([0-9]*)$"):
-    """
-    Find image channels of a dataset using a regular expression.
-
-    Parameters
-    ------------------------
-
-    path:PathLike
-        Dataset path
-
-    channel_regex:str
-        Regular expression for filtering folders in dataset path.
-
-
-    Returns
-    ------------------------
-
-    List[str]:
-        List with the image channels. Empty list if
-        it does not find any channels with the
-        given regular expression.
-
-    """
-    return [path for path in os.listdir(path) if re.search(channel_regex, path)]
 
 
 def execute_terastitcher(
@@ -1887,18 +2093,16 @@ def execute_terastitcher(
 
     regexpression = config_teras["regex_channels"]
     regexpression = "({})".format(regexpression)
-    channels = find_channels(input_data, regexpression)
+    channels = utils.find_smartspim_channels(input_data, regexpression)
     stitch_channel = config_teras["stitch_channel"]
     len_channels = len(channels)
 
     if not len_channels:
-        raise ValueError(
-            f"""
+        raise ValueError(f"""
             Please, check the regular expression for
             obtaining channels: {channels} and the
             stitch_channel parameter: {stitch_channel}.
-            """
-        )
+            """)
 
     else:
         terastitcher_tool = TeraStitcher(
@@ -1942,7 +2146,7 @@ def main(smartspim_config: dict) -> str:
         preprocessed_data = os.path.abspath(args["preprocessed_data"])
         metadata_folder = os.path.abspath(args["metadata_folder"])
 
-        print(
+        logger.info(
             f"Input data: {input_data} \nOutput data: {output_folder} \nPreprocessed data: {preprocessed_data}"
         )
 
